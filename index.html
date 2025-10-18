@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Murano Product Manager</title>
+  <!-- Minimal, responsive CSS -->
+  <link rel="stylesheet" href="./styles.css" />
+  <!-- App logic -->
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <div class="left">
+      <button id="add-btn" title="Add folder or product">+</button>
+      <button id="import-btn" title="Import save.json">Import</button>
+      <button id="export-btn" title="Export save.json">Export</button>
+    </div>
+    <div class="center">
+      <div id="search-bar">
+        <input id="search-input" type="text" placeholder="Search products..." />
+        <div id="search-results" class="dropdown hidden"></div>
+      </div>
+    </div>
+    <div class="right">
+      <div id="sync-status" title="Cloud sync status">Offline</div>
+    </div>
+  </div>
+
+  <!-- Product Detail Page (overlay) -->
+  <div id="product-page" class="hidden" aria-label="Product detail">
+    <div class="pp-header">
+      <button id="pp-back" class="pp-back" type="button">← Back</button>
+      <div id="pp-title" class="pp-title"></div>
+      <div class="pp-spacer"></div>
+      <button id="pp-edit" class="pp-back" title="Edit details" type="button">Edit</button>
+    </div>
+    <div class="pp-content">
+      <div class="pp-card">
+        <div class="pp-card-title">Product Information</div>
+        <div class="pp-info-grid">
+          <div class="pp-row"><div class="pp-label">Name</div><div class="pp-value" id="pp-name"></div></div>
+          <div class="pp-row"><div class="pp-label">Quantity</div><div class="pp-value" id="pp-qty"></div></div>
+          <div class="pp-row"><div class="pp-label">Value</div><div class="pp-value" id="pp-price"></div></div>
+          <div class="pp-row"><div class="pp-label">Total Value</div><div class="pp-value" id="pp-total"></div></div>
+        </div>
+      </div>
+
+      <div class="pp-card">
+        <div class="pp-card-title">Adjust Quantity</div>
+        <div class="pp-adjust">
+          <input id="pp-adjust-input" type="number" min="1" step="1" value="1" />
+          <button id="pp-add-btn" type="button">Add</button>
+          <button id="pp-remove-btn" class="danger" type="button">Remove</button>
+        </div>
+      </div>
+
+      <div class="pp-card">
+        <div class="pp-card-title">Image</div>
+        <div class="pp-image">
+          <img id="pp-image-preview" alt="product" class="pp-image-preview hidden" />
+          <button id="pp-upload-btn" type="button">Upload Image</button>
+          <input id="pp-image-file" type="file" accept="image/*" class="hidden" />
+        </div>
+      </div>
+
+      <div class="pp-card">
+        <div class="pp-card-title">Note</div>
+        <div class="pp-note">
+          <textarea id="pp-note" rows="6" placeholder="Add a note…"></textarea>
+          <div class="pp-note-actions">
+            <button id="pp-note-save" type="button">Save Note</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breadcrumbs -->
+  <div id="breadcrumbs"></div>
+
+  <!-- Main Content -->
+  <div id="main">
+    <div id="folder-list" aria-label="Folder and product tree"></div>
+
+    <div id="editor-panel" class="hidden" aria-label="Editor panel">
+      <div class="editor-header">
+        <span id="editor-title">Editor</span>
+        <button id="editor-close" title="Close">✕</button>
+      </div>
+      <form id="editor-form">
+        <!-- Common fields -->
+        <input type="hidden" id="editor-entity-id" />
+        <input type="hidden" id="editor-entity-type" />
+
+        <label>
+          <span>Name</span>
+          <input id="editor-name" type="text" required />
+        </label>
+
+        <!-- Product-only fields -->
+        <div id="product-fields" class="hidden">
+          <label>
+            <span>Price</span>
+            <input id="editor-price" type="number" min="0" step="0.01" />
+          </label>
+          <label>
+            <span>Quantity</span>
+            <input id="editor-quantity" type="number" min="0" step="1" />
+          </label>
+
+          <div class="custom-fields">
+            <div class="custom-fields-header">
+              <span>Custom fields</span>
+              <button type="button" id="add-custom-field">+ Field</button>
+            </div>
+            <div id="custom-fields-container"></div>
+          </div>
+        </div>
+
+        <!-- Folder-only fields -->
+        <div id="folder-fields" class="hidden">
+          <label>
+            <span>Image</span>
+            <input id="editor-image" type="file" accept="image/*" />
+          </label>
+          <div class="image-preview hidden" id="folder-image-preview"></div>
+        </div>
+
+        <div class="editor-actions">
+          <button type="submit" id="save-entity">Save</button>
+          <button type="button" id="delete-entity" class="danger">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span id="modal-title">Confirm</span>
+        <button id="modal-close">✕</button>
+      </div>
+      <div id="modal-body"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Hidden import input -->
+  <input id="import-file" type="file" accept="application/json" class="hidden" />
+
+  <!-- Service worker registration at end of body for reliability -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').catch(() => {/* no-op */});
+      });
+    }
+  </script>
+</body>
+</html>
