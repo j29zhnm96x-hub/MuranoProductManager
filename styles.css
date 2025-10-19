@@ -10,6 +10,8 @@ button { cursor: pointer; }
 #top-bar .left, #top-bar .center, #top-bar .right { display: flex; align-items: center; gap: 8px; }
 #top-bar #add-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #d1d5db; background: #0ea5e9; color: white; font-size: 18px; line-height: 0; display: grid; place-items: center; }
 #top-bar #import-btn, #top-bar #export-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; }
+#top-bar .btn-save { padding: 6px 12px; border-radius: 8px; border: 1px solid #7c3aed; background: #7c3aed; color: #fff; font-weight: 600; }
+#top-bar .btn-save:hover { background: #6d28d9; border-color: #6d28d9; }
 #sync-status { font-size: 12px; padding: 4px 8px; border-radius: 9999px; background: #e5e7eb; color: #111827; }
 
 #breadcrumbs { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: #4b5563; }

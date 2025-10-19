@@ -6,15 +6,16 @@
 */
 
 // ---------------------------- Config ----------------------------
-const ENABLE_CLOUD = false; // Toggle to true to enable Supabase sync
-const SUPABASE_URL = 'https://your-project.supabase.co';
-const SUPABASE_KEY = 'your-anon-key';
+const ENABLE_CLOUD = true; // Toggle to true to enable Supabase sync
+const SUPABASE_URL = 'https://drfyrustkimutpfmxzag.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyZnlydXN0a2ltdXRwZm14emFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2MDEyMjgsImV4cCI6MjA3NjE3NzIyOH0.y-gbZmtpuvGocS8i2w9U9vMo9kOwN59NGEM4m3JwsmA';
 const BUCKET = 'saves';
 const FILE_PATH = 'save.json';
+const BACKUP_PREFIX = 'backups/';
 
 // ---------------------------- State ----------------------------
 const DB_NAME = 'productSaveDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // bump to add 'snapshots' store
 const STORE_NAME = 'data';
 const STORE_KEY = 'appState';
 
@@ -30,6 +31,74 @@ function uuid() {
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
 }
 
+async function listCloudBackups() {
+  if (!ENABLE_CLOUD) return [];
+  const url = `${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ prefix: BACKUP_PREFIX, limit: 100, offset: 0, sortBy: { column: 'updated_at', order: 'desc' } })
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+async function downloadBackupObject(name) {
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${BACKUP_PREFIX}${encodeURIComponent(name)}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${SUPABASE_KEY}` } });
+  if (!res.ok) throw new Error('Backup download failed');
+  return await res.json();
+}
+
+async function loadLatestCloudBackup() {
+  if (!ENABLE_CLOUD || !navigator.onLine) return false;
+  try {
+    setSyncStatus('Checking cloud…');
+    const list = await listCloudBackups();
+    if (!list.length) { setSyncStatus('No backups'); return false; }
+    list.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    const latest = list.find(x => (x.name || '').toLowerCase().endsWith('.json')) || list[0];
+    if (!latest) { setSyncStatus('No backups'); return false; }
+    const remote = await downloadBackupObject(latest.name);
+    if (remote && typeof remote === 'object') {
+      appState = remote;
+      await writeState(appState);
+      setSyncStatus('Backup loaded');
+      return true;
+    }
+    return false;
+  } catch (e) {
+    setSyncStatus('Cloud error');
+    return false;
+  }
+}
+
+async function uploadBackupToCloud() {
+  if (!ENABLE_CLOUD || !navigator.onLine) { return; }
+  try {
+    setSyncStatus('Uploading…');
+    const ts = formatTs(Date.now());
+    const path = `${BACKUP_PREFIX}save_${ts}.json`;
+    const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`;
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(appState)
+    });
+    if (!res.ok) throw new Error('Upload failed');
+    setSyncStatus('Backup saved');
+  } catch (e) {
+    setSyncStatus('Upload error');
+  }
+}
+
 // ---------------------------- Confirmations & Edit Modals ----------------------------
 function confirmDeleteProduct(productId) {
   const p = appState.products[productId];
@@ -41,6 +110,60 @@ function confirmDeleteProduct(productId) {
       { label: 'Cancel' }
     ]
   });
+}
+
+// ---------------------------- Snapshots (New Save System) ----------------------------
+function formatTs(ts) {
+  const d = new Date(ts);
+  const pad = (n) => String(n).padStart(2, '0');
+  const YYYY = d.getFullYear();
+  const MM = pad(d.getMonth() + 1);
+  const DD = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  const ss = pad(d.getSeconds());
+  return `${YYYY}-${MM}-${DD}_${hh}-${mm}-${ss}`;
+}
+
+function putSnapshot(record) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('snapshots', 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.objectStore('snapshots').put(record);
+  });
+}
+
+function getLatestSnapshot() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('snapshots', 'readonly');
+    const idx = tx.objectStore('snapshots').index('ts');
+    const req = idx.openCursor(null, 'prev');
+    req.onsuccess = () => {
+      resolve(req.result ? req.result.value : null);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveSnapshot(downloadAlso = false) {
+  try {
+    const ts = Date.now();
+    const record = { ts, state: structuredClone(appState) };
+    await putSnapshot(record);
+    showToast('Snapshot saved');
+    if (downloadAlso) {
+      const blob = new Blob([JSON.stringify(record.state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `save_${formatTs(ts)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+  } catch (e) {
+    console.warn(e);
+    showToast('Snapshot save failed');
+  }
 }
 
 function confirmDeleteFolder(folderId) {
@@ -182,6 +305,10 @@ function openDB() {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
+      }
+      if (!db.objectStoreNames.contains('snapshots')) {
+        const s = db.createObjectStore('snapshots', { keyPath: 'id', autoIncrement: true });
+        s.createIndex('ts', 'ts');
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -797,6 +924,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // UI wiring
   document.getElementById('add-btn').addEventListener('click', () => openAddMenu(currentFolderId));
+  document.getElementById('save-btn').addEventListener('click', async () => {
+    await saveSnapshot(true);
+    await uploadBackupToCloud();
+  });
   document.getElementById('export-btn').addEventListener('click', exportState);
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change', (e) => { const f = e.target.files?.[0]; if (f) importState(f); e.target.value = ''; });
@@ -814,6 +945,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('modal-close').addEventListener('click', closeModal);
 
   attachSearch();
+
+  // Try load latest backup from cloud before first render
+  await loadLatestCloudBackup();
   renderAll();
 
   // network status
@@ -824,6 +958,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // initial cloud
   await initialCloudSync();
+
+  // Load latest snapshot if present
+  try {
+    const latest = await getLatestSnapshot();
+    if (latest && latest.state) {
+      appState = latest.state;
+      await writeState(appState);
+      renderAll();
+      showToast('Loaded latest snapshot');
+    }
+  } catch {}
 
   // Product page events
   document.getElementById('pp-back').addEventListener('click', () => { closeProductPage(); });
