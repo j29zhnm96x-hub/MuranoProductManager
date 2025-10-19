@@ -24,6 +24,7 @@ let appState = null;
 let currentFolderId = 'root';
 let saveDebounceTimer = null;
 let productPageProductId = null;
+let backupLoaded = false; // indicates a successful cloud backup load in this session
 
 // ---------------------------- Utilities ----------------------------
 function uuid() {
@@ -72,7 +73,8 @@ async function loadLatestCloudBackup() {
     if (remote && typeof remote === 'object') {
       appState = remote;
       await writeState(appState);
-      setSyncStatus('Backup loaded');
+      backupLoaded = true;
+      setSyncStatus('Synced');
       return true;
     }
     return false;
@@ -826,9 +828,9 @@ async function downloadFromCloud() {
     setSyncStatus('Checking…');
     const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${FILE_PATH}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${SUPABASE_KEY}` } });
-    if (!res.ok) { setSyncStatus('No remote'); return null; }
+    if (!res.ok) { return null; }
     const data = await res.json();
-    setSyncStatus('Remote loaded');
+    setSyncStatus('Synced');
     return data;
   } catch (e) {
     setSyncStatus('Sync error');
@@ -963,7 +965,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateNet();
 
   // initial cloud
-  await initialCloudSync();
+  // If we already loaded a backup successfully, skip legacy single-file sync to avoid confusing statuses
+  if (!backupLoaded) {
+    await initialCloudSync();
+  }
 
   // Load latest snapshot if present
   try {
