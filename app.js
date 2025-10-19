@@ -121,9 +121,37 @@ async function uploadBackupToCloud() {
       throw new Error(`Upload failed (${res.status}) ${msg}`);
     }
     setSyncStatus('Backup saved');
+    // Retention: keep only latest 3 backups
+    await pruneBackups(3).catch(err => console.warn('Prune failed', err));
   } catch (e) {
     console.warn(e);
     setSyncStatus('Upload error');
+  }
+}
+
+async function deleteBackupObject(name) {
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${BACKUP_PREFIX}${encodeURIComponent(name)}`;
+  const res = await fetch(url, { method: 'DELETE', headers: storageHeaders() });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => '');
+    throw new Error(`Delete failed (${res.status}) ${msg}`);
+  }
+}
+
+async function pruneBackups(maxKeep = 3) {
+  const list = await listCloudBackups();
+  if (!Array.isArray(list) || list.length <= maxKeep) return;
+  // Prefer updated_at; fallback to sorting by name descending (timestamped filenames)
+  const jsonOnly = list.filter(x => (x.name || '').toLowerCase().endsWith('.json'));
+  jsonOnly.sort((a, b) => {
+    const au = new Date(a.updated_at || 0).getTime();
+    const bu = new Date(b.updated_at || 0).getTime();
+    if (au !== bu) return bu - au; // newest first
+    return (b.name || '').localeCompare(a.name || ''); // fallback
+  });
+  const toDelete = jsonOnly.slice(maxKeep);
+  for (const obj of toDelete) {
+    try { await deleteBackupObject(obj.name); } catch (e) { console.warn('Delete failed for', obj.name, e); }
   }
 }
 
