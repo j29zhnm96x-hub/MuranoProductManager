@@ -32,6 +32,26 @@ function uuid() {
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
 }
 
+function clearAllCookies() {
+  try {
+    const parts = document.cookie.split(';');
+    const host = location.hostname;
+    const domains = [undefined, host, '.' + host];
+    const paths = ['/', ''];
+    parts.forEach(p => {
+      const name = p.split('=')[0].trim();
+      domains.forEach(d => {
+        paths.forEach(path => {
+          let cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`; 
+          if (path) cookie += `;path=${path}`;
+          if (d) cookie += `;domain=${d}`;
+          document.cookie = cookie;
+        });
+      });
+    });
+  } catch {}
+}
+
 function storageHeaders(extra = {}) {
   return {
     Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -924,6 +944,7 @@ async function initialCloudSync() {
 
 // ---------------------------- Event Wiring ----------------------------
 document.addEventListener('DOMContentLoaded', async () => {
+  clearAllCookies();
   // DB
   try { db = await openDB(); } catch (e) { console.error(e); showToast('IndexedDB error'); }
   appState = await readState();
