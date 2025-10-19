@@ -31,15 +31,20 @@ function uuid() {
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
 }
 
+function storageHeaders(extra = {}) {
+  return {
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    apikey: SUPABASE_KEY,
+    ...extra,
+  };
+}
+
 async function listCloudBackups() {
   if (!ENABLE_CLOUD) return [];
   const url = `${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json'
-    },
+    headers: storageHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ prefix: BACKUP_PREFIX, limit: 100, offset: 0, sortBy: { column: 'updated_at', order: 'desc' } })
   });
   if (!res.ok) return [];
@@ -49,7 +54,7 @@ async function listCloudBackups() {
 
 async function downloadBackupObject(name) {
   const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${BACKUP_PREFIX}${encodeURIComponent(name)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${SUPABASE_KEY}` } });
+  const res = await fetch(url, { headers: storageHeaders() });
   if (!res.ok) throw new Error('Backup download failed');
   return await res.json();
 }
@@ -86,15 +91,16 @@ async function uploadBackupToCloud() {
     const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`;
     const res = await fetch(url, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
+      headers: storageHeaders({ 'Content-Type': 'application/json', 'x-upsert': 'true' }),
       body: JSON.stringify(appState)
     });
-    if (!res.ok) throw new Error('Upload failed');
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      throw new Error(`Upload failed (${res.status}) ${msg}`);
+    }
     setSyncStatus('Backup saved');
   } catch (e) {
+    console.warn(e);
     setSyncStatus('Upload error');
   }
 }
