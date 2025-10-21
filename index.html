@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Murano Product Manager</title>
+  <link rel="icon" type="image/png" sizes="180x180" href="./assets/MPMLogo180.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/MPMLogo180.png" />
+  <meta name="theme-color" content="#0ea5e9" />
   <!-- Minimal, responsive CSS -->
   <link rel="stylesheet" href="./styles.css" />
   <!-- App logic -->
@@ -13,20 +16,26 @@
   <!-- Top Bar -->
   <div id="top-bar">
     <div class="left">
-      <button id="save-btn" class="btn-save" title="Save snapshot" type="button">Save</button>
+      <button id="save-btn" class="btn-save" title="Save state" type="button">Save</button>
+      <button id="actions-btn" class="btn-save" title="Actions" type="button">Actions</button>
       <button id="add-btn" title="Add folder or product">+</button>
-      <button id="import-btn" title="Import save.json">Import</button>
-      <button id="export-btn" title="Export save.json">Export</button>
     </div>
     <div class="center">
       <div id="search-bar">
         <input id="search-input" type="text" placeholder="Search products..." />
         <div id="search-results" class="dropdown hidden"></div>
       </div>
+      <button id="search-toggle" class="btn-search" title="Search" type="button"><img src="./assets/magnifying-glass.png" alt="Search" class="icon"/></button>
     </div>
     <div class="right">
+      <button id="settings-btn" title="Settings" type="button"><img src="./assets/setting.png" alt="Settings" class="icon"/></button>
       <div id="sync-status" title="Cloud sync status">Offline</div>
     </div>
+  </div>
+
+  <!-- Refresh overlay -->
+  <div id="refresh-overlay" aria-live="assertive" aria-label="Refreshing to latest version">
+    <div class="box">New version found, refreshing…</div>
   </div>
 
   <!-- Product Detail Page (overlay) -->
@@ -45,13 +54,14 @@
           <div class="pp-row"><div class="pp-label">Quantity</div><div class="pp-value" id="pp-qty"></div></div>
           <div class="pp-row"><div class="pp-label">Value</div><div class="pp-value" id="pp-price"></div></div>
           <div class="pp-row"><div class="pp-label">Total Value</div><div class="pp-value" id="pp-total"></div></div>
+          <div class="pp-row"><div class="pp-label">Target Quantity</div><div class="pp-value" id="pp-target"></div></div>
         </div>
       </div>
 
       <div class="pp-card">
         <div class="pp-card-title">Adjust Quantity</div>
         <div class="pp-adjust">
-          <input id="pp-adjust-input" type="number" min="1" step="1" value="1" />
+          <input id="pp-adjust-input" type="number" inputmode="numeric" pattern="[0-9]*" min="1" step="1" value="" />
           <button id="pp-add-btn" type="button">Add</button>
           <button id="pp-remove-btn" class="danger" type="button">Remove</button>
         </div>
@@ -70,9 +80,7 @@
         <div class="pp-card-title">Note</div>
         <div class="pp-note">
           <textarea id="pp-note" rows="6" placeholder="Add a note…"></textarea>
-          <div class="pp-note-actions">
-            <button id="pp-note-save" type="button">Save Note</button>
-          </div>
+          <div class="pp-note-actions"></div>
         </div>
       </div>
     </div>
@@ -81,9 +89,13 @@
   <!-- Breadcrumbs -->
   <div id="breadcrumbs"></div>
 
+  <!-- Stats Bar -->
+  <div id="stats-bar" aria-label="Overall stats"></div>
+
   <!-- Main Content -->
   <div id="main">
     <div id="folder-list" aria-label="Folder and product tree"></div>
+    <div id="priority-graph" aria-label="Priority products progress"></div>
 
     <div id="editor-panel" class="hidden" aria-label="Editor panel">
       <div class="editor-header">
@@ -107,8 +119,20 @@
             <input id="editor-price" type="number" min="0" step="0.01" />
           </label>
           <label>
+            <span>Target Quantity</span>
+            <input id="editor-target" type="number" min="0" step="1" />
+          </label>
+          <label>
             <span>Quantity</span>
             <input id="editor-quantity" type="number" min="0" step="1" />
+          </label>
+          <label>
+            <span>Priority product</span>
+            <input id="editor-priority" type="checkbox" />
+          </label>
+          <label>
+            <span>Max Quantity (guideline)</span>
+            <input id="editor-maxqty" type="number" min="0" step="1" />
           </label>
 
           <div class="custom-fields">

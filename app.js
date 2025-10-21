@@ -1,3 +1,77 @@
+function showResetStatsConfirm() {
+  // Build warning body
+  const body = document.createElement('div');
+  body.style.display = 'grid'; body.style.gap = '10px'; body.style.maxWidth = '520px';
+  const warn = document.createElement('div'); warn.textContent = 'ARE YOU SURE YOU WISH TO DELETE ALL PRODUCT STATISTICS, THIS IS IRREVERSABLE'; warn.style.color = '#ef4444'; warn.style.fontWeight = '700'; warn.style.textAlign = 'center';
+  const note = document.createElement('div'); note.textContent = 'This will set the Quantity of every product to 0. Folders, products and settings remain unchanged.'; note.style.textAlign = 'center';
+  const countdownEl = document.createElement('div'); countdownEl.style.textAlign = 'center'; countdownEl.style.color = '#6b7280';
+  body.appendChild(warn); body.appendChild(note); body.appendChild(countdownEl);
+
+  let seconds = 10;
+  let confirmBtnRef = null;
+
+  const tick = () => {
+    countdownEl.textContent = `You can confirm in ${seconds}s`;
+    if (confirmBtnRef) confirmBtnRef.disabled = seconds > 0;
+    if (seconds > 0) { seconds -= 1; setTimeout(tick, 1000); }
+    else { countdownEl.textContent = 'You may proceed.'; }
+  };
+
+  openModal({
+    title: 'Confirm Reset Stats',
+    body,
+    actions: [
+      { label: 'Confirm', onClick: () => { resetAllProductQuantities(); } },
+      { label: 'Cancel' }
+    ]
+  });
+
+  // Find the last opened modal's actions and disable Confirm initially
+  try {
+    const actionsEl = document.getElementById('modal-actions');
+    if (actionsEl) {
+      const btns = actionsEl.querySelectorAll('button');
+      confirmBtnRef = btns[0]; // first is Confirm
+      if (confirmBtnRef) { confirmBtnRef.classList.add('danger'); confirmBtnRef.disabled = true; }
+    }
+  } catch {}
+  tick();
+}
+
+function resetAllProductQuantities() {
+  for (const p of Object.values(appState.products || {})) {
+    p.quantity = 0;
+  }
+  saveStateDebounced();
+  ensureDailyProgress();
+  renderAll();
+  showToast('All product quantities reset to 0');
+}
+// ---------------------------- Priority Graph ----------------------------
+function renderPriorityGraph() {
+  const box = document.getElementById('priority-graph');
+  if (!box) return;
+  const list = Object.values(appState.products || {}).filter(p => !!p.priority && Number(p.targetQuantity || 0) > 0);
+  if (!list.length) { box.innerHTML = ''; box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  // Sort by progress ascending (least produced near top)
+  list.sort((a,b) => (a.quantity/(a.targetQuantity||1)) - (b.quantity/(b.targetQuantity||1)));
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<div class="pg-title">Priority Progress</div>`;
+  const ul = document.createElement('div'); ul.className = 'pg-list';
+  for (const p of list) {
+    const row = document.createElement('div'); row.className = 'pg-row';
+    const name = document.createElement('div'); name.className = 'pg-name'; name.textContent = p.name || 'Product';
+    const bar = document.createElement('div'); bar.className = 'pg-bar';
+    const fill = document.createElement('div'); fill.className = 'pg-fill';
+    const ratio = Math.max(0, Math.min(1, Number(p.quantity||0) / Number(p.targetQuantity||1)));
+    fill.style.width = `${Math.round(ratio*100)}%`; bar.appendChild(fill);
+    const percent = document.createElement('div'); percent.className = 'pg-percent'; percent.textContent = `${Math.round(ratio*100)}%`;
+    const meta = document.createElement('div'); meta.className = 'pg-meta'; meta.textContent = `${Number(p.quantity||0)} / ${Number(p.targetQuantity||0)} pc`;
+    row.appendChild(name); row.appendChild(bar); row.appendChild(percent); row.appendChild(meta); ul.appendChild(row);
+  }
+  box.innerHTML = ''; box.appendChild(wrap); box.appendChild(ul);
+}
 /*
   Murano Product Manager
   - IndexedDB for persistence
@@ -25,11 +99,236 @@ let currentFolderId = 'root';
 let saveDebounceTimer = null;
 let productPageProductId = null;
 let backupLoaded = false; // indicates a successful cloud backup load in this session
+// Persistent client ID for self-change detection
+const CLIENT_ID = (() => {
+  try {
+    const k = 'murano_client_id';
+    let v = localStorage.getItem(k);
+    if (!v) { v = uuid(); localStorage.setItem(k, v); }
+    return v;
+  } catch { return uuid(); }
+})();
+
+function computeTodayAddedValue() {
+  try {
+    const logs = appState.productionLog || [];
+    const today = todayStr();
+    let sum = 0;
+    for (const rec of logs) {
+      const d = new Date(rec.ts || 0); d.setHours(0,0,0,0);
+      const key = d.toISOString().slice(0,10);
+      if (key === today) sum += Number(rec.value || 0);
+    }
+    return sum; // net value change today (can be negative)
+  } catch { return 0; }
+}
+const LAST_BACKUP_NAME_KEY = 'murano_last_backup_name';
+let lastKnownBackupName = null; // persisted across reloads for accurate detection
+try { lastKnownBackupName = localStorage.getItem(LAST_BACKUP_NAME_KEY) || null; } catch {}
+
+// ---------------------------- Daily Progress ----------------------------
+function todayStr() {
+  const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10);
+}
+function ensureDailyProgress() {
+  appState.dailyProgress = appState.dailyProgress || { date: null, startValue: 0, fixedGoal: 0 };
+  const cur = todayStr();
+  const stats = computeStats('root');
+  if (appState.dailyProgress.date !== cur) {
+    appState.dailyProgress.date = cur;
+    appState.dailyProgress.startValue = stats.totalValue || 0;
+    // Compute and pin today's goal using current settings at day start
+    const settings = appState.settings || {};
+    if (settings.plannedValue && settings.endDate) {
+      const end = new Date(settings.endDate);
+      const today = new Date(); today.setHours(0,0,0,0);
+      const remainingOverall = Math.max(0, Number(settings.plannedValue || 0) - Number(stats.totalValue || 0));
+      const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
+      const daysLeft = rawDays > 0 ? rawDays : 1;
+      appState.dailyProgress.fixedGoal = remainingOverall / daysLeft;
+    } else {
+      appState.dailyProgress.fixedGoal = 0;
+    }
+    try { saveStateDebounced(); } catch {}
+  } else {
+    // Same day: if current total is less than start value, reset start to current
+    // This handles the case where everything was deleted
+    if (stats.totalValue < appState.dailyProgress.startValue) {
+      appState.dailyProgress.startValue = stats.totalValue || 0;
+      try { saveStateDebounced(); } catch {}
+    }
+  }
+}
+
+// Recompute today's fixed goal immediately based on current settings and totals
+function recomputeDailyGoalNow() {
+  appState.dailyProgress = appState.dailyProgress || { date: todayStr(), startValue: 0, fixedGoal: 0 };
+  const stats = computeStats('root');
+  const settings = appState.settings || {};
+  if (settings.plannedValue && settings.endDate) {
+    const end = new Date(settings.endDate);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const remainingOverall = Math.max(0, Number(settings.plannedValue || 0) - Number(stats.totalValue || 0));
+    const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
+    const daysLeft = rawDays > 0 ? rawDays : 1;
+    appState.dailyProgress.fixedGoal = remainingOverall / daysLeft;
+  } else {
+    appState.dailyProgress.fixedGoal = 0;
+  }
+}
 
 // ---------------------------- Utilities ----------------------------
 function uuid() {
   if (crypto && crypto.randomUUID) return crypto.randomUUID();
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+}
+
+// ---------------------------- Reorder (Drag & Drop) ----------------------------
+let dragSrcEl = null;
+function getFolderOrder(folder) {
+  // Create/repair unified order list of keys like 'f:<id>' and 'p:<id>'
+  folder.order = Array.isArray(folder.order) ? folder.order.slice() : [];
+  const want = new Set([
+    ...folder.subfolders.map(id => `f:${id}`),
+    ...folder.products.map(id => `p:${id}`)
+  ]);
+  // Keep only existing
+  folder.order = folder.order.filter(k => want.has(k));
+  // Append any missing at the end in default grouping order
+  for (const fid of folder.subfolders) {
+    const key = `f:${fid}`;
+    if (!folder.order.includes(key)) folder.order.push(key);
+  }
+  for (const pid of folder.products) {
+    const key = `p:${pid}`;
+    if (!folder.order.includes(key)) folder.order.push(key);
+  }
+  return folder.order;
+}
+function setFolderOrder(folder, order) {
+  folder.order = order.slice();
+}
+function attachReorderDnD(li, kind, id, curFolder) {
+  // Long-press to enable dragging
+  li.setAttribute('draggable', 'false');
+  li.dataset.kind = kind;
+  li.dataset.id = id; // id can be raw id or mixed key like 'f:ID' or 'p:ID'
+  let lpTimer = null;
+  const enableDrag = () => { li.setAttribute('draggable', 'true'); li.classList.add('drag-ready'); };
+  const disableDrag = () => { li.setAttribute('draggable', 'false'); li.classList.remove('drag-ready'); };
+
+  const clearLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+  li.addEventListener('pointerdown', () => { clearLP(); lpTimer = setTimeout(enableDrag, 200); });
+  li.addEventListener('pointerup', () => { clearLP(); });
+  li.addEventListener('pointerleave', () => { clearLP(); });
+  li.addEventListener('pointercancel', () => { clearLP(); });
+
+  li.addEventListener('dragstart', (e) => {
+    dragSrcEl = li;
+    li.classList.add('dragging');
+    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); } catch {}
+  });
+  li.addEventListener('dragend', () => {
+    li.classList.remove('dragging');
+    document.querySelectorAll('.drop-before').forEach(n => n.classList.remove('drop-before'));
+    dragSrcEl = null;
+    // Disable drag until next long-press
+    disableDrag();
+  });
+  li.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const target = li;
+    if (!dragSrcEl || dragSrcEl === target) return;
+    const rect = target.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height / 2;
+    target.classList.toggle('drop-before', before);
+  });
+  li.addEventListener('dragleave', () => {
+    li.classList.remove('drop-before');
+  });
+  li.addEventListener('drop', (e) => {
+    e.preventDefault();
+    li.classList.remove('drop-before');
+    if (!dragSrcEl || dragSrcEl === li) return;
+    const srcId = dragSrcEl.dataset.id;
+    const dstId = li.dataset.id;
+    const arr = kind === 'order' ? getFolderOrder(curFolder) : (kind === 'folder' ? curFolder.subfolders : curFolder.products);
+    const srcIdx = arr.indexOf(srcId);
+    const dstIdx = arr.indexOf(dstId);
+    if (srcIdx < 0 || dstIdx < 0) return;
+    // Determine insertion index (before or after)
+    const rect = li.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height / 2;
+    // Remove src
+    arr.splice(srcIdx, 1);
+    let insertAt = dstIdx;
+    if (!before) insertAt = dstIdx + (srcIdx < dstIdx ? 0 : 1);
+    else insertAt = dstIdx + (srcIdx < dstIdx ? -1 : 0);
+    if (insertAt < 0) insertAt = 0;
+    if (insertAt > arr.length) insertAt = arr.length;
+    arr.splice(insertAt, 0, srcId);
+    if (kind === 'order') setFolderOrder(curFolder, arr);
+    saveStateDebounced();
+    renderAll();
+  });
+}
+
+// ---------------------------- Autosave Pipeline ----------------------------
+let autosaveInProgress = false;
+let autosaveQueued = false;
+let lastAutosaveTs = 0;
+let lastUploadedBackupName = null; // name like save_YYYY-MM-DD_hh-mm-ss.json
+let lastAppliedBackupName = null;  // last remote backup name that we loaded into app
+let remotePollTimerId = null;
+
+async function runAutosave(downloadAlso = false) {
+  if (autosaveInProgress) { autosaveQueued = true; return; }
+  if (!navigator.onLine || !ENABLE_CLOUD) { autosaveQueued = true; return; }
+  try {
+    autosaveInProgress = true;
+    setSyncStatus('Syncing…'); // yellow blink
+    // Use the same pipeline as manual Save button
+    await saveSnapshot(downloadAlso);
+    await uploadBackupToCloud();
+    // If both above succeeded, uploadBackupToCloud will set status; ensure saved state here too
+    setSyncStatus('Backup saved'); // green with check
+    lastAutosaveTs = Date.now();
+  } catch (e) {
+    console.warn('Autosave failed', e);
+    setSyncStatus('Upload error');
+    autosaveQueued = true;
+  } finally {
+    autosaveInProgress = false;
+    if (autosaveQueued && navigator.onLine) {
+      autosaveQueued = false;
+      // Debounce small bursts
+      setTimeout(() => runAutosave(false), 500);
+    }
+  }
+}
+
+function scheduleAutosave() {
+  // Try immediately; if offline it will queue
+  runAutosave(false);
+}
+
+// (moved: computeProductionInRange/exportProductionPDF defined later once)
+
+function openActionsMenu() {
+  const body = document.createElement('div');
+  const saveBtn = document.createElement('button'); saveBtn.textContent = 'Save (snapshot + cloud)'; saveBtn.type = 'button';
+  const importBtn = document.createElement('button'); importBtn.textContent = 'Import JSON'; importBtn.type = 'button';
+  const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export JSON'; exportBtn.type = 'button';
+  [saveBtn, importBtn, exportBtn].forEach(b => { b.style.display = 'block'; b.style.marginBottom = '8px'; });
+  body.appendChild(saveBtn); body.appendChild(importBtn); body.appendChild(exportBtn);
+  openModal({
+    title: 'Actions',
+    body,
+    actions: [ { label: 'Close' } ]
+  });
+  saveBtn.addEventListener('click', async () => { await saveSnapshot(true); await uploadBackupToCloud(); closeModal(); });
+  importBtn.addEventListener('click', () => { document.getElementById('import-file').click(); closeModal(); });
+  exportBtn.addEventListener('click', () => { exportState(); closeModal(); });
 }
 
 function clearAllCookies() {
@@ -109,7 +408,8 @@ async function uploadBackupToCloud() {
   try {
     setSyncStatus('Uploading…');
     const ts = formatTs(Date.now());
-    const path = `${BACKUP_PREFIX}save_${ts}.json`;
+    const fileName = `save_${ts}_${CLIENT_ID}.json`;
+    const path = `${BACKUP_PREFIX}${fileName}`;
     const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`;
     const res = await fetch(url, {
       method: 'PUT',
@@ -123,10 +423,79 @@ async function uploadBackupToCloud() {
     setSyncStatus('Backup saved');
     // Retention: keep only latest 3 backups
     await pruneBackups(3).catch(err => console.warn('Prune failed', err));
+    lastUploadedBackupName = fileName;
+    // Persist the latest name we created (so other tabs/devices can compare)
+    try { localStorage.setItem(LAST_BACKUP_NAME_KEY, fileName); lastKnownBackupName = fileName; } catch {}
   } catch (e) {
     console.warn(e);
     setSyncStatus('Upload error');
   }
+}
+
+async function getLatestRemoteBackupName() {
+  const list = await listCloudBackups();
+  if (!Array.isArray(list) || !list.length) return null;
+  const jsonOnly = list.filter(x => (x.name || '').toLowerCase().endsWith('.json'));
+  if (!jsonOnly.length) return null;
+  jsonOnly.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+  return jsonOnly[0].name || null;
+}
+
+async function applyRemoteBackupByName(name) {
+  if (!name) return false;
+  try {
+    const remote = await downloadBackupObject(name);
+    if (remote && typeof remote === 'object') {
+      appState = remote;
+      await writeState(appState);
+      lastAppliedBackupName = name;
+      try { localStorage.setItem(LAST_BACKUP_NAME_KEY, name); lastKnownBackupName = name; } catch {}
+      // Close transient UI and re-render
+      try { closeModal(); } catch {}
+      try { closeEditor(); } catch {}
+      renderAll();
+      setSyncStatus('Synced');
+      return true;
+    }
+  } catch (e) {
+    console.warn('Apply remote backup failed', e);
+    setSyncStatus('Cloud error');
+  }
+  return false;
+}
+
+async function startRemoteBackupWatcher() {
+  if (!ENABLE_CLOUD) return;
+  // Do not pre-mark lastApplied to latest; rely on what we actually loaded
+  // Restore last known backup name from storage for better first-check accuracy
+  if (!lastAppliedBackupName && lastKnownBackupName) lastAppliedBackupName = lastKnownBackupName;
+  if (remotePollTimerId) clearInterval(remotePollTimerId);
+  remotePollTimerId = setInterval(async () => {
+    if (!navigator.onLine) return;
+    try {
+      const latestName = await getLatestRemoteBackupName();
+      if (!latestName) return;
+      // If the latest remote backup is not ours and not already applied, refresh
+      if (latestName !== lastUploadedBackupName && latestName !== lastAppliedBackupName) {
+        // Skip if the latest backup clearly belongs to this client (filename contains CLIENT_ID)
+        if (latestName.includes(CLIENT_ID)) {
+          lastAppliedBackupName = latestName; // acknowledge
+          return;
+        }
+        showToast('New version found, refreshing', 1000);
+        setSyncStatus('Checking cloud…');
+        const overlay = document.getElementById('refresh-overlay');
+        try { overlay?.classList.add('show'); } catch {}
+        try {
+          await applyRemoteBackupByName(latestName);
+        } finally {
+          try { overlay?.classList.remove('show'); } catch {}
+        }
+      }
+    } catch (e) {
+      // Silent poll failures
+    }
+  }, 1000);
 }
 
 async function deleteBackupObject(name) {
@@ -241,15 +610,25 @@ function openProductEditModal(productId) {
   const nameRow = document.createElement('div');
   const nameLabel = document.createElement('div'); nameLabel.textContent = 'Name'; nameLabel.style.marginBottom = '4px';
   const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = p.name || ''; nameInput.style.width = '100%'; nameInput.style.padding = '8px'; nameInput.style.border = '1px solid #d1d5db'; nameInput.style.borderRadius = '8px';
+  nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
   nameRow.appendChild(nameLabel); nameRow.appendChild(nameInput);
 
   const priceRow = document.createElement('div'); priceRow.style.marginTop = '10px';
   const priceLabel = document.createElement('div'); priceLabel.textContent = 'Price'; priceLabel.style.marginBottom = '4px';
-  const priceInput = document.createElement('input'); priceInput.type = 'number'; priceInput.step = '0.01'; priceInput.min = '0'; priceInput.value = p.price || 0; priceInput.style.width = '100%'; priceInput.style.padding = '8px'; priceInput.style.border = '1px solid #d1d5db'; priceInput.style.borderRadius = '8px';
+  const priceInput = document.createElement('input'); priceInput.type = 'number'; priceInput.step = '0.01'; priceInput.min = '0'; priceInput.value = p.price || 0; priceInput.style.width = '100%'; priceInput.style.padding = '8px'; priceInput.style.border = '1px solid #d1d5db'; priceInput.style.borderRadius = '8px'; priceInput.inputMode = 'decimal';
+  priceInput.addEventListener('focus', () => { try { priceInput.select(); } catch {} });
   priceRow.appendChild(priceLabel); priceRow.appendChild(priceInput);
+
+  // Target Quantity row (under Price)
+  const targetRow = document.createElement('div'); targetRow.style.marginTop = '10px';
+  const targetLabel = document.createElement('div'); targetLabel.textContent = 'Target Quantity'; targetLabel.style.marginBottom = '4px';
+  const targetInput = document.createElement('input'); targetInput.type = 'number'; targetInput.step = '1'; targetInput.min = '0'; targetInput.value = p.targetQuantity || 0; targetInput.style.width = '100%'; targetInput.style.padding = '8px'; targetInput.style.border = '1px solid #d1d5db'; targetInput.style.borderRadius = '8px'; targetInput.inputMode = 'numeric';
+  targetInput.addEventListener('focus', () => { try { targetInput.select(); } catch {} });
+  targetRow.appendChild(targetLabel); targetRow.appendChild(targetInput);
 
   wrap.appendChild(nameRow);
   wrap.appendChild(priceRow);
+  wrap.appendChild(targetRow);
 
   openModal({
     title: 'Edit Product',
@@ -258,6 +637,7 @@ function openProductEditModal(productId) {
       { label: 'Save', onClick: () => {
           const newName = nameInput.value.trim();
           const newPrice = Number(priceInput.value || 0);
+          const newTarget = Number(targetInput.value || 0);
           openModal({
             title: 'Confirm Save',
             body: 'Apply these changes to the product?',
@@ -265,11 +645,14 @@ function openProductEditModal(productId) {
               { label: 'Confirm', onClick: () => {
                   p.name = newName || p.name;
                   p.price = newPrice;
+                  p.targetQuantity = newTarget;
                   saveStateDebounced();
                   // update product page fields
                   document.getElementById('pp-title').textContent = p.name;
                   document.getElementById('pp-name').textContent = p.name;
                   document.getElementById('pp-price').textContent = formatCurrency(p.price);
+                  document.getElementById('pp-qty').textContent = p.quantity || 0;
+                  document.getElementById('pp-target').textContent = p.targetQuantity || 0;
                   document.getElementById('pp-total').textContent = formatCurrency(p.price * (p.quantity||0));
                   renderFolderList();
                 } },
@@ -278,6 +661,49 @@ function openProductEditModal(productId) {
           });
         } },
       { label: 'Cancel' }
+    ]
+  });
+  setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
+  try { document.getElementById('modal-close').textContent = '← Back'; } catch {}
+}
+
+function openSettings() {
+  const wrap = document.createElement('div');
+  wrap.className = 'settings-wrap';
+  const plannedGroup = document.createElement('div'); plannedGroup.className = 'set-row';
+  const plannedLabel = document.createElement('label'); plannedLabel.className = 'set-col'; plannedLabel.innerHTML = `<div class="set-k">Planned total</div>`;
+  const plannedInput = document.createElement('input'); plannedInput.type = 'number'; plannedInput.min = '0'; plannedInput.step = '1'; plannedInput.inputMode = 'numeric'; plannedInput.placeholder = 'e.g. 30000'; plannedInput.value = appState.settings?.plannedValue ?? '';
+  plannedLabel.appendChild(plannedInput);
+  const dateLabel = document.createElement('label'); dateLabel.className = 'set-col'; dateLabel.innerHTML = `<div class="set-k">End date</div>`;
+  const dateInput = document.createElement('input'); dateInput.type = 'date'; dateInput.value = appState.settings?.endDate ? new Date(appState.settings.endDate).toISOString().slice(0,10) : '';
+  dateLabel.appendChild(dateInput);
+  plannedGroup.appendChild(plannedLabel); plannedGroup.appendChild(dateLabel);
+  wrap.appendChild(plannedGroup);
+  // Add dangerous RESET STATS button inside body
+  const dangerRow = document.createElement('div'); dangerRow.style.marginTop = '12px'; dangerRow.style.display = 'flex'; dangerRow.style.justifyContent = 'flex-start';
+  const resetBtn = document.createElement('button'); resetBtn.textContent = 'RESET STATS'; resetBtn.className = 'danger';
+  resetBtn.addEventListener('click', showResetStatsConfirm);
+  dangerRow.appendChild(resetBtn);
+  wrap.appendChild(dangerRow);
+  openModal({
+    title: 'Settings',
+    body: wrap,
+    actions: [
+      { label: 'Save', onClick: () => {
+          appState.settings = appState.settings || {};
+          appState.settings.plannedValue = Number(plannedInput.value || 0);
+          if (dateInput.value) {
+            const endLocal = new Date(`${dateInput.value}T23:59:59`);
+            appState.settings.endDate = endLocal.toISOString();
+          } else {
+            appState.settings.endDate = null;
+          }
+          // Recompute today's goal immediately to reflect changes
+          recomputeDailyGoalNow();
+          saveStateDebounced();
+          renderAll();
+          showToast('Settings saved');
+        } }
     ]
   });
 }
@@ -312,6 +738,11 @@ function openModal({ title = 'Confirm', body = '', actions = [] } = {}) {
   actions.forEach(a => {
     const b = document.createElement('button');
     b.textContent = a.label;
+    // Style destructive actions as red
+    try {
+      const lbl = String(a.label || '').toLowerCase();
+      if (lbl.includes('delete') || lbl.includes('remove')) b.classList.add('danger');
+    } catch {}
     b.addEventListener('click', () => { closeModal(); a.onClick?.(); });
     actionsEl.appendChild(b);
   });
@@ -321,12 +752,47 @@ function closeModal() { document.getElementById('modal').classList.add('hidden')
 
 function setSyncStatus(text) {
   const el = document.getElementById('sync-status');
-  el.textContent = text;
+  if (!el) return;
+  // reset
+  el.classList.remove('status-active', 'status-ok', 'status-error', 'status-saved');
+  el.textContent = '';
+  el.setAttribute('aria-label', String(text || ''));
+
+  const t = String(text || '').toLowerCase();
+  // Active: checking, uploading, syncing
+  if (t.includes('checking') || t.includes('upload') || t.includes('sync') && !(t.includes('saved') || t.includes('synced'))) {
+    el.classList.add('status-active');
+    return;
+  }
+  // Error states
+  if (t.includes('offline') || t.includes('error') || t.includes('fail')) {
+    el.classList.add('status-error');
+    return;
+  }
+  // Saved/synced OK
+  if (t.includes('saved') || t.includes('synced') || t.includes('backup saved')) {
+    el.classList.add('status-saved');
+    el.textContent = '✓';
+    return;
+  }
+  // Generic OK/online
+  if (t.includes('online') || t.includes('ok') || t.includes('ready')) {
+    el.classList.add('status-ok');
+    return;
+  }
+  // default: leave neutral gray
 }
 
 function formatCurrency(value) {
-  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(value || 0); }
-  catch { return (value || 0).toFixed(2); }
+  try {
+    const n = Math.round(Number(value || 0));
+    const formatted = new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+    return `${formatted}\u00A0€`;
+  }
+  catch {
+    const n = Math.round(Number(value || 0));
+    return `${n}\u00A0€`;
+  }
 }
 
 // Image resize to max WxH (returns dataURL)
@@ -336,13 +802,15 @@ function resizeImageToDataURL(file, maxW = 300, maxH = 300) {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        let { width, height } = img;
-        const ratio = Math.min(maxW / width, maxH / height, 1);
+        // Crop to centered square then resize to 300x300
+        const side = Math.min(img.width, img.height);
+        const sx = Math.floor((img.width - side) / 2);
+        const sy = Math.floor((img.height - side) / 2);
         const canvas = document.createElement('canvas');
-        canvas.width = Math.round(width * ratio);
-        canvas.height = Math.round(height * ratio);
+        canvas.width = maxW;
+        canvas.height = maxH;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, maxW, maxH);
         resolve(canvas.toDataURL('image/jpeg', 0.9));
       };
       img.onerror = reject;
@@ -398,7 +866,8 @@ function saveStateDebounced() {
     try {
       appState.lastModified = Date.now();
       await writeState(appState);
-      queueCloudSync();
+      // Trigger autosave to cloud backup (same logic as Save button)
+      scheduleAutosave();
     } catch (e) {
       console.error(e);
       showToast('Failed to save');
@@ -414,7 +883,9 @@ function initEmptyState() {
     folders: {
       root: { id: 'root', name: 'Home', parentId: null, imageUrl: null, subfolders: [], products: [] }
     },
-    products: {}
+    products: {},
+    productionLog: [],
+    settings: { plannedValue: 0, endDate: null }
   };
 }
 
@@ -490,6 +961,9 @@ function renderBreadcrumbs() {
 function renderFolderList(folderId = currentFolderId) {
   const container = document.getElementById('folder-list');
   container.innerHTML = '';
+  // Reset stats bar
+  const statsBar = document.getElementById('stats-bar');
+  if (statsBar) statsBar.innerHTML = '';
 
   const rootUl = document.createElement('ul');
   rootUl.className = 'tree';
@@ -497,119 +971,112 @@ function renderFolderList(folderId = currentFolderId) {
   const curFolder = appState.folders[folderId];
   if (!curFolder) return;
 
-  // If on root, show stats card at top
-  if (folderId === 'root') {
+  // Always show stats bar (totals for entire database)
+  if (statsBar) {
     const stats = computeStats('root');
-    const card = document.createElement('div');
-    card.className = 'stats-card';
-    const title = document.createElement('div'); title.className = 'title'; title.textContent = 'SVI PROIZVODI';
-    const vals = document.createElement('div'); vals.className = 'values';
-    const q = document.createElement('div'); q.textContent = `Total Qty: ${stats.totalQty}`;
-    const v = document.createElement('div'); v.textContent = `Total Value: ${formatCurrency(stats.totalValue)}`;
-    vals.appendChild(q); vals.appendChild(v);
-    card.appendChild(title); card.appendChild(vals);
-    document.getElementById('folder-list').appendChild(card);
+    const wrap = document.createElement('div');
+    wrap.className = 'stats-bar-inner';
+    const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">Total Qty</div><div class="sb-v">${stats.totalQty} pc</div>`;
+    const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">Total Value</div><div class="sb-v">${formatCurrency(stats.totalValue)}</div>`;
+    wrap.appendChild(itemQty); wrap.appendChild(itemVal);
+
+    // Daily Remaining card (only when plan is set)
+    const settings = appState.settings || {};
+    // Days left (based on end date)
+    if (settings.endDate) {
+      const end = new Date(settings.endDate);
+      const today = new Date(); today.setHours(0,0,0,0);
+      const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
+      const daysLeft = Math.max(0, rawDays);
+      const itemDays = document.createElement('div'); itemDays.className = 'sb-item'; itemDays.innerHTML = `<div class="sb-k">Days left</div><div class="sb-v">${daysLeft}</div>`;
+      wrap.appendChild(itemDays);
+    }
+    if (settings.plannedValue && settings.endDate) {
+      ensureDailyProgress();
+      const currentValue = stats.totalValue;
+      const startVal = Number(appState.dailyProgress?.startValue || 0);
+      const addedToday = Math.max(0, Math.round(currentValue - startVal));
+      const fixedDailyGoal = Number(appState.dailyProgress?.fixedGoal || 0);
+      const remainingToday = Math.max(0, Math.round(fixedDailyGoal - addedToday));
+      const extraToday = Math.max(0, Math.round(addedToday - fixedDailyGoal));
+
+      const itemRemain = document.createElement('div');
+      itemRemain.className = 'sb-item sb-daily';
+      const goalReached = addedToday >= fixedDailyGoal;
+      const goalLabel = goalReached ? 'Produced today' : 'Daily goal';
+      const goalValue = goalReached ? formatCurrency(addedToday) : formatCurrency(fixedDailyGoal);
+      itemRemain.innerHTML = `
+        <div class="sb-col">
+          <div class="sb-k">${goalLabel}</div>
+          <div class="sb-v">${goalValue}</div>
+        </div>
+        <div class="sb-col">
+          <div class="sb-k">Remaining today</div>
+          <div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div>
+        </div>
+        ${extraToday>0?`<div class="sb-col">
+          <div class="sb-k">Extra</div>
+          <div class="sb-v sb-good">+${formatCurrency(extraToday)}</div>
+        </div>`:''}
+      `;
+      wrap.appendChild(itemRemain);
+    }
+    statsBar.appendChild(wrap);
   }
 
-  // Subfolders (no recursion)
-  for (const fid of curFolder.subfolders) {
-    const f = appState.folders[fid];
-    if (!f) continue;
-    const stats = computeStats(fid);
-
-    const li = document.createElement('li');
-
-    const left = document.createElement('div');
-    left.className = 'item-left';
-    const icon = document.createElement('div');
-    icon.className = 'icon-box';
-    if (f.imageUrl) {
-      const img = document.createElement('img');
-      img.src = f.imageUrl;
-      img.alt = 'folder';
-      icon.appendChild(img);
-    } else {
-      icon.textContent = '📁';
+  // Mixed order render (folders and products interleaved)
+  const order = getFolderOrder(curFolder);
+  for (const key of order) {
+    if (key.startsWith('f:')) {
+      const fid = key.slice(2);
+      const f = appState.folders[fid];
+      if (!f) continue;
+      const stats = computeStats(fid);
+      const li = document.createElement('li');
+      const left = document.createElement('div'); left.className = 'item-left';
+      const icon = document.createElement('div'); icon.className = 'icon-box';
+      if (f.imageUrl) { const img = document.createElement('img'); img.src = f.imageUrl; img.alt = 'folder'; icon.appendChild(img); }
+      else { icon.textContent = '📁'; }
+      const textCol = document.createElement('div'); textCol.className = 'text-col';
+      const name = document.createElement('span'); name.className = 'name'; name.textContent = f.name;
+      name.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
+      const meta = document.createElement('span'); meta.className = 'meta'; meta.textContent = `Qty: ${stats.totalQty}   ${formatCurrency(stats.totalValue)}`;
+      textCol.appendChild(name); textCol.appendChild(meta);
+      left.appendChild(icon); left.appendChild(textCol);
+      left.style.cursor = 'pointer'; left.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
+      const actions = document.createElement('div'); actions.className = 'actions';
+      const moreBtn = document.createElement('button'); moreBtn.textContent = '⋯'; moreBtn.title = 'More';
+      moreBtn.addEventListener('click', (e) => { e.stopPropagation(); openFolderMenu(fid); });
+      actions.appendChild(moreBtn);
+      // Use unified order DnD with mixed key
+      attachReorderDnD(li, 'order', `f:${fid}`, curFolder);
+      li.appendChild(left); li.appendChild(actions); rootUl.appendChild(li);
+    } else if (key.startsWith('p:')) {
+      const pid = key.slice(2);
+      const p = appState.products[pid];
+      if (!p) continue;
+      const pli = document.createElement('li');
+      const leftp = document.createElement('div'); leftp.className = 'item-left';
+      const picon = document.createElement('div'); picon.className = 'icon-box';
+      if (p.imageUrl) { const im = document.createElement('img'); im.src = p.imageUrl; im.alt = 'product'; picon.appendChild(im); }
+      else { picon.textContent = '📦'; }
+      const ptext = document.createElement('div'); ptext.className = 'text-col';
+      const pname = document.createElement('span'); pname.className = 'name'; pname.textContent = p.name;
+      pname.addEventListener('click', () => openProductPage(p.id));
+      const pmeta = document.createElement('span'); pmeta.className = 'meta';
+      const qty = Number(p.quantity || 0); const price = Number(p.price || 0);
+      pmeta.textContent = `Qty: ${qty}   ${formatCurrency(qty * price)}`;
+      ptext.appendChild(pname); ptext.appendChild(pmeta);
+      leftp.appendChild(picon); leftp.appendChild(ptext);
+      leftp.style.cursor = 'pointer'; leftp.addEventListener('click', () => openProductPage(p.id));
+      const actionsP = document.createElement('div'); actionsP.className = 'actions';
+      const moreBtnP = document.createElement('button'); moreBtnP.textContent = '⋯'; moreBtnP.title = 'More';
+      moreBtnP.addEventListener('click', (e) => { e.stopPropagation(); openProductMenu(p.id); });
+      actionsP.appendChild(moreBtnP);
+      // Use unified order DnD with mixed key
+      attachReorderDnD(pli, 'order', `p:${p.id}`, curFolder);
+      pli.appendChild(leftp); pli.appendChild(actionsP); rootUl.appendChild(pli);
     }
-    const textCol = document.createElement('div');
-    textCol.className = 'text-col';
-    const name = document.createElement('span');
-    name.className = 'name';
-    name.textContent = f.name;
-    name.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
-    const meta = document.createElement('span');
-    meta.className = 'meta';
-    meta.textContent = `Qty: ${stats.totalQty}   ${formatCurrency(stats.totalValue)}`;
-    textCol.appendChild(name);
-    textCol.appendChild(meta);
-    left.appendChild(icon);
-    left.appendChild(textCol);
-
-    const actions = document.createElement('div');
-    actions.className = 'actions';
-    const addBtn = document.createElement('button');
-    addBtn.textContent = '+';
-    addBtn.title = 'Add to this folder';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); openAddMenu(fid); });
-    const moreBtn = document.createElement('button');
-    moreBtn.textContent = '⋯';
-    moreBtn.title = 'More';
-    moreBtn.addEventListener('click', (e) => { e.stopPropagation(); openFolderMenu(fid); });
-    actions.appendChild(addBtn);
-    actions.appendChild(moreBtn);
-
-    li.appendChild(left);
-    li.appendChild(actions);
-    rootUl.appendChild(li);
-  }
-
-  // Products in current folder
-  for (const pid of curFolder.products) {
-    const p = appState.products[pid];
-    if (!p) continue;
-
-    const pli = document.createElement('li');
-
-    const leftp = document.createElement('div');
-    leftp.className = 'item-left';
-    const picon = document.createElement('div');
-    picon.className = 'icon-box';
-    if (p.imageUrl) {
-      const im = document.createElement('img');
-      im.src = p.imageUrl;
-      im.alt = 'product';
-      picon.appendChild(im);
-    } else {
-      picon.textContent = '📦';
-    }
-    const ptext = document.createElement('div');
-    ptext.className = 'text-col';
-    const pname = document.createElement('span');
-    pname.className = 'name';
-    pname.textContent = p.name;
-    pname.addEventListener('click', () => openProductPage(p.id));
-    const pmeta = document.createElement('span');
-    pmeta.className = 'meta';
-    const qty = Number(p.quantity || 0);
-    const price = Number(p.price || 0);
-    pmeta.textContent = `Qty: ${qty}   ${formatCurrency(qty * price)}`;
-    ptext.appendChild(pname);
-    ptext.appendChild(pmeta);
-    leftp.appendChild(picon);
-    leftp.appendChild(ptext);
-
-    const actionsP = document.createElement('div');
-    actionsP.className = 'actions';
-    const delBtn = document.createElement('button');
-    delBtn.textContent = '🗑';
-    delBtn.title = 'Delete product';
-    delBtn.addEventListener('click', (e) => { e.stopPropagation(); confirmDeleteProduct(p.id); });
-
-    actionsP.appendChild(delBtn);
-
-    pli.appendChild(leftp);
-    pli.appendChild(actionsP);
-    rootUl.appendChild(pli);
   }
 
   container.appendChild(rootUl);
@@ -618,6 +1085,47 @@ function renderFolderList(folderId = currentFolderId) {
 function renderAll() {
   renderBreadcrumbs();
   renderFolderList();
+  renderPriorityGraph();
+}
+
+function openFolderEditModal(folderId) {
+  const f = appState.folders[folderId];
+  if (!f) return;
+  const wrap = document.createElement('div');
+  const nameRow = document.createElement('div');
+  const nameLabel = document.createElement('div'); nameLabel.textContent = 'Name'; nameLabel.style.marginBottom = '4px';
+  const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = f.name || ''; nameInput.style.width = '100%'; nameInput.style.padding = '8px'; nameInput.style.border = '1px solid #d1d5db'; nameInput.style.borderRadius = '8px';
+  nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
+  nameRow.appendChild(nameLabel); nameRow.appendChild(nameInput);
+
+  const imgRow = document.createElement('div'); imgRow.style.marginTop = '10px';
+  const imgLabel = document.createElement('div'); imgLabel.textContent = 'Image'; imgLabel.style.marginBottom = '4px';
+  const imgInput = document.createElement('input'); imgInput.type = 'file'; imgInput.accept = 'image/*';
+  const preview = document.createElement('div'); preview.style.marginTop = '6px'; preview.innerHTML = f.imageUrl ? `<img src="${f.imageUrl}" alt="folder" style="max-width:100%;border-radius:8px;border:1px solid #e5e7eb;"/>` : '';
+  imgInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    try { const dataUrl = await resizeImageToDataURL(file, 300, 300); f.imageUrl = dataUrl; preview.innerHTML = `<img src="${f.imageUrl}" alt="folder" style="max-width:100%;border-radius:8px;border:1px solid #e5e7eb;"/>`; saveStateDebounced(); }
+    catch {}
+  });
+  imgRow.appendChild(imgLabel); imgRow.appendChild(imgInput); imgRow.appendChild(preview);
+
+  wrap.appendChild(nameRow);
+  wrap.appendChild(imgRow);
+
+  openModal({
+    title: 'Edit Folder',
+    body: wrap,
+    actions: [
+      { label: 'Save', onClick: () => {
+          const newName = nameInput.value.trim();
+          f.name = newName || f.name;
+          saveStateDebounced();
+          renderAll();
+        } },
+      { label: 'Cancel' }
+    ]
+  });
+  setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
 }
 
 // ---------------------------- Editor ----------------------------
@@ -646,16 +1154,23 @@ function openEditor(type, id) {
     }
   } else {
     title.textContent = id ? 'Edit Product' : 'New Product';
-    const p = id ? appState.products[id] : { name: '', price: 0, quantity: 0, note: '' };
+    const p = id ? appState.products[id] : { name: '', price: 0, quantity: 0, note: '', targetQuantity: 0, priority: false };
     document.getElementById('editor-name').value = p.name || '';
     document.getElementById('editor-price').value = p.price ?? 0;
     document.getElementById('editor-quantity').value = p.quantity ?? 0;
+    document.getElementById('editor-target').value = p.targetQuantity ?? 0;
+    const prio = document.getElementById('editor-priority'); if (prio) prio.checked = !!p.priority;
     document.getElementById('product-fields').classList.remove('hidden');
     // Note is edited on product page; no custom fields UI
   }
 
   panel.classList.remove('hidden');
-  document.getElementById('main').classList.add('with-editor');
+  // Back label
+  const backBtn = document.getElementById('editor-close');
+  if (backBtn) backBtn.textContent = '← Back';
+  // Focus and preselect name field
+  const nameEl = document.getElementById('editor-name');
+  setTimeout(() => { try { nameEl.focus(); nameEl.select(); } catch {} }, 0);
 }
 
 function closeEditor() {
@@ -680,12 +1195,12 @@ function createFolder(parentId) {
   appState.folders[parentId].subfolders.push(id);
   saveStateDebounced();
   renderAll();
-  openEditor('folder', id);
+  openFolderEditModal(id);
 }
 
 function createProduct(folderId) {
   const id = uuid();
-  appState.products[id] = { id, name: 'New Product', price: 0, quantity: 0, note: '', imageUrl: null };
+  appState.products[id] = { id, name: 'New Product', price: 0, quantity: 0, note: '', imageUrl: null, targetQuantity: 0, priority: false };
   appState.folders[folderId].products.push(id);
   saveStateDebounced();
   renderAll();
@@ -696,6 +1211,10 @@ function deleteFolder(folderId) {
   if (folderId === 'root') return showToast('Cannot delete root');
   const f = appState.folders[folderId];
   if (!f) return;
+  // Compute total value being removed for production log
+  const stats = computeStats(folderId);
+  const removedValue = stats.totalValue || 0;
+  const removedQty = stats.totalQty || 0;
   // recursively delete subfolders
   for (const sf of [...f.subfolders]) deleteFolder(sf);
   // delete products
@@ -704,6 +1223,11 @@ function deleteFolder(folderId) {
   const parent = appState.folders[f.parentId];
   if (parent) parent.subfolders = parent.subfolders.filter(x => x !== folderId);
   delete appState.folders[folderId];
+  // Log the removal as negative production
+  if (removedValue > 0 || removedQty > 0) {
+    appState.productionLog = appState.productionLog || [];
+    appState.productionLog.push({ ts: Date.now(), productId: null, delta: -removedQty, price: 0, value: -removedValue });
+  }
   saveStateDebounced();
   renderAll();
 }
@@ -711,12 +1235,20 @@ function deleteFolder(folderId) {
 function deleteProduct(productId) {
   const p = appState.products[productId];
   if (!p) return;
+  // Compute value being removed for production log
+  const removedValue = (Number(p.price || 0)) * (Number(p.quantity || 0));
+  const removedQty = Number(p.quantity || 0);
   // find parent folder
   for (const f of Object.values(appState.folders)) {
     const idx = f.products.indexOf(productId);
     if (idx >= 0) { f.products.splice(idx, 1); break; }
   }
   delete appState.products[productId];
+  // Log the removal as negative production
+  if (removedValue > 0 || removedQty > 0) {
+    appState.productionLog = appState.productionLog || [];
+    appState.productionLog.push({ ts: Date.now(), productId, delta: -removedQty, price: Number(p.price || 0), value: -removedValue });
+  }
   saveStateDebounced();
   renderAll();
 }
@@ -732,33 +1264,33 @@ function saveEditorForm(e) {
     if (!f) return;
     f.name = name || f.name;
   } else {
-    const p = appState.products[id];
+    // Product save
+    const p = id ? appState.products[id] : null;
     if (!p) return;
     p.name = name || p.name;
     p.price = Number(document.getElementById('editor-price').value || 0);
     p.quantity = Number(document.getElementById('editor-quantity').value || 0);
-    // Note handled separately on product page
+    p.targetQuantity = Number(document.getElementById('editor-target').value || 0);
+    p.priority = !!document.getElementById('editor-priority').checked;
+    saveStateDebounced();
+    renderAll();
+    closeEditor();
   }
-  saveStateDebounced();
-  renderAll();
-  closeEditor();
 }
 
 function onFolderImageSelected(e) {
   const file = e.target.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
+  resizeImageToDataURL(file, 300, 300).then((dataUrl) => {
     const id = document.getElementById('editor-entity-id').value;
     const f = appState.folders[id];
     if (!f) return;
-    f.imageUrl = reader.result;
+    f.imageUrl = dataUrl;
     const prev = document.getElementById('folder-image-preview');
     prev.innerHTML = `<img alt="folder" src="${f.imageUrl}" />`;
     prev.classList.remove('hidden');
     saveStateDebounced();
-  };
-  reader.readAsDataURL(file);
+  }).catch(() => {});
 }
 
 // ---------------------------- Menus ----------------------------
@@ -779,13 +1311,117 @@ function openFolderMenu(folderId) {
     title: 'Folder actions',
     body: 'Select an action',
     actions: [
-      { label: 'Edit', onClick: () => openEditor('folder', folderId) },
+      { label: 'Edit', onClick: () => openFolderEditModal(folderId) },
       { label: 'Delete', onClick: () => confirmDeleteFolder(folderId) },
       { label: 'New Subfolder', onClick: () => createFolder(folderId) },
       { label: 'New Product', onClick: () => createProduct(folderId) },
+      { label: 'Move to…', onClick: () => openMoveDialog('folder', folderId) }
+    ]
+  });
+}
+
+function openProductMenu(productId) {
+  openModal({
+    title: 'Product actions',
+    body: 'Select an action',
+    actions: [
+      { label: 'Edit', onClick: () => openProductEditModal(productId) },
+      { label: 'Duplicate', onClick: () => duplicateProduct(productId) },
+      { label: 'Move to…', onClick: () => openMoveDialog('product', productId) },
+      { label: (() => { const p = appState.products[productId]; return p?.priority ? 'Unmark priority' : 'Mark as priority'; })(), onClick: () => {
+          const p = appState.products[productId]; if (!p) return; p.priority = !p.priority; saveStateDebounced(); renderAll();
+        } },
+      { label: 'Delete', onClick: () => confirmDeleteProduct(productId) }
+    ]
+  });
+}
+
+function duplicateProduct(productId) {
+  const p = appState.products[productId];
+  if (!p) return;
+  const id = uuid();
+  const copy = { ...p, id, name: (p.name || 'Product') + ' (copy)' };
+  appState.products[id] = copy;
+  for (const f of Object.values(appState.folders)) {
+    const idx = f.products.indexOf(productId);
+    if (idx >= 0) { f.products.push(id); break; }
+  }
+  saveStateDebounced();
+  openProductEditModal(id);
+}
+
+function openMoveDialog(type, id) {
+  const wrapper = document.createElement('div');
+  const list = document.createElement('div');
+  list.style.display = 'grid';
+  list.style.gap = '8px';
+  const radios = [];
+  const addFolderOption = (fid, label, disabled) => {
+    const row = document.createElement('label');
+    row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '8px';
+    const r = document.createElement('input'); r.type = 'radio'; r.name = 'move-target'; r.value = fid; r.disabled = !!disabled;
+    const span = document.createElement('span'); span.textContent = label;
+    row.appendChild(r); row.appendChild(span); list.appendChild(row); radios.push(r);
+  };
+  const build = (fid, prefix) => {
+    const f = appState.folders[fid];
+    if (!f) return;
+    const disabled = (type === 'folder' && (fid === id || isDescendantFolder(id, fid)));
+    addFolderOption(fid, (prefix || '') + (f.name || 'Folder'), disabled);
+    for (const sf of f.subfolders) build(sf, (prefix || '') + f.name + ' / ');
+  };
+  build('root', '');
+  wrapper.appendChild(list);
+  openModal({
+    title: 'Move to…',
+    body: wrapper,
+    actions: [
+      { label: 'Confirm', onClick: () => {
+          const r = radios.find(x => x.checked);
+          if (!r) return;
+          const target = r.value;
+          if (type === 'product') moveProductTo(id, target); else moveFolderTo(id, target);
+        } },
       { label: 'Cancel' }
     ]
   });
+}
+
+function isDescendantFolder(folderId, maybeChildId) {
+  if (folderId === maybeChildId) return true;
+  const f = appState.folders[folderId];
+  if (!f) return false;
+  for (const sf of f.subfolders) {
+    if (sf === maybeChildId) return true;
+    if (isDescendantFolder(sf, maybeChildId)) return true;
+  }
+  return false;
+}
+
+function moveProductTo(productId, folderId) {
+  const p = appState.products[productId];
+  if (!p || !appState.folders[folderId]) return;
+  for (const f of Object.values(appState.folders)) {
+    const idx = f.products.indexOf(productId);
+    if (idx >= 0) { f.products.splice(idx, 1); break; }
+  }
+  appState.folders[folderId].products.push(productId);
+  saveStateDebounced();
+  renderAll();
+}
+
+function moveFolderTo(folderId, targetFolderId) {
+  if (folderId === 'root' || folderId === targetFolderId) return;
+  const f = appState.folders[folderId];
+  const target = appState.folders[targetFolderId];
+  if (!f || !target) return;
+  if (isDescendantFolder(folderId, targetFolderId)) return;
+  const parent = appState.folders[f.parentId];
+  if (parent) parent.subfolders = parent.subfolders.filter(x => x !== folderId);
+  f.parentId = targetFolderId;
+  target.subfolders.push(folderId);
+  saveStateDebounced();
+  renderAll();
 }
 
 // ---------------------------- Search ----------------------------
@@ -981,30 +1617,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // UI wiring
   document.getElementById('add-btn').addEventListener('click', () => openAddMenu(currentFolderId));
-  document.getElementById('save-btn').addEventListener('click', async () => {
-    await saveSnapshot(true);
-    await uploadBackupToCloud();
-  });
-  document.getElementById('export-btn').addEventListener('click', exportState);
-  document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
-  document.getElementById('import-file').addEventListener('change', (e) => { const f = e.target.files?.[0]; if (f) importState(f); e.target.value = ''; });
+  const saveBtn = document.getElementById('save-btn');
+  if (saveBtn) saveBtn.addEventListener('click', async () => { await saveSnapshot(true); await uploadBackupToCloud(); showToast('Saved'); });
+  const actionsBtn = document.getElementById('actions-btn');
+  if (actionsBtn) actionsBtn.addEventListener('click', openActionsMenu);
+  const importFileEl = document.getElementById('import-file');
+  if (importFileEl) importFileEl.addEventListener('change', (e) => { const f = e.target.files?.[0]; if (f) importState(f); e.target.value = ''; });
+  const settingsBtn = document.getElementById('settings-btn');
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
 
-  document.getElementById('editor-close').addEventListener('click', closeEditor);
-  document.getElementById('editor-form').addEventListener('submit', saveEditorForm);
-  document.getElementById('delete-entity').addEventListener('click', () => {
-    const type = document.getElementById('editor-entity-type').value;
-    const id = document.getElementById('editor-entity-id').value;
+  // Connectivity listeners: keep status accurate and flush queued autosave when back online
+  window.addEventListener('online', () => {
+    setSyncStatus('Online');
+    if (autosaveQueued) runAutosave(false);
+  });
+  window.addEventListener('offline', () => {
+    setSyncStatus('Offline');
+  });
+  // Set initial status based on connectivity
+  setSyncStatus(navigator.onLine ? 'Online' : 'Offline');
+  // Start remote watcher
+  startRemoteBackupWatcher();
+
+  // Search toggle for portrait mode
+  const searchToggle = document.getElementById('search-toggle');
+  const searchBar = document.getElementById('search-bar');
+  if (searchToggle && searchBar) {
+    searchToggle.addEventListener('click', () => {
+      const isExpanded = searchBar.classList.contains('search-expanded');
+      if (!isExpanded) {
+        searchBar.classList.remove('search-collapsed');
+        searchBar.classList.add('search-expanded');
+        const input = document.getElementById('search-input');
+        if (input) { input.value = ''; input.focus(); }
+      } else {
+        searchBar.classList.remove('search-expanded');
+        searchBar.classList.add('search-collapsed');
+      }
+    });
+    // Collapse when clicking outside (only in portrait mode)
+    document.addEventListener('click', (e) => {
+      if (window.innerHeight > window.innerWidth) { // portrait
+        if (!searchBar.contains(e.target) && !searchToggle.contains(e.target)) {
+          searchBar.classList.remove('search-expanded');
+          searchBar.classList.add('search-collapsed');
+        }
+      }
+    });
+    // Collapse on Escape key (only in portrait mode)
+    document.addEventListener('keydown', (e) => {
+      if (window.innerHeight > window.innerWidth && e.key === 'Escape') {
+        searchBar.classList.remove('search-expanded');
+        searchBar.classList.add('search-collapsed');
+      }
+    });
+    // Reset on orientation change
+    window.addEventListener('orientationchange', () => {
+      if (window.innerHeight > window.innerWidth) { // portrait
+        searchBar.classList.remove('search-expanded');
+        searchBar.classList.add('search-collapsed');
+      } else {
+        // in landscape keep normal view
+        searchBar.classList.remove('search-collapsed');
+        searchBar.classList.remove('search-expanded');
+      }
+    });
+    // Also handle window resize (covers desktop resize and orientation change on some browsers)
+    window.addEventListener('resize', () => {
+      if (window.innerHeight > window.innerWidth) { // portrait
+        // ensure collapsed state
+        searchBar.classList.remove('search-expanded');
+        searchBar.classList.add('search-collapsed');
+      } else {
+        // landscape / desktop: show bar
+        searchBar.classList.remove('search-collapsed');
+        searchBar.classList.remove('search-expanded');
+      }
+    });
+  }
+
+  const edClose = document.getElementById('editor-close'); if (edClose) edClose.addEventListener('click', closeEditor);
+  const edForm = document.getElementById('editor-form'); if (edForm) edForm.addEventListener('submit', saveEditorForm);
+  const delBtn = document.getElementById('delete-entity'); if (delBtn) delBtn.addEventListener('click', () => {
+    const typeEl = document.getElementById('editor-entity-type');
+    const idEl = document.getElementById('editor-entity-id');
+    const type = typeEl ? typeEl.value : null;
+    const id = idEl ? idEl.value : null;
+    if (!type || !id) return;
     if (type === 'folder') confirmDeleteFolder(id); else confirmDeleteProduct(id);
     closeEditor();
   });
-  document.getElementById('add-custom-field').addEventListener('click', () => addCustomFieldRow());
-  document.getElementById('editor-image').addEventListener('change', onFolderImageSelected);
-  document.getElementById('modal-close').addEventListener('click', closeModal);
+  const addCF = document.getElementById('add-custom-field'); if (addCF) addCF.addEventListener('click', () => addCustomFieldRow());
+  const edImg = document.getElementById('editor-image'); if (edImg) edImg.addEventListener('change', onFolderImageSelected);
+  const modalClose = document.getElementById('modal-close'); if (modalClose) modalClose.addEventListener('click', closeModal);
 
   attachSearch();
 
   // Try load latest backup from cloud before first render
   await loadLatestCloudBackup();
+  ensureDailyProgress();
   renderAll();
 
   // network status
@@ -1037,8 +1748,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pp-upload-btn').addEventListener('click', () => document.getElementById('pp-image-file').click());
   document.getElementById('pp-image-file').addEventListener('change', onProductImageSelected);
   document.getElementById('pp-edit').addEventListener('click', () => { if (productPageProductId) openProductEditModal(productPageProductId); });
-  const noteBtn = document.getElementById('pp-note-save');
-  if (noteBtn) noteBtn.addEventListener('click', onSaveProductNote);
+  // Note autosaves on exit; no explicit Save button binding
+  const adj = document.getElementById('pp-adjust-input');
+  if (adj) adj.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); adjustProductQuantity(+1); } });
 });
 
 // ---------------------------- Product Page ----------------------------
@@ -1052,8 +1764,9 @@ function openProductPage(productId) {
   document.getElementById('pp-name').textContent = p.name || '';
   document.getElementById('pp-qty').textContent = Number(p.quantity || 0);
   document.getElementById('pp-price').textContent = formatCurrency(Number(p.price || 0));
+  document.getElementById('pp-target').textContent = Number(p.targetQuantity || 0);
   document.getElementById('pp-total').textContent = formatCurrency(Number(p.price || 0) * Number(p.quantity || 0));
-  document.getElementById('pp-adjust-input').value = 1;
+  document.getElementById('pp-adjust-input').value = '';
   // image
   const prev = document.getElementById('pp-image-preview');
   if (p.imageUrl) { prev.src = p.imageUrl; prev.classList.remove('hidden'); }
@@ -1066,6 +1779,8 @@ function openProductPage(productId) {
 }
 
 function closeProductPage() {
+  // Auto-save note on exit
+  try { onSaveProductNote(); } catch {}
   document.getElementById('product-page').classList.add('hidden');
   productPageProductId = null;
   renderAll();
@@ -1075,8 +1790,9 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
   if (!productPageProductId) return;
   const p = appState.products[productPageProductId];
   if (!p) return;
-  const delta = Math.max(0, Number(document.getElementById('pp-adjust-input').value || 0));
-  if (delta === 0) return;
+  const inputEl = document.getElementById('pp-adjust-input');
+  const delta = Math.max(0, Number(inputEl.value || 0));
+  if (delta === 0) { inputEl.focus(); showToast('Enter quantity'); return; }
   let qty = Number(p.quantity || 0);
   const newQty = direction > 0 ? qty + delta : Math.max(0, qty - delta);
   openModal({
@@ -1085,6 +1801,10 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
     actions: [
       { label: 'Confirm', onClick: () => {
           p.quantity = newQty;
+          // log production change
+          const signed = direction > 0 ? delta : -delta;
+          appState.productionLog = appState.productionLog || [];
+          appState.productionLog.push({ ts: Date.now(), productId: p.id, delta: signed, price: Number(p.price||0), value: Number(p.price||0) * signed });
           saveStateDebounced();
           document.getElementById('pp-qty').textContent = p.quantity;
           document.getElementById('pp-total').textContent = formatCurrency((Number(p.price || 0)) * p.quantity);
@@ -1106,16 +1826,8 @@ async function onProductImageSelected(e) {
     p.imageUrl = dataUrl;
     const prev = document.getElementById('pp-image-preview');
     prev.src = dataUrl; prev.classList.remove('hidden');
-    openModal({
-      title: 'Confirm Image Update',
-      body: 'Replace the product image with the selected file?',
-      actions: [
-        { label: 'Confirm', onClick: () => { saveStateDebounced(); renderFolderList(); } },
-        { label: 'Cancel', onClick: () => { /* no-op */ } }
-      ]
-    });
-  } catch (err) {
-    console.warn(err);
-    showToast('Image upload failed');
+    saveStateDebounced();
+  } catch (e) {
+    // no-op
   }
 }

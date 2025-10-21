@@ -1,5 +1,5 @@
-/* Basic offline cache */
-const CACHE_NAME = 'app-cache-v2';
+/* Improved offline cache with network-first for app shell */
+const CACHE_NAME = 'app-cache-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -23,14 +23,28 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return; // only cache GET
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((resp) => {
+  const url = new URL(req.url);
+  const isAppShell = req.destination === 'document' || url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css');
+  if (isAppShell) {
+    // Network-first: always try network, fall back to cache
+    event.respondWith(
+      fetch(req).then((resp) => {
         const copy = resp.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
         return resp;
-      }).catch(() => cached);
-    })
-  );
+      }).catch(() => caches.match(req))
+    );
+  } else {
+    // Cache-first for other assets
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req).then((resp) => {
+          const copy = resp.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
+          return resp;
+        }).catch(() => cached);
+      })
+    );
+  }
 });
