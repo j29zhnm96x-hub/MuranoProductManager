@@ -59,15 +59,29 @@ function renderPriorityGraph() {
   const wrap = document.createElement('div');
   wrap.innerHTML = `<div class="pg-title">Priority Progress</div>`;
   const ul = document.createElement('div'); ul.className = 'pg-list';
+  // Smoothly interpolate color from red (0%) to green (100%)
+  const pctColor = (p) => {
+    const r1=220,g1=38,b1=38; // red #dc2626
+    const r2=16,g2=185,b2=129; // green #10b981
+    const t = Math.max(0, Math.min(1, p/100));
+    const r = Math.round(r1 + (r2 - r1) * t);
+    const g = Math.round(g1 + (g2 - g1) * t);
+    const b = Math.round(b1 + (b2 - b1) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
   for (const p of list) {
     const row = document.createElement('div'); row.className = 'pg-row';
     const name = document.createElement('div'); name.className = 'pg-name'; name.textContent = p.name || 'Product';
     const bar = document.createElement('div'); bar.className = 'pg-bar';
     const fill = document.createElement('div'); fill.className = 'pg-fill';
     const ratio = Math.max(0, Math.min(1, Number(p.quantity||0) / Number(p.targetQuantity||1)));
-    fill.style.width = `${Math.round(ratio*100)}%`; bar.appendChild(fill);
-    const percent = document.createElement('div'); percent.className = 'pg-percent'; percent.textContent = `${Math.round(ratio*100)}%`;
-    const meta = document.createElement('div'); meta.className = 'pg-meta'; meta.textContent = `${Number(p.quantity||0)} / ${Number(p.targetQuantity||0)} pc`;
+    const pct = Math.round(ratio * 100);
+    fill.style.width = `${pct}%`; bar.appendChild(fill);
+    const percent = document.createElement('div'); percent.className = 'pg-percent'; percent.textContent = `${pct}%`;
+    const color = pctColor(pct);
+    percent.style.color = color;
+    const meta = document.createElement('div'); meta.className = 'pg-meta';
+    meta.innerHTML = `${Number(p.quantity||0)} / ${Number(p.targetQuantity||0)} pc <span style="color:${color}">(${pct}%)</span>`;
     row.appendChild(name); row.appendChild(bar); row.appendChild(percent); row.appendChild(meta); ul.appendChild(row);
   }
   box.innerHTML = ''; box.appendChild(wrap); box.appendChild(ul);
@@ -976,21 +990,9 @@ function renderFolderList(folderId = currentFolderId) {
     const stats = computeStats('root');
     const wrap = document.createElement('div');
     wrap.className = 'stats-bar-inner';
-    const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">Total Qty</div><div class="sb-v">${stats.totalQty} pc</div>`;
-    const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">Total Value</div><div class="sb-v">${formatCurrency(stats.totalValue)}</div>`;
-    wrap.appendChild(itemQty); wrap.appendChild(itemVal);
 
-    // Daily Remaining card (only when plan is set)
     const settings = appState.settings || {};
-    // Days left (based on end date)
-    if (settings.endDate) {
-      const end = new Date(settings.endDate);
-      const today = new Date(); today.setHours(0,0,0,0);
-      const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
-      const daysLeft = Math.max(0, rawDays);
-      const itemDays = document.createElement('div'); itemDays.className = 'sb-item'; itemDays.innerHTML = `<div class="sb-k">Days left</div><div class="sb-v">${daysLeft}</div>`;
-      wrap.appendChild(itemDays);
-    }
+    // Daily card first (if plan is set)
     if (settings.plannedValue && settings.endDate) {
       ensureDailyProgress();
       const currentValue = stats.totalValue;
@@ -1011,16 +1013,32 @@ function renderFolderList(folderId = currentFolderId) {
           <div class="sb-v">${goalValue}</div>
         </div>
         <div class="sb-col">
-          <div class="sb-k">Remaining today</div>
+          <div class="sb-k sb-bad">To do</div>
           <div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div>
         </div>
         ${extraToday>0?`<div class="sb-col">
-          <div class="sb-k">Extra</div>
+          <div class="sb-k sb-good">Extra</div>
           <div class="sb-v sb-good">+${formatCurrency(extraToday)}</div>
         </div>`:''}
       `;
       wrap.appendChild(itemRemain);
     }
+
+    // Then Days left
+    if (settings.endDate) {
+      const end = new Date(settings.endDate);
+      const today = new Date(); today.setHours(0,0,0,0);
+      const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
+      const daysLeft = Math.max(0, rawDays);
+      const itemDays = document.createElement('div'); itemDays.className = 'sb-item'; itemDays.innerHTML = `<div class="sb-k">Days left</div><div class="sb-v">${daysLeft}</div>`;
+      wrap.appendChild(itemDays);
+    }
+
+    // Finally totals: Qty and Value
+    const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">Total Qty</div><div class="sb-v">${stats.totalQty} pc</div>`;
+    const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">Total Value</div><div class="sb-v">${formatCurrency(stats.totalValue)}</div>`;
+    wrap.appendChild(itemQty); wrap.appendChild(itemVal);
+
     statsBar.appendChild(wrap);
   }
 
@@ -1045,8 +1063,10 @@ function renderFolderList(folderId = currentFolderId) {
       left.appendChild(icon); left.appendChild(textCol);
       left.style.cursor = 'pointer'; left.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
       const actions = document.createElement('div'); actions.className = 'actions';
+      const actIcon = document.createElement('span'); actIcon.textContent = '📁'; actIcon.setAttribute('aria-hidden', 'true');
       const moreBtn = document.createElement('button'); moreBtn.textContent = '⋯'; moreBtn.title = 'More';
       moreBtn.addEventListener('click', (e) => { e.stopPropagation(); openFolderMenu(fid); });
+      actions.appendChild(actIcon);
       actions.appendChild(moreBtn);
       // Use unified order DnD with mixed key
       attachReorderDnD(li, 'order', `f:${fid}`, curFolder);
@@ -1307,9 +1327,14 @@ function openAddMenu(targetFolderId) {
 }
 
 function openFolderMenu(folderId) {
+  const header = document.createElement('div');
+  header.style.display = 'flex'; header.style.alignItems = 'center'; header.style.gap = '8px';
+  const icon = document.createElement('span'); icon.textContent = '📁';
+  const label = document.createElement('span'); label.textContent = 'Select an action';
+  header.appendChild(icon); header.appendChild(label);
   openModal({
     title: 'Folder actions',
-    body: 'Select an action',
+    body: header,
     actions: [
       { label: 'Edit', onClick: () => openFolderEditModal(folderId) },
       { label: 'Delete', onClick: () => confirmDeleteFolder(folderId) },
