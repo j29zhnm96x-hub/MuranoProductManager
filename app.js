@@ -161,6 +161,10 @@ let clickCtx = null;
 let clickGain = null;
 let clickBuffer = null;
 let clickBufferLoading = false;
+const IS_IOS = (() => {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+})();
 
 function initClickPool() {
   try {
@@ -209,15 +213,26 @@ function playClick(force = false) {
     const now = Date.now();
     if (!force && now - lastClickPlay < 120) return; // throttle per interaction
     lastClickPlay = now;
+    if (IS_IOS && navigator.vibrate) {
+      try { navigator.vibrate(5); } catch {}
+    }
     ensureAudioCtx();
-    if (clickBuffer) {
-      try {
-        const src = clickCtx.createBufferSource();
-        src.buffer = clickBuffer;
-        src.connect(clickGain || clickCtx.destination);
-        src.start(0);
-        return;
-      } catch {}
+    const ctx = clickCtx;
+    if (ctx && clickBuffer) {
+      const playBuffer = () => {
+        try {
+          const src = ctx.createBufferSource();
+          src.buffer = clickBuffer;
+          src.connect(clickGain || ctx.destination);
+          src.start(0);
+        } catch { tryBeep(); }
+      };
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(playBuffer).catch(() => tryBeep());
+      } else {
+        playBuffer();
+      }
+      return;
     }
     // fallback to HTMLAudio while buffer loads
     initClickPool();
@@ -240,7 +255,9 @@ function ensureAudioCtx() {
       clickGain.gain.value = 0.25; // louder
       clickGain.connect(clickCtx.destination);
     }
-    if (clickCtx.state === 'suspended') clickCtx.resume();
+    if (clickCtx.state === 'suspended') {
+      clickCtx.resume().catch(() => {});
+    }
   } catch {}
 }
 async function loadClickBuffer() {
@@ -264,17 +281,27 @@ async function loadClickBuffer() {
 function tryBeep() {
   try {
     ensureAudioCtx();
-    if (!clickCtx) return;
-    const o = clickCtx.createOscillator();
-    o.type = 'square';
-    o.frequency.value = 1200; // brighter click
-    const g = clickCtx.createGain();
-    g.gain.setValueAtTime(0.0001, clickCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.35, clickCtx.currentTime + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, clickCtx.currentTime + 0.12);
-    o.connect(g).connect(clickGain || clickCtx.destination);
-    o.start();
-    o.stop(clickCtx.currentTime + 0.13);
+    const ctx = clickCtx;
+    if (!ctx) return;
+    const startBeep = () => {
+      try {
+        const o = ctx.createOscillator();
+        o.type = 'square';
+        o.frequency.value = 1200; // brighter click
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+        o.connect(g).connect(clickGain || ctx.destination);
+        o.start();
+        o.stop(ctx.currentTime + 0.13);
+      } catch {}
+    };
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(startBeep).catch(() => {});
+    } else {
+      startBeep();
+    }
   } catch {}
 }
 function isInteractive(el) {
