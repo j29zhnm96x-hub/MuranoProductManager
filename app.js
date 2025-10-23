@@ -140,6 +140,224 @@ const LAST_BACKUP_NAME_KEY = 'murano_last_backup_name';
 let lastKnownBackupName = null; // persisted across reloads for accurate detection
 try { lastKnownBackupName = localStorage.getItem(LAST_BACKUP_NAME_KEY) || null; } catch {}
 
+// ---------------------------- Auth ----------------------------
+const APP_PASSCODE = '9277';
+const AUTH_SESSION_KEY = 'murano_auth_ok';
+ 
+// ---------------------------- UI Sounds ----------------------------
+const CLICK_SOUND_URL = './assets/Click.mp3';
+const CLICK_ALT_SRCS = [
+  './assets/Click.mp3',
+  './assets/click.mp3',
+  './assets/click-dot.mp3',
+  './assets/click_dot.mp3',
+  './assets/click dot.mp3'
+];
+let clickPool = [];
+let clickIdx = 0;
+let clickUnlocked = false;
+let lastClickPlay = 0;
+let clickCtx = null;
+let clickGain = null;
+let clickBuffer = null;
+let clickBufferLoading = false;
+
+function initClickPool() {
+  try {
+    if (!clickPool.length) {
+      for (let i = 0; i < 4; i++) {
+        const a = new Audio();
+        // try multiple source candidates for robustness
+        let idx = 0;
+        const tryNext = () => {
+          if (idx >= CLICK_ALT_SRCS.length) return;
+          a.src = CLICK_ALT_SRCS[idx++] + '?v=' + Date.now();
+          a.load();
+        };
+        a.onerror = () => { tryNext(); };
+        tryNext();
+        a.preload = 'auto';
+        a.volume = 1.0;
+        clickPool.push(a);
+      }
+    }
+  } catch {}
+}
+function unlockClickAudio() {
+  if (clickUnlocked) return;
+  clickUnlocked = true;
+  ensureAudioCtx();
+  loadClickBuffer();
+  tryBeep();
+  // try to satisfy autoplay policies with a muted play attempt, but don't rely on success
+  initClickPool();
+  try {
+    const a = clickPool[0];
+    if (a) {
+      a.muted = true;
+      const p = a.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => {});
+      } else {
+        a.pause(); a.currentTime = 0; a.muted = false;
+      }
+    }
+  } catch {}
+}
+function playClick(force = false) {
+  try {
+    const now = Date.now();
+    if (!force && now - lastClickPlay < 120) return; // throttle per interaction
+    lastClickPlay = now;
+    ensureAudioCtx();
+    if (clickBuffer) {
+      try {
+        const src = clickCtx.createBufferSource();
+        src.buffer = clickBuffer;
+        src.connect(clickGain || clickCtx.destination);
+        src.start(0);
+        return;
+      } catch {}
+    }
+    // fallback to HTMLAudio while buffer loads
+    initClickPool();
+    const a = clickPool[clickIdx++ % Math.max(1, clickPool.length)];
+    let played = false;
+    if (a) {
+      a.currentTime = 0;
+      a.play().then(() => { played = true; }).catch(() => {});
+    }
+    if (!played) { tryBeep(); }
+    // kick off buffer load in background
+    loadClickBuffer();
+  } catch {}
+}
+function ensureAudioCtx() {
+  try {
+    if (!clickCtx) {
+      clickCtx = new (window.AudioContext || window.webkitAudioContext)();
+      clickGain = clickCtx.createGain();
+      clickGain.gain.value = 0.25; // louder
+      clickGain.connect(clickCtx.destination);
+    }
+    if (clickCtx.state === 'suspended') clickCtx.resume();
+  } catch {}
+}
+async function loadClickBuffer() {
+  if (clickBuffer || clickBufferLoading) return;
+  clickBufferLoading = true;
+  try {
+    for (const src of CLICK_ALT_SRCS) {
+      try {
+        const res = await fetch(src + '?v=' + Date.now());
+        if (!res.ok) continue;
+        const arr = await res.arrayBuffer();
+        ensureAudioCtx();
+        const buf = await clickCtx.decodeAudioData(arr.slice(0));
+        if (buf) { clickBuffer = buf; break; }
+      } catch {}
+    }
+  } finally {
+    clickBufferLoading = false;
+  }
+}
+function tryBeep() {
+  try {
+    ensureAudioCtx();
+    if (!clickCtx) return;
+    const o = clickCtx.createOscillator();
+    o.type = 'square';
+    o.frequency.value = 1200; // brighter click
+    const g = clickCtx.createGain();
+    g.gain.setValueAtTime(0.0001, clickCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.35, clickCtx.currentTime + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, clickCtx.currentTime + 0.12);
+    o.connect(g).connect(clickGain || clickCtx.destination);
+    o.start();
+    o.stop(clickCtx.currentTime + 0.13);
+  } catch {}
+}
+function isInteractive(el) {
+  if (!el || !(el instanceof Element)) return false;
+  if (el.closest('input, textarea, select')) return false; // avoid keystroke spam
+  if (el.tagName === 'BUTTON' || el.tagName === 'A') return true;
+  const role = (el.getAttribute('role') || '').toLowerCase();
+  if (role === 'button' || role === 'link' || role === 'menuitem') return true;
+  if (el.hasAttribute('onclick')) return true;
+  const ti = el.getAttribute('tabindex');
+  if (ti !== null && Number(ti) >= 0) return true;
+  return false;
+}
+try {
+  // Unlock audio on first gesture
+  document.addEventListener('pointerdown', unlockClickAudio, { capture: true, passive: true });
+  document.addEventListener('touchstart', unlockClickAudio, { capture: true, passive: true });
+  document.addEventListener('mousedown', unlockClickAudio, { capture: true, passive: true });
+  document.addEventListener('keydown', unlockClickAudio, { capture: true, passive: true });
+  // Play on common interaction endpoints
+  const onInteract = () => { playClick(); };
+  document.addEventListener('click', onInteract, true);
+  document.addEventListener('pointerup', onInteract, true);
+  document.addEventListener('touchend', onInteract, true);
+  document.addEventListener('mousedown', onInteract, true);
+  document.addEventListener('mouseup', onInteract, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') playClick();
+  }, true);
+} catch {}
+
+
+function ensureAuthOverlayElements() {
+  if (document.getElementById('auth-overlay')) return;
+  const ov = document.createElement('div'); ov.id = 'auth-overlay';
+  const box = document.createElement('div'); box.className = 'auth-box';
+  const title = document.createElement('div'); title.className = 'auth-title'; title.textContent = 'Unlock';
+  const desc = document.createElement('div'); desc.className = 'auth-desc'; desc.textContent = 'Authenticate to continue';
+  const pad = document.createElement('div'); pad.id = 'auth-pad'; pad.className = '';
+  const inp = document.createElement('input'); inp.id = 'auth-code'; inp.type = 'password'; inp.inputMode = 'numeric'; inp.maxLength = 4; inp.autocomplete = 'off'; inp.placeholder = '• • • •';
+  const keys = document.createElement('div'); keys.className = 'pad-grid';
+  const buttons = ['1','2','3','4','5','6','7','8','9','⌫','0','OK'];
+  for (const k of buttons) {
+    const b = document.createElement('button'); b.textContent = k; b.dataset.key = k; keys.appendChild(b);
+    try { b.addEventListener('click', () => playClick()); } catch {}
+  }
+  pad.appendChild(inp); pad.appendChild(keys);
+  box.appendChild(title); box.appendChild(desc); box.appendChild(pad);
+  ov.appendChild(box); document.body.appendChild(ov);
+  // Passcode only: show keypad immediately
+  pad.classList.remove('hidden');
+  setTimeout(()=>inp.focus(),0);
+  keys.addEventListener('click', (e) => {
+    const t = e.target; if (!(t instanceof HTMLElement)) return; const key = t.dataset.key; if (!key) return;
+    if (key === '⌫') { inp.value = inp.value.slice(0,-1); return; }
+    if (key === 'OK') { tryPasscode(); return; }
+    if (/^\d$/.test(key) && inp.value.length < 4) inp.value += key;
+  });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); tryPasscode(); }
+    if (e.key === 'Backspace') return;
+    if (!/\d/.test(e.key)) e.preventDefault();
+  });
+  function tryPasscode() {
+    if (inp.value === APP_PASSCODE) { sessionStorage.setItem(AUTH_SESSION_KEY, '1'); ov.classList.add('hidden'); }
+    else { inp.value = ''; inp.focus(); }
+  }
+}
+
+async function ensureAuthenticated() {
+  try { if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') return; } catch {}
+  ensureAuthOverlayElements();
+  const ov = document.getElementById('auth-overlay');
+  ov.classList.remove('hidden');
+  // Passcode-only per requirements (biometrics disabled)
+  // Fallback waits for passcode entry; do not resolve until authenticated
+  await new Promise((resolve) => {
+    const watcher = setInterval(() => {
+      if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') { clearInterval(watcher); resolve(); }
+    }, 200);
+  });
+}
+
 // ---------------------------- Daily Progress ----------------------------
 function todayStr() {
   const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10);
@@ -693,16 +911,58 @@ function openSettings() {
   dateLabel.appendChild(dateInput);
   plannedGroup.appendChild(plannedLabel); plannedGroup.appendChild(dateLabel);
   wrap.appendChild(plannedGroup);
-  // Add dangerous RESET STATS button inside body
-  const dangerRow = document.createElement('div'); dangerRow.style.marginTop = '12px'; dangerRow.style.display = 'flex'; dangerRow.style.justifyContent = 'flex-start';
-  const resetBtn = document.createElement('button'); resetBtn.textContent = 'RESET STATS'; resetBtn.className = 'danger';
-  resetBtn.addEventListener('click', showResetStatsConfirm);
-  dangerRow.appendChild(resetBtn);
-  wrap.appendChild(dangerRow);
+  // Autosize inputs to their display length using the size attribute
+  const autosizeInput = (el, extra = 4, min = 8) => {
+    try {
+      let len = 0;
+      if (el.type === 'number') {
+        const n = Number(el.value || 0);
+        const formatted = new Intl.NumberFormat().format(isFinite(n) ? n : 0);
+        len = formatted.length;
+      } else if (el.type === 'date') {
+        const s = String(el.value || el.placeholder || 'YYYY-MM-DD');
+        len = s.length;
+      } else {
+        len = String(el.value || el.placeholder || '').length;
+      }
+      el.size = Math.max(min, len + extra);
+      el.style.width = 'auto';
+    } catch {}
+  };
+  autosizeInput(plannedInput, 4, 10);
+  autosizeInput(dateInput, 2, 10);
+  plannedInput.addEventListener('input', () => autosizeInput(plannedInput, 4, 10));
+  plannedInput.addEventListener('change', () => autosizeInput(plannedInput, 4, 10));
+  dateInput.addEventListener('input', () => autosizeInput(dateInput, 2, 10));
+  dateInput.addEventListener('change', () => autosizeInput(dateInput, 2, 10));
+  // Make both inputs the same width (use the date input's rendered width)
+  const syncWidths = () => {
+    try {
+      // Temporarily reset widths to measure natural date width
+      plannedInput.style.width = 'auto';
+      dateInput.style.width = 'auto';
+      plannedInput.style.minWidth = '0';
+      dateInput.style.minWidth = '0';
+      const w = Math.ceil(dateInput.getBoundingClientRect().width);
+      if (w && isFinite(w)) {
+        plannedInput.style.width = `${w}px`;
+        dateInput.style.width = `${w}px`;
+      }
+    } catch {}
+  };
+  // Initial and reactive sync
+  setTimeout(syncWidths, 0);
+  window.addEventListener('resize', syncWidths, { once: true });
+  dateInput.addEventListener('input', syncWidths);
+  dateInput.addEventListener('change', syncWidths);
+  plannedInput.addEventListener('input', syncWidths);
+  plannedInput.addEventListener('change', syncWidths);
   openModal({
     title: 'Settings',
     body: wrap,
     actions: [
+      { label: 'Reset Stats', onClick: () => showResetStatsConfirm() },
+      { label: 'Show Report', onClick: () => { setTimeout(() => openReportModal(), 0); } },
       { label: 'Save', onClick: () => {
           appState.settings = appState.settings || {};
           appState.settings.plannedValue = Number(plannedInput.value || 0);
@@ -755,9 +1015,18 @@ function openModal({ title = 'Confirm', body = '', actions = [] } = {}) {
     // Style destructive actions as red
     try {
       const lbl = String(a.label || '').toLowerCase();
-      if (lbl.includes('delete') || lbl.includes('remove')) b.classList.add('danger');
+      if (lbl.includes('delete') || lbl.includes('remove') || lbl.includes('reset')) b.classList.add('danger');
     } catch {}
-    b.addEventListener('click', () => { closeModal(); a.onClick?.(); });
+    b.addEventListener('click', async () => {
+      try {
+        if (a.keepOpen) {
+          await a.onClick?.();
+        } else {
+          closeModal();
+          await a.onClick?.();
+        }
+      } catch {}
+    });
     actionsEl.appendChild(b);
   });
   modal.classList.remove('hidden');
@@ -797,6 +1066,7 @@ function setSyncStatus(text) {
   // default: leave neutral gray
 }
 
+
 function formatCurrency(value) {
   try {
     const n = Math.round(Number(value || 0));
@@ -807,6 +1077,98 @@ function formatCurrency(value) {
     const n = Math.round(Number(value || 0));
     return `${n}\u00A0€`;
   }
+}
+
+// Build a comprehensive, shareable text report of all folders and products
+function generateAppReportText() {
+  const lines = [];
+  const settings = appState?.settings || {};
+  const statsAll = computeStats('root');
+  lines.push('Murano Product Manager — Report');
+  lines.push('===============================');
+  if (settings.plannedValue) lines.push(`Planned total: ${formatCurrency(settings.plannedValue)}`);
+  if (settings.endDate) {
+    const end = new Date(settings.endDate);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
+    const daysLeft = Math.max(0, rawDays);
+    lines.push(`End date: ${end.toISOString().slice(0,10)}  (Days left: ${daysLeft})`);
+  }
+  try { ensureDailyProgress(); } catch {}
+  const fixedDailyGoal = Math.round(Number(appState?.dailyProgress?.fixedGoal || 0));
+  if (fixedDailyGoal) lines.push(`Daily goal: ${formatCurrency(fixedDailyGoal)}`);
+  lines.push(`Total quantity: ${statsAll.totalQty} pc`);
+  lines.push(`Total value: ${formatCurrency(statsAll.totalValue)}`);
+  lines.push('');
+
+  function walk(folderId, depth = 0) {
+    const indent = '  '.repeat(depth);
+    const f = appState.folders[folderId];
+    if (!f) return;
+    const st = computeStats(folderId);
+    lines.push(`${indent}Folder: ${f.name}  — Qty: ${st.totalQty}, Value: ${formatCurrency(st.totalValue)}`);
+    for (const pid of f.products) {
+      const p = appState.products[pid];
+      if (!p) continue;
+      const qty = Number(p.quantity || 0);
+      const price = Number(p.price || 0);
+      const val = qty * price;
+      lines.push(`${indent}  • ${p.name} — Qty: ${qty}, Value: ${formatCurrency(val)}`);
+    }
+    for (const sf of f.subfolders) walk(sf, depth+1);
+  }
+  walk('root', 0);
+  return lines.join('\n');
+}
+
+function openReportModal() {
+  const wrap = document.createElement('div');
+  wrap.style.display = 'grid';
+  wrap.style.gap = '10px';
+  const pre = document.createElement('textarea');
+  pre.readOnly = true;
+  pre.style.width = '100%'; pre.style.minHeight = '320px'; pre.style.padding = '10px';
+  pre.style.border = '1px solid #d1d5db'; pre.style.borderRadius = '8px';
+  pre.value = generateAppReportText();
+  wrap.appendChild(pre);
+
+  openModal({
+    title: 'Report',
+    body: wrap,
+    actions: [
+      { label: 'Copy', keepOpen: true, onClick: async () => {
+          const doExecCopy = () => {
+            try {
+              const ta = document.createElement('textarea');
+              ta.value = pre.value; ta.setAttribute('readonly', ''); ta.style.position = 'absolute'; ta.style.left = '-9999px';
+              document.body.appendChild(ta); ta.select();
+              const ok = document.execCommand('copy'); document.body.removeChild(ta);
+              return ok;
+            } catch { return false; }
+          };
+          if (doExecCopy()) { showToast('Report copied'); return; }
+          try { await navigator.clipboard.writeText(pre.value); showToast('Report copied'); }
+          catch { showToast('Copy failed'); }
+        } },
+      { label: 'Share', keepOpen: true, onClick: async () => {
+          const payload = { title: 'Murano Report', text: pre.value };
+          if (navigator.share) {
+            try { await navigator.share(payload); showToast('Share opened'); return; }
+            catch (err) { /* cancelled or unsupported */ }
+          }
+          // Fallback: copy to clipboard
+          try {
+            const ta = document.createElement('textarea'); ta.value = pre.value; ta.setAttribute('readonly',''); ta.style.position='absolute'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select();
+            const ok = document.execCommand('copy'); document.body.removeChild(ta);
+            if (ok) { showToast('Copied to clipboard'); return; }
+          } catch {}
+          try { await navigator.clipboard.writeText(pre.value); showToast('Copied to clipboard'); }
+          catch { showToast('Share not supported'); }
+        } },
+      { label: 'Download', onClick: () => { try { const blob = new Blob([pre.value], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `murano_report_${new Date().toISOString().slice(0,10)}.txt`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); } catch {} } },
+      { label: 'Close' }
+    ]
+  });
 }
 
 // Image resize to max WxH (returns dataURL)
@@ -966,7 +1328,7 @@ function renderBreadcrumbs() {
     if (idx < path.length - 1) {
       const sep = document.createElement('span');
       sep.className = 'sep';
-      sep.textContent = '>';
+      sep.textContent = ' > ';
       el.appendChild(sep);
     }
   });
@@ -1148,6 +1510,48 @@ function openFolderEditModal(folderId) {
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
 }
 
+// Create Product modal (name + optional image)
+function openProductCreateModal(folderId) {
+  const wrap = document.createElement('div');
+  const nameRow = document.createElement('div');
+  const nameLabel = document.createElement('div'); nameLabel.textContent = 'Name'; nameLabel.style.marginBottom = '4px';
+  const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.placeholder = 'Product name'; nameInput.style.width = '100%'; nameInput.style.padding = '8px'; nameInput.style.border = '1px solid #cbd5e1'; nameInput.style.borderRadius = '8px';
+  nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
+  nameRow.appendChild(nameLabel); nameRow.appendChild(nameInput);
+
+  const imgRow = document.createElement('div'); imgRow.style.marginTop = '10px';
+  const imgLabel = document.createElement('div'); imgLabel.textContent = 'Image'; imgLabel.style.marginBottom = '4px';
+  const imgInput = document.createElement('input'); imgInput.type = 'file'; imgInput.accept = 'image/*';
+  const preview = document.createElement('div'); preview.style.marginTop = '6px';
+  imgInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    try { const dataUrl = await resizeImageToDataURL(file, 300, 300); preview.innerHTML = `<img src="${dataUrl}" alt="product" style="max-width:100%;border-radius:8px;border:1px solid #cbd5e1;"/>`; preview.dataset.src = dataUrl; }
+    catch {}
+  });
+  imgRow.appendChild(imgLabel); imgRow.appendChild(imgInput); imgRow.appendChild(preview);
+
+  wrap.appendChild(nameRow);
+  wrap.appendChild(imgRow);
+
+  openModal({
+    title: 'New Product',
+    body: wrap,
+    actions: [
+      { label: 'Create', onClick: async () => {
+          const id = uuid();
+          const name = (nameInput.value || 'New Product').trim();
+          const imageUrl = preview.dataset?.src || null;
+          appState.products[id] = { id, name, price: 0, quantity: 0, note: '', imageUrl, targetQuantity: 0, priority: false };
+          appState.folders[folderId].products.push(id);
+          saveStateDebounced();
+          renderAll();
+        } },
+      { label: 'Cancel' }
+    ]
+  });
+  setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
+}
+
 // ---------------------------- Editor ----------------------------
 function openEditor(type, id) {
   const panel = document.getElementById('editor-panel');
@@ -1219,12 +1623,8 @@ function createFolder(parentId) {
 }
 
 function createProduct(folderId) {
-  const id = uuid();
-  appState.products[id] = { id, name: 'New Product', price: 0, quantity: 0, note: '', imageUrl: null, targetQuantity: 0, priority: false };
-  appState.folders[folderId].products.push(id);
-  saveStateDebounced();
-  renderAll();
-  openProductPage(id);
+  // Open creation modal instead of immediate creation
+  openProductCreateModal(folderId);
 }
 
 function deleteFolder(folderId) {
@@ -1316,11 +1716,11 @@ function onFolderImageSelected(e) {
 // ---------------------------- Menus ----------------------------
 function openAddMenu(targetFolderId) {
   openModal({
-    title: 'Add to folder',
+    title: 'Choose item to create',
     body: 'Choose item to create',
     actions: [
       { label: 'New Folder', onClick: () => createFolder(targetFolderId) },
-      { label: 'New Product', onClick: () => createProduct(targetFolderId) },
+      { label: 'New Product', onClick: () => openProductCreateModal(targetFolderId) },
       { label: 'Cancel' }
     ]
   });
@@ -1337,10 +1737,10 @@ function openFolderMenu(folderId) {
     body: header,
     actions: [
       { label: 'Edit', onClick: () => openFolderEditModal(folderId) },
-      { label: 'Delete', onClick: () => confirmDeleteFolder(folderId) },
       { label: 'New Subfolder', onClick: () => createFolder(folderId) },
-      { label: 'New Product', onClick: () => createProduct(folderId) },
-      { label: 'Move to…', onClick: () => openMoveDialog('folder', folderId) }
+      { label: 'New Product', onClick: () => openProductCreateModal(folderId) },
+      { label: 'Move to…', onClick: () => openMoveDialog('folder', folderId) },
+      { label: 'Delete', onClick: () => confirmDeleteFolder(folderId) }
     ]
   });
 }
@@ -1634,6 +2034,7 @@ async function initialCloudSync() {
 // ---------------------------- Event Wiring ----------------------------
 document.addEventListener('DOMContentLoaded', async () => {
   clearAllCookies();
+  try { await ensureAuthenticated(); } catch {}
   // DB
   try { db = await openDB(); } catch (e) { console.error(e); showToast('IndexedDB error'); }
   appState = await readState();
@@ -1775,7 +2176,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pp-edit').addEventListener('click', () => { if (productPageProductId) openProductEditModal(productPageProductId); });
   // Note autosaves on exit; no explicit Save button binding
   const adj = document.getElementById('pp-adjust-input');
-  if (adj) adj.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); adjustProductQuantity(+1); } });
+  if (adj) {
+    adj.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); adjustProductQuantity(+1); } });
+    adj.addEventListener('focus', () => { try { const pp = document.getElementById('product-page'); if (pp) pp.scrollTo({ top: 0, behavior: 'smooth' }); } catch {} });
+  }
 });
 
 // ---------------------------- Product Page ----------------------------
@@ -1798,7 +2202,27 @@ function openProductPage(productId) {
   else { prev.src = ''; prev.classList.add('hidden'); }
   // note
   const noteEl = document.getElementById('pp-note');
-  if (noteEl) noteEl.value = p.note || '';
+  if (noteEl) {
+    noteEl.value = p.note || '';
+    // autosize to content (one-line min)
+    const auto = () => { try { noteEl.style.height = 'auto'; noteEl.style.height = Math.max(36, noteEl.scrollHeight) + 'px'; } catch {} };
+    noteEl.addEventListener('input', auto);
+    setTimeout(auto, 0);
+  }
+  // ensure floating back exists (helps when keyboard covers header on small screens)
+  try {
+    const page = document.getElementById('product-page');
+    let fab = document.getElementById('pp-back-fab');
+    if (!fab) {
+      fab = document.createElement('button');
+      fab.id = 'pp-back-fab';
+      fab.className = 'pp-fab-back';
+      fab.type = 'button';
+      fab.textContent = 'Back';
+      fab.addEventListener('click', () => { closeProductPage(); });
+      page.appendChild(fab);
+    }
+  } catch {}
   // show overlay
   document.getElementById('product-page').classList.remove('hidden');
 }
@@ -1834,6 +2258,8 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
           document.getElementById('pp-qty').textContent = p.quantity;
           document.getElementById('pp-total').textContent = formatCurrency((Number(p.price || 0)) * p.quantity);
           renderFolderList();
+          try { const adjEl = document.getElementById('pp-adjust-input'); adjEl && adjEl.blur(); } catch {}
+          try { const pp = document.getElementById('product-page'); if (pp) pp.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
         } },
       { label: 'Cancel' }
     ]
