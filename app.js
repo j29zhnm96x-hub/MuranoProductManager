@@ -539,29 +539,33 @@ let lastAutosaveTs = 0;
 let lastUploadedBackupName = null; // name like save_YYYY-MM-DD_hh-mm-ss.json
 let lastAppliedBackupName = null;  // last remote backup name that we loaded into app
 let remotePollTimerId = null;
+let modified = false; // tracks if user has made changes that need syncing
+let connectionCheckerId = null; // interval ID for connection checker
+let wasOffline = false; // tracks previous offline state
 
-async function runAutosave(downloadAlso = false) {
+async function runAutosave(downloadAlso = false, forceUpload = false) {
   if (autosaveInProgress) { autosaveQueued = true; return; }
   if (!navigator.onLine || !ENABLE_CLOUD) { autosaveQueued = true; return; }
   try {
     autosaveInProgress = true;
-    setSyncStatus('Syncing…'); // yellow blink
+    setSyncStatus('syncing'); // yellow blink
     // Use the same pipeline as manual Save button
     await saveSnapshot(downloadAlso);
-    await uploadBackupToCloud();
-    // If both above succeeded, uploadBackupToCloud will set status; ensure saved state here too
-    setSyncStatus('Backup saved'); // green with check
+    await uploadBackupToCloud(forceUpload);
+    // If both above succeeded, mark as synced
+    setSyncStatus('synced'); // green with check
+    modified = false; // clear modified flag after successful sync
     lastAutosaveTs = Date.now();
   } catch (e) {
     console.warn('Autosave failed', e);
-    setSyncStatus('Upload error');
+    setSyncStatus('error');
     autosaveQueued = true;
   } finally {
     autosaveInProgress = false;
     if (autosaveQueued && navigator.onLine) {
       autosaveQueued = false;
       // Debounce small bursts
-      setTimeout(() => runAutosave(false), 500);
+      setTimeout(() => runAutosave(false, forceUpload), 500);
     }
   }
 }
@@ -569,6 +573,39 @@ async function runAutosave(downloadAlso = false) {
 function scheduleAutosave() {
   // Try immediately; if offline it will queue
   runAutosave(false);
+}
+
+// Connection checker: runs every 5 seconds to monitor connection and force sync when back online
+function startConnectionChecker() {
+  if (connectionCheckerId) clearInterval(connectionCheckerId);
+  
+  connectionCheckerId = setInterval(async () => {
+    const isOnline = navigator.onLine;
+    
+    // Detect transition from offline to online
+    if (wasOffline && isOnline) {
+      console.log('Connection restored');
+      
+      // If we have pending changes, force sync immediately
+      if (modified) {
+        console.log('Modified flag is true, forcing sync');
+        try {
+          setSyncStatus('syncing');
+          // Force upload the current version, no questions asked
+          await saveSnapshot(false);
+          await uploadBackupToCloud(true);
+          setSyncStatus('synced');
+          modified = false;
+          showToast('Changes synced');
+        } catch (e) {
+          console.warn('Force sync failed', e);
+          setSyncStatus('error');
+        }
+      }
+    }
+    
+    wasOffline = !isOnline;
+  }, 5000); // check every 5 seconds
 }
 
 // (moved: computeProductionInRange/exportProductionPDF defined later once)
@@ -585,7 +622,21 @@ function openActionsMenu() {
     body,
     actions: [ { label: 'Close' } ]
   });
-  saveBtn.addEventListener('click', async () => { await saveSnapshot(true); await uploadBackupToCloud(); closeModal(); });
+  saveBtn.addEventListener('click', async () => { 
+    try {
+      setSyncStatus('syncing');
+      await saveSnapshot(false); // Don't download - only export should download
+      await uploadBackupToCloud(false);
+      setSyncStatus('synced');
+      modified = false;
+      closeModal();
+      showToast('Saved');
+    } catch (e) {
+      console.warn('Save failed', e);
+      setSyncStatus('error');
+      showToast('Save failed');
+    }
+  });
   importBtn.addEventListener('click', () => { document.getElementById('import-file').click(); closeModal(); });
   exportBtn.addEventListener('click', () => { exportState(); closeModal(); });
 }
@@ -641,31 +692,32 @@ async function downloadBackupObject(name) {
 async function loadLatestCloudBackup() {
   if (!ENABLE_CLOUD || !navigator.onLine) return false;
   try {
-    setSyncStatus('Checking cloud…');
+    setSyncStatus('syncing');
     const list = await listCloudBackups();
-    if (!list.length) { setSyncStatus('No backups'); return false; }
+    if (!list.length) { return false; }
     list.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
     const latest = list.find(x => (x.name || '').toLowerCase().endsWith('.json')) || list[0];
-    if (!latest) { setSyncStatus('No backups'); return false; }
+    if (!latest) { return false; }
     const remote = await downloadBackupObject(latest.name);
     if (remote && typeof remote === 'object') {
       appState = remote;
       await writeState(appState);
       backupLoaded = true;
-      setSyncStatus('Synced');
+      modified = false; // clear modified flag when loading from cloud
+      setSyncStatus('synced');
       return true;
     }
     return false;
   } catch (e) {
-    setSyncStatus('Cloud error');
+    setSyncStatus('error');
     return false;
   }
 }
 
-async function uploadBackupToCloud() {
+async function uploadBackupToCloud(forceUpload = false) {
   if (!ENABLE_CLOUD || !navigator.onLine) { return; }
   try {
-    setSyncStatus('Uploading…');
+    setSyncStatus('syncing');
     const ts = formatTs(Date.now());
     const fileName = `save_${ts}_${CLIENT_ID}.json`;
     const path = `${BACKUP_PREFIX}${fileName}`;
@@ -679,7 +731,7 @@ async function uploadBackupToCloud() {
       const msg = await res.text().catch(() => '');
       throw new Error(`Upload failed (${res.status}) ${msg}`);
     }
-    setSyncStatus('Backup saved');
+    setSyncStatus('synced');
     // Retention: keep only latest 3 backups
     await pruneBackups(3).catch(err => console.warn('Prune failed', err));
     lastUploadedBackupName = fileName;
@@ -687,7 +739,8 @@ async function uploadBackupToCloud() {
     try { localStorage.setItem(LAST_BACKUP_NAME_KEY, fileName); lastKnownBackupName = fileName; } catch {}
   } catch (e) {
     console.warn(e);
-    setSyncStatus('Upload error');
+    setSyncStatus('error');
+    throw e; // re-throw to let caller handle
   }
 }
 
@@ -713,12 +766,13 @@ async function applyRemoteBackupByName(name) {
       try { closeModal(); } catch {}
       try { closeEditor(); } catch {}
       renderAll();
-      setSyncStatus('Synced');
+      modified = false; // clear modified flag when loading from cloud
+      setSyncStatus('synced');
       return true;
     }
   } catch (e) {
     console.warn('Apply remote backup failed', e);
-    setSyncStatus('Cloud error');
+    setSyncStatus('error');
   }
   return false;
 }
@@ -742,7 +796,7 @@ async function startRemoteBackupWatcher() {
           return;
         }
         showToast('New version found, refreshing', 1000);
-        setSyncStatus('Checking cloud…');
+        setSyncStatus('syncing');
         const overlay = document.getElementById('refresh-overlay');
         try { overlay?.classList.add('show'); } catch {}
         try {
@@ -1060,37 +1114,30 @@ function openModal({ title = 'Confirm', body = '', actions = [] } = {}) {
 }
 function closeModal() { document.getElementById('modal').classList.add('hidden'); }
 
-function setSyncStatus(text) {
+function setSyncStatus(status) {
   const el = document.getElementById('sync-status');
   if (!el) return;
   // reset
   el.classList.remove('status-active', 'status-ok', 'status-error', 'status-saved');
   el.textContent = '';
-  el.setAttribute('aria-label', String(text || ''));
-
-  const t = String(text || '').toLowerCase();
-  // Active: checking, uploading, syncing
-  if (t.includes('checking') || t.includes('upload') || t.includes('sync') && !(t.includes('saved') || t.includes('synced'))) {
-    el.classList.add('status-active');
-    return;
-  }
-  // Error states
-  if (t.includes('offline') || t.includes('error') || t.includes('fail')) {
-    el.classList.add('status-error');
-    return;
-  }
-  // Saved/synced OK
-  if (t.includes('saved') || t.includes('synced') || t.includes('backup saved')) {
-    el.classList.add('status-saved');
+  
+  const s = String(status || '').toLowerCase();
+  
+  // Only show visual status, no text labels
+  if (s === 'syncing') {
+    el.classList.add('status-active'); // yellow blinking
+    el.setAttribute('aria-label', 'Syncing');
+  } else if (s === 'synced') {
+    el.classList.add('status-saved'); // green with checkmark
     el.textContent = '✓';
-    return;
+    el.setAttribute('aria-label', 'Synced');
+  } else if (s === 'error') {
+    el.classList.add('status-error'); // red
+    el.setAttribute('aria-label', 'Sync error');
+  } else {
+    // neutral gray for idle/unknown states
+    el.setAttribute('aria-label', 'Idle');
   }
-  // Generic OK/online
-  if (t.includes('online') || t.includes('ok') || t.includes('ready')) {
-    el.classList.add('status-ok');
-    return;
-  }
-  // default: leave neutral gray
 }
 
 
@@ -1264,6 +1311,7 @@ function writeState(state) {
 }
 
 function saveStateDebounced() {
+  modified = true; // mark as modified whenever any change is made
   clearTimeout(saveDebounceTimer);
   saveDebounceTimer = setTimeout(async () => {
     try {
@@ -1949,27 +1997,27 @@ let syncQueued = false;
 
 function queueCloudSync() {
   if (!ENABLE_CLOUD) return;
-  if (!navigator.onLine) { setSyncStatus('Offline'); return; }
+  if (!navigator.onLine) { setSyncStatus('error'); return; }
   if (syncQueued) return;
   syncQueued = true;
   setTimeout(async () => {
     syncQueued = false;
-    await uploadToCloud().catch(err => { console.warn(err); showToast('Cloud sync failed'); setSyncStatus('Sync error'); });
+    await uploadToCloud().catch(err => { console.warn(err); showToast('Cloud sync failed'); setSyncStatus('error'); });
   }, 800);
 }
 
 async function downloadFromCloud() {
   if (!ENABLE_CLOUD) return null;
   try {
-    setSyncStatus('Checking…');
+    setSyncStatus('syncing');
     const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${FILE_PATH}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${SUPABASE_KEY}` } });
     if (!res.ok) { return null; }
     const data = await res.json();
-    setSyncStatus('Synced');
+    setSyncStatus('synced');
     return data;
   } catch (e) {
-    setSyncStatus('Sync error');
+    setSyncStatus('error');
     throw e;
   }
 }
@@ -1978,7 +2026,7 @@ async function uploadToCloud() {
   if (pendingUpload) return; // collapse bursts
   pendingUpload = true;
   try {
-    setSyncStatus('Uploading…');
+    setSyncStatus('syncing');
     const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${FILE_PATH}`;
     const res = await fetch(url, {
       method: 'PUT',
@@ -1989,7 +2037,8 @@ async function uploadToCloud() {
       body: JSON.stringify(appState)
     });
     if (!res.ok) throw new Error('Upload failed');
-    setSyncStatus('Synced');
+    setSyncStatus('synced');
+    modified = false; // clear modified flag after successful upload
   } finally {
     pendingUpload = false;
   }
@@ -2041,16 +2090,16 @@ async function initialCloudSync() {
       if (choice === 'overwrite') {
         await uploadToCloud();
       } else if (choice === 'load_remote') {
-        appState = remote; await writeState(appState); renderAll(); setSyncStatus('Loaded remote');
+        appState = remote; await writeState(appState); renderAll(); modified = false; setSyncStatus('synced');
       } else if (choice === 'merge') {
         const snapshot = structuredClone(appState);
         const merged = autoMerge(appState, remote);
-        appState = merged; await writeState(appState); renderAll(); setSyncStatus('Merged');
+        appState = merged; await writeState(appState); renderAll(); setSyncStatus('synced');
         // create downloadable snapshot of conflicts (simple)
         const blob = new Blob([JSON.stringify({ local: snapshot, remote }, null, 2)], { type: 'application/json' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'conflict.json'; a.click(); URL.revokeObjectURL(a.href);
       } else {
-        setSyncStatus('Conflict unresolved');
+        setSyncStatus('error');
       }
     }
   } catch (e) {
@@ -2071,7 +2120,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // UI wiring
   document.getElementById('add-btn').addEventListener('click', () => openAddMenu(currentFolderId));
   const saveBtn = document.getElementById('save-btn');
-  if (saveBtn) saveBtn.addEventListener('click', async () => { await saveSnapshot(true); await uploadBackupToCloud(); showToast('Saved'); });
+  if (saveBtn) saveBtn.addEventListener('click', async () => { 
+    try {
+      setSyncStatus('syncing');
+      await saveSnapshot(false); // Don't download on save button
+      await uploadBackupToCloud(false);
+      setSyncStatus('synced');
+      modified = false;
+      showToast('Saved');
+    } catch (e) {
+      console.warn('Save failed', e);
+      setSyncStatus('error');
+      showToast('Save failed');
+    }
+  });
   const actionsBtn = document.getElementById('actions-btn');
   if (actionsBtn) actionsBtn.addEventListener('click', openActionsMenu);
   const importFileEl = document.getElementById('import-file');
@@ -2079,16 +2141,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
 
-  // Connectivity listeners: keep status accurate and flush queued autosave when back online
-  window.addEventListener('online', () => {
-    setSyncStatus('Online');
-    if (autosaveQueued) runAutosave(false);
-  });
-  window.addEventListener('offline', () => {
-    setSyncStatus('Offline');
-  });
-  // Set initial status based on connectivity
-  setSyncStatus(navigator.onLine ? 'Online' : 'Offline');
+  // Start connection checker (monitors every 5 seconds)
+  wasOffline = !navigator.onLine;
+  startConnectionChecker();
+  
   // Start remote watcher
   startRemoteBackupWatcher();
 
@@ -2171,11 +2227,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   ensureDailyProgress();
   renderAll();
 
-  // network status
-  const updateNet = () => setSyncStatus(navigator.onLine ? 'Online' : 'Offline');
-  window.addEventListener('online', () => { updateNet(); queueCloudSync(); });
-  window.addEventListener('offline', updateNet);
-  updateNet();
+  // Set initial sync status
+  if (navigator.onLine) {
+    setSyncStatus('synced');
+  } else {
+    setSyncStatus('error');
+  }
 
   // initial cloud
   // If we already loaded a backup successfully, skip legacy single-file sync to avoid confusing statuses
