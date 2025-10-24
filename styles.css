@@ -46,14 +46,17 @@ button { cursor: pointer; }
 /* Auth overlay for passcode */
 #auth-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; display: grid; place-items: center; }
 #auth-overlay.hidden { display: none !important; }
-.auth-box { width: min(420px, 92vw); background: #1f2937; border: 1px solid #374151; border-radius: 16px; padding: 20px; box-shadow: 0 10px 24px rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 14px; }
-.auth-title { font-size: 22px; font-weight: 800; color: #ffffff; }
-.auth-desc { color: #d1d5db; margin-bottom: 4px; }
-#auth-pad { display: flex; flex-direction: column; gap: 12px; align-items: center; }
-#auth-code { text-align: center; letter-spacing: 8px; font-size: 28px; padding: 12px 14px; border-radius: 12px; border: 1px solid #374151; width: 200px; background: #111827; color: #ffffff; }
-.pad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
-.pad-grid button { padding: 14px 0; border-radius: 12px; border: 1px solid #4b5563; background: #374151; color: #ffffff; font-weight: 800; font-size: 20px; }
-.pad-grid button:hover { background: #4b5563; }
+.auth-box { width: min(420px, 92vw); background: #1f2937; border: 1px solid #374151; border-radius: 16px; padding: 20px; box-shadow: 0 10px 24px rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 16px; }
+.auth-title { font-size: 22px; font-weight: 800; color: #ffffff; text-align: center; }
+.auth-message { color: #ef4444; text-align: center; font-size: 14px; min-height: 20px; }
+.auth-input { padding: 12px 14px; border-radius: 12px; border: 1px solid #374151; background: #ffffff; text-align: center; font-size: 18px; letter-spacing: 4px; width: 100%; }
+.auth-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
+.auth-keypad button { padding: 15px; border: 1px solid #4b5563; background: #374151; color: #ffffff; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+.auth-keypad button:hover { background: #4b5563; }
+.auth-keypad button:active { background: #6b7280; }
+.auth-submit { padding: 12px 20px; border-radius: 12px; border: 1px solid #10b981; background: #10b981; color: #ffffff; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+.auth-submit:hover { background: #059669; }
+.auth-submit:active { background: #047857; }
 
 /* Settings modal */
 .settings-wrap { display: grid; gap: 10px; }
@@ -106,9 +109,11 @@ button { cursor: pointer; }
 .tree li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #d1d5db; border-radius: 12px; background: #f8fafc; box-shadow: 0 1px 0 rgba(0,0,0,0.03); }
 .tree li:hover { border-color: #9ca3af; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .tree .item-left { display: flex; align-items: center; gap: 12px; }
-.tree .name { font-weight: 700; color: #111827; }
-.tree .meta { font-size: 13px; color: #6b7280; margin-top: 2px; }
-.tree .text-col { display: flex; flex-direction: column; }
+.tree .name { font-weight: 700; color: #111827; margin-bottom: 2px; }
+.tree .meta { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+.tree .meta-qty { font-size: 12px; color: #6b7280; }
+.tree .meta-value { font-size: 12px; color: #374151; font-weight: 600; }
+.tree .text-col { display: flex; flex-direction: column; justify-content: center; }
 .tree .icon-box { width: 72px; height: 72px; border-radius: 12px; background: #f1f2f6; display: grid; place-items: center; color: #6b7280; flex: 0 0 auto; border: 1px solid #cbd5e1; overflow: hidden; }
 .tree .icon-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; border: 1px solid #cbd5e1; }
 .tree .actions { display: flex; gap: 6px; align-items: center; }
@@ -229,9 +234,9 @@ button { cursor: pointer; }
 .pp-row:first-child { border-top: 0; }
 .pp-label { color: #6b7280; }
 .pp-value { text-align: right; font-weight: 600; }
-.pp-adjust { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
-.pp-adjust-label { font-weight: 600; color: #374151; flex-shrink: 0; }
-.pp-adjust input { width: 50px; padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; text-align: center; }
+.pp-adjust { display: flex; gap: 8px; align-items: center; }
+.pp-adjust-label { font-weight: 600; color: #374151; flex-shrink: 0; margin-right: 4px; }
+.pp-adjust input { width: 50px; padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; text-align: center; margin-right: 8px; }
 .pp-adjust button { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #0ea5e9; color: white; flex-shrink: 0; }
 .pp-adjust .danger { background: #ef4444; border-color: #ef4444; }
 .pp-image { display: flex; gap: 8px; align-items: center; }

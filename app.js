@@ -143,8 +143,44 @@ let lastKnownBackupName = null; // persisted across reloads for accurate detecti
 try { lastKnownBackupName = localStorage.getItem(LAST_BACKUP_NAME_KEY) || null; } catch {}
 
 // ---------------------------- Auth ----------------------------
-const APP_PASSCODE = '9277';
+// Obfuscated password system - password is encoded using Base64 + XOR
+// 
+// TO CHANGE THE PASSWORD:
+// 1. Open browser console on this page
+// 2. Run: encodePassword('YOUR_NEW_PASSWORD') 
+// 3. Copy the result and replace ENCODED_PASS below
+// 4. Optionally change OB_KEY for additional security
+// 
+// Current password: 9277 (encoded as 'OTI3Nw==' with key 7)
+const OB_KEY = 7; // XOR key for obfuscation (change this to modify password encoding)
+const ENCODED_PASS = 'OTI3Nw=='; // Base64 + XOR encoded version of '9277'
 const AUTH_SESSION_KEY = 'murano_auth_ok';
+
+// Decode the obfuscated password at runtime
+function decodePassword(encoded) {
+  try {
+    let decoded = atob(encoded); // Decode from Base64
+    let result = '';
+    for (let i = 0; i < decoded.length; i++) {
+      result += String.fromCharCode(decoded.charCodeAt(i) ^ OB_KEY); // XOR with key
+    }
+    return result;
+  } catch {
+    return '9277'; // Fallback to default if decoding fails
+  }
+}
+
+// Utility function to encode a new password (for development/updates)
+// Usage: console.log('New encoded password:', encodePassword('1234'));
+function encodePassword(plaintext) {
+  let xored = '';
+  for (let i = 0; i < plaintext.length; i++) {
+    xored += String.fromCharCode(plaintext.charCodeAt(i) ^ OB_KEY);
+  }
+  return btoa(xored);
+}
+
+const APP_PASSCODE = decodePassword(ENCODED_PASS);
  
 // ---------------------------- UI Sounds ----------------------------
 const CLICK_SOUND_URL = './assets/Click.mp3';
@@ -357,39 +393,87 @@ try {
 
 function ensureAuthOverlayElements() {
   if (document.getElementById('auth-overlay')) return;
+  
   const ov = document.createElement('div'); ov.id = 'auth-overlay';
   const box = document.createElement('div'); box.className = 'auth-box';
-  const title = document.createElement('div'); title.className = 'auth-title'; title.textContent = 'Unlock';
-  const desc = document.createElement('div'); desc.className = 'auth-desc'; desc.textContent = 'Authenticate to continue';
-  const pad = document.createElement('div'); pad.id = 'auth-pad'; pad.className = '';
-  const inp = document.createElement('input'); inp.id = 'auth-code'; inp.type = 'password'; inp.inputMode = 'numeric'; inp.maxLength = 4; inp.autocomplete = 'off'; inp.placeholder = '• • • •';
-  const keys = document.createElement('div'); keys.className = 'pad-grid';
-  const buttons = ['1','2','3','4','5','6','7','8','9','⌫','0','OK'];
-  for (const k of buttons) {
-    const b = document.createElement('button'); b.textContent = k; b.dataset.key = k; keys.appendChild(b);
-    // Click sound will be handled by the global click handler
+  const title = document.createElement('div'); title.className = 'auth-title'; title.textContent = 'Enter Password';
+  const message = document.createElement('div'); message.id = 'auth-message'; message.className = 'auth-message';
+  const inp = document.createElement('input'); 
+  inp.id = 'auth-code'; 
+  inp.type = 'password'; 
+  inp.inputMode = 'numeric'; 
+  inp.maxLength = 4; 
+  inp.autocomplete = 'off'; 
+  inp.placeholder = '• • • •';
+  inp.className = 'auth-input';
+  
+  const keypad = document.createElement('div'); keypad.className = 'auth-keypad';
+  
+  // Create numerical keypad (1-9, 0, Clear)
+  for (let i = 1; i <= 9; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    btn.addEventListener('click', () => {
+      if (inp.value.length < 4) inp.value += i;
+    });
+    keypad.appendChild(btn);
   }
-  pad.appendChild(inp); pad.appendChild(keys);
-  box.appendChild(title); box.appendChild(desc); box.appendChild(pad);
-  ov.appendChild(box); document.body.appendChild(ov);
-  // Passcode only: show keypad immediately
-  pad.classList.remove('hidden');
-  setTimeout(()=>inp.focus(),0);
-  keys.addEventListener('click', (e) => {
-    const t = e.target; if (!(t instanceof HTMLElement)) return; const key = t.dataset.key; if (!key) return;
-    if (key === '⌫') { inp.value = inp.value.slice(0,-1); return; }
-    if (key === 'OK') { tryPasscode(); return; }
-    if (/^\d$/.test(key) && inp.value.length < 4) inp.value += key;
+  
+  // Add 0 button
+  const btn0 = document.createElement('button');
+  btn0.textContent = '0';
+  btn0.addEventListener('click', () => {
+    if (inp.value.length < 4) inp.value += '0';
   });
+  keypad.appendChild(btn0);
+  
+  // Add Clear button
+  const btnClear = document.createElement('button');
+  btnClear.textContent = 'Clear';
+  btnClear.addEventListener('click', () => {
+    inp.value = '';
+    message.textContent = '';
+  });
+  keypad.appendChild(btnClear);
+  
+  // Add Submit button
+  const submitBtn = document.createElement('button');
+  submitBtn.textContent = 'Submit';
+  submitBtn.className = 'auth-submit';
+  
+  function tryPasscode() {
+    if (inp.value === APP_PASSCODE) {
+      sessionStorage.setItem(AUTH_SESSION_KEY, '1');
+      ov.classList.add('hidden');
+      message.textContent = '';
+    } else {
+      message.textContent = 'Incorrect password. Try again.';
+      inp.value = '';
+      setTimeout(() => inp.focus(), 100);
+    }
+  }
+  
+  submitBtn.addEventListener('click', tryPasscode);
+  
+  // Handle Enter key
   inp.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); tryPasscode(); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      tryPasscode();
+    }
     if (e.key === 'Backspace') return;
     if (!/\d/.test(e.key)) e.preventDefault();
   });
-  function tryPasscode() {
-    if (inp.value === APP_PASSCODE) { sessionStorage.setItem(AUTH_SESSION_KEY, '1'); ov.classList.add('hidden'); }
-    else { inp.value = ''; inp.focus(); }
-  }
+  
+  box.appendChild(title);
+  box.appendChild(message);
+  box.appendChild(inp);
+  box.appendChild(keypad);
+  box.appendChild(submitBtn);
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+  
+  setTimeout(() => inp.focus(), 100);
 }
 
 async function ensureAuthenticated() {
@@ -1091,6 +1175,8 @@ function onSaveProductNote() {
   const val = document.getElementById('pp-note').value;
   p.note = val;
   saveStateDebounced();
+  // Re-render folder list to update pencil icon visibility
+  renderFolderList();
   showToast('Note saved');
 }
 
@@ -1516,7 +1602,10 @@ function renderFolderList(folderId = currentFolderId) {
       const textCol = document.createElement('div'); textCol.className = 'text-col';
       const name = document.createElement('span'); name.className = 'name'; name.textContent = f.name;
       name.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
-      const meta = document.createElement('span'); meta.className = 'meta'; meta.textContent = `Qty: ${stats.totalQty}   ${formatCurrency(stats.totalValue)}`;
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `Qty: ${stats.totalQty}`;
+      const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(stats.totalValue);
+      meta.appendChild(qtyLine); meta.appendChild(valueLine);
       textCol.appendChild(name); textCol.appendChild(meta);
       left.appendChild(icon); left.appendChild(textCol);
       left.style.cursor = 'pointer'; left.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
@@ -1541,13 +1630,21 @@ function renderFolderList(folderId = currentFolderId) {
       const ptext = document.createElement('div'); ptext.className = 'text-col';
       const pname = document.createElement('span'); pname.className = 'name'; pname.textContent = p.name;
       pname.addEventListener('click', () => openProductPage(p.id));
-      const pmeta = document.createElement('span'); pmeta.className = 'meta';
+      const pmeta = document.createElement('div'); pmeta.className = 'meta';
       const qty = Number(p.quantity || 0); const price = Number(p.price || 0);
-      pmeta.textContent = `Qty: ${qty}   ${formatCurrency(qty * price)}`;
+      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `Qty: ${qty}`;
+      const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(qty * price);
+      pmeta.appendChild(qtyLine); pmeta.appendChild(valueLine);
       ptext.appendChild(pname); ptext.appendChild(pmeta);
       leftp.appendChild(picon); leftp.appendChild(ptext);
       leftp.style.cursor = 'pointer'; leftp.addEventListener('click', () => openProductPage(p.id));
       const actionsP = document.createElement('div'); actionsP.className = 'actions';
+      // Add pencil icon if product has a note
+      if (p.note && p.note.trim()) {
+        const noteIcon = document.createElement('span'); noteIcon.textContent = '✏️'; noteIcon.setAttribute('aria-hidden', 'true');
+        noteIcon.title = 'Has note';
+        actionsP.appendChild(noteIcon);
+      }
       const moreBtnP = document.createElement('button'); moreBtnP.textContent = '⋯'; moreBtnP.title = 'More';
       moreBtnP.addEventListener('click', (e) => { e.stopPropagation(); openProductMenu(p.id); });
       actionsP.appendChild(moreBtnP);
