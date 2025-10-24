@@ -229,9 +229,10 @@ button { cursor: pointer; }
 .pp-row:first-child { border-top: 0; }
 .pp-label { color: #6b7280; }
 .pp-value { text-align: right; font-weight: 600; }
-.pp-adjust { display: flex; gap: 8px; align-items: center; }
-.pp-adjust input { width: 100px; padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; }
-.pp-adjust button { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #0ea5e9; color: white; }
+.pp-adjust { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.pp-adjust-label { font-weight: 600; color: #374151; flex-shrink: 0; }
+.pp-adjust input { width: 50px; padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; text-align: center; }
+.pp-adjust button { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #0ea5e9; color: white; flex-shrink: 0; }
 .pp-adjust .danger { background: #ef4444; border-color: #ef4444; }
 .pp-image { display: flex; gap: 8px; align-items: center; }
 .pp-image-preview { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; background: #f1f2f6; }

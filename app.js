@@ -72,6 +72,8 @@ function renderPriorityGraph() {
   for (const p of list) {
     const row = document.createElement('div'); row.className = 'pg-row';
     const name = document.createElement('div'); name.className = 'pg-name'; name.textContent = p.name || 'Product';
+    name.style.cursor = 'pointer';
+    name.addEventListener('click', () => openProductPage(p.id));
     const bar = document.createElement('div'); bar.className = 'pg-bar';
     const fill = document.createElement('div'); fill.className = 'pg-fill';
     const ratio = Math.max(0, Math.min(1, Number(p.quantity||0) / Number(p.targetQuantity||1)));
@@ -313,6 +315,12 @@ function isInteractive(el) {
   if (el.hasAttribute('onclick')) return true;
   const ti = el.getAttribute('tabindex');
   if (ti !== null && Number(ti) >= 0) return true;
+  // Check for clickable elements with cursor pointer
+  if (el.style.cursor === 'pointer') return true;
+  // Check for elements with click event listeners (common clickable classes)
+  if (el.classList.contains('name') || el.classList.contains('crumb') || el.classList.contains('result')) return true;
+  // Check if element has click event listeners by checking parent containers
+  if (el.closest('.item-left, .pp-row, .pg-name')) return true;
   return false;
 }
 try {
@@ -321,15 +329,28 @@ try {
   document.addEventListener('touchstart', unlockClickAudio, { capture: true, passive: true });
   document.addEventListener('mousedown', unlockClickAudio, { capture: true, passive: true });
   document.addEventListener('keydown', unlockClickAudio, { capture: true, passive: true });
-  // Play on common interaction endpoints
-  const onInteract = () => { playClick(); };
-  document.addEventListener('click', onInteract, true);
-  document.addEventListener('pointerup', onInteract, true);
-  document.addEventListener('touchend', onInteract, true);
-  document.addEventListener('mousedown', onInteract, true);
-  document.addEventListener('mouseup', onInteract, true);
+  
+  // Play click sound only on actual interactive elements
+  const onInteractiveClick = (e) => {
+    // Only play sound if the target or its closest interactive parent is actually interactive
+    let target = e.target;
+    while (target && target !== document) {
+      if (isInteractive(target)) {
+        playClick();
+        break;
+      }
+      target = target.parentElement;
+    }
+  };
+  
+  // Use click event only (not mousedown/mouseup to avoid double sounds)
+  document.addEventListener('click', onInteractiveClick, true);
+  
+  // Handle keyboard interactions
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') playClick();
+    if ((e.key === 'Enter' || e.key === ' ') && isInteractive(e.target)) {
+      playClick();
+    }
   }, true);
 } catch {}
 
@@ -346,7 +367,7 @@ function ensureAuthOverlayElements() {
   const buttons = ['1','2','3','4','5','6','7','8','9','⌫','0','OK'];
   for (const k of buttons) {
     const b = document.createElement('button'); b.textContent = k; b.dataset.key = k; keys.appendChild(b);
-    try { b.addEventListener('click', () => playClick()); } catch {}
+    // Click sound will be handled by the global click handler
   }
   pad.appendChild(inp); pad.appendChild(keys);
   box.appendChild(title); box.appendChild(desc); box.appendChild(pad);
