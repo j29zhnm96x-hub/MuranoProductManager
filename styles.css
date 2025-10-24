@@ -84,7 +84,8 @@ button { cursor: pointer; }
 .pg-list { display: flex; flex-direction: column; gap: 8px; }
 .pg-row { display: grid; grid-template-columns: 200px 1fr 180px; gap: 20px; align-items: center; }
 .pg-name { color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pg-bar { position: relative; width: 100%; height: 16px; background: #f3f4f6; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; margin-left: 50px; margin-right: 50px; }
+/* Center the progress bar within its column with equal side spacing */
+.pg-bar { position: relative; height: 16px; background: #f3f4f6; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; width: min(640px, 100%); margin: 0 auto; }
 .pg-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: #10b981; }
 .pg-meta { text-align: right; color: #6b7280; white-space: nowrap; padding-right: 8px; }
 
@@ -223,9 +224,13 @@ button { cursor: pointer; }
 
 /* Product Page (overlay) */
 #product-page { position: fixed; inset: 0; background: #f7f7f9; z-index: 40; overflow: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; height: 100dvh; height: 100vh; }
-.pp-header { position: fixed; top: 0; left: 0; right: 0; z-index: 41; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; padding: 6px 8px; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
+.pp-header { position: fixed; top: 0; left: 0; right: 0; z-index: 41; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px; padding: 6px 8px; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
+.pp-left { display: inline-flex; align-items: center; gap: 8px; }
 .pp-back { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-size: 14px; }
-.pp-title { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Light yellow edit button */
+.pp-edit { padding: 6px 8px; border-radius: 8px; border: 1px solid #fde68a; background: #fef3c7; color: #92400e; font-size: 14px; }
+.pp-edit:hover { background: #fde68a; }
+.pp-title { font-weight: 800; font-size: 19px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; justify-self: center; }
 .pp-content { padding: 8px; display: grid; gap: 8px; max-width: 960px; margin: 0 auto; padding-top: calc(48px + env(safe-area-inset-top)); padding-bottom: calc(116px + env(safe-area-inset-bottom)); }
 .pp-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px; }
 .pp-card-title { font-weight: 700; margin-bottom: 10px; }

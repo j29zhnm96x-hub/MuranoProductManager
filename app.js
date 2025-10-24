@@ -76,14 +76,16 @@ function renderPriorityGraph() {
     name.addEventListener('click', () => openProductPage(p.id));
     const bar = document.createElement('div'); bar.className = 'pg-bar';
     const fill = document.createElement('div'); fill.className = 'pg-fill';
-    const ratio = Math.max(0, Math.min(1, Number(p.quantity||0) / Number(p.targetQuantity||1)));
-    const pct = Math.round(ratio * 100);
-    fill.style.width = `${pct}%`; bar.appendChild(fill);
-    const percent = document.createElement('div'); percent.className = 'pg-percent'; percent.textContent = `${pct}%`;
-    const color = pctColor(pct);
+    const qtyNum = Number(p.quantity || 0);
+    const tgtNum = Number(p.targetQuantity || 1);
+    const rawPct = Math.round((qtyNum / tgtNum) * 100); // can exceed 100
+    const pctForBar = Math.max(0, Math.min(100, rawPct)); // cap bar width at 100%
+    fill.style.width = `${pctForBar}%`; bar.appendChild(fill);
+    const percent = document.createElement('div'); percent.className = 'pg-percent'; percent.textContent = `${rawPct}%`;
+    const color = pctColor(Math.max(0, Math.min(100, rawPct))); // color scale based on 0..100
     percent.style.color = color;
     const meta = document.createElement('div'); meta.className = 'pg-meta';
-    meta.innerHTML = `${Number(p.quantity||0)} / ${Number(p.targetQuantity||0)} pc <span style="color:${color}">(${pct}%)</span>`;
+    meta.innerHTML = `${qtyNum} / ${tgtNum} pc <span style="color:${color}">(${rawPct}%)</span>`;
     row.appendChild(name); row.appendChild(bar); row.appendChild(percent); row.appendChild(meta); ul.appendChild(row);
   }
   box.innerHTML = ''; box.appendChild(wrap); box.appendChild(ul);
