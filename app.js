@@ -151,9 +151,8 @@ try { lastKnownBackupName = localStorage.getItem(LAST_BACKUP_NAME_KEY) || null; 
 // 3. Copy the result and replace ENCODED_PASS below
 // 4. Optionally change OB_KEY for additional security
 // 
-// Current password: 9277 (encoded as 'OTI3Nw==' with key 7)
-const OB_KEY = 7; // XOR key for obfuscation (change this to modify password encoding)
-const ENCODED_PASS = 'OTI3Nw=='; // Base64 + XOR encoded version of '9277'
+const OB_KEY = 42; // XOR key for obfuscation
+const ENCODED_PASS = 'ZxFdZw=='; // Base64 + XOR encoded version of '9277'
 const AUTH_SESSION_KEY = 'murano_auth_ok';
 
 // Decode the obfuscated password at runtime
@@ -171,7 +170,6 @@ function decodePassword(encoded) {
 }
 
 // Utility function to encode a new password (for development/updates)
-// Usage: console.log('New encoded password:', encodePassword('1234'));
 function encodePassword(plaintext) {
   let xored = '';
   for (let i = 0; i < plaintext.length; i++) {
@@ -181,6 +179,12 @@ function encodePassword(plaintext) {
 }
 
 const APP_PASSCODE = decodePassword(ENCODED_PASS);
+
+// Verify encoding is working (remove after confirming)
+console.log('Password verification:', APP_PASSCODE === '9277' ? 'SUCCESS' : 'FAILED');
+if (APP_PASSCODE !== '9277') {
+  console.error('Password mismatch! Decoded:', APP_PASSCODE, 'Expected: 9277');
+}
  
 // ---------------------------- UI Sounds ----------------------------
 const CLICK_SOUND_URL = './assets/Click.mp3';
