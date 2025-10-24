@@ -143,27 +143,20 @@ let lastKnownBackupName = null; // persisted across reloads for accurate detecti
 try { lastKnownBackupName = localStorage.getItem(LAST_BACKUP_NAME_KEY) || null; } catch {}
 
 // ---------------------------- Auth ----------------------------
-// Obfuscated password system - password is encoded using Base64 + XOR
+// Obfuscated password system - password is encoded using Base64
 // 
 // TO CHANGE THE PASSWORD:
 // 1. Open browser console on this page
 // 2. Run: encodePassword('YOUR_NEW_PASSWORD') 
 // 3. Copy the result and replace ENCODED_PASS below
-// 4. Optionally change OB_KEY for additional security
 // 
-const OB_KEY = 42; // XOR key for obfuscation
-const ENCODED_PASS = 'ZxFdZw=='; // Base64 + XOR encoded version of '9277'
+const ENCODED_PASS = 'OTI3Nw=='; // Base64 encoded version of '9277'
 const AUTH_SESSION_KEY = 'murano_auth_ok';
 
-// Decode the obfuscated password at runtime
+// Decode the obfuscated password at runtime (Base64 only)
 function decodePassword(encoded) {
   try {
-    let decoded = atob(encoded); // Decode from Base64
-    let result = '';
-    for (let i = 0; i < decoded.length; i++) {
-      result += String.fromCharCode(decoded.charCodeAt(i) ^ OB_KEY); // XOR with key
-    }
-    return result;
+    return atob(encoded);
   } catch {
     return '9277'; // Fallback to default if decoding fails
   }
@@ -171,20 +164,10 @@ function decodePassword(encoded) {
 
 // Utility function to encode a new password (for development/updates)
 function encodePassword(plaintext) {
-  let xored = '';
-  for (let i = 0; i < plaintext.length; i++) {
-    xored += String.fromCharCode(plaintext.charCodeAt(i) ^ OB_KEY);
-  }
-  return btoa(xored);
+  return btoa(plaintext);
 }
 
 const APP_PASSCODE = decodePassword(ENCODED_PASS);
-
-// Verify encoding is working (remove after confirming)
-console.log('Password verification:', APP_PASSCODE === '9277' ? 'SUCCESS' : 'FAILED');
-if (APP_PASSCODE !== '9277') {
-  console.error('Password mismatch! Decoded:', APP_PASSCODE, 'Expected: 9277');
-}
  
 // ---------------------------- UI Sounds ----------------------------
 const CLICK_SOUND_URL = './assets/Click.mp3';
