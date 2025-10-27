@@ -217,9 +217,6 @@ function initClickPool() {
 function unlockClickAudio() {
   if (clickUnlocked) return;
   clickUnlocked = true;
-  ensureAudioCtx();
-  loadClickBuffer();
-  tryBeep();
   // try to satisfy autoplay policies with a muted play attempt, but don't rely on success
   initClickPool();
   try {
@@ -234,6 +231,11 @@ function unlockClickAudio() {
       }
     }
   } catch {}
+  // Defer audio context setup to next tick to ensure it's after user gesture
+  setTimeout(() => {
+    try { ensureAudioCtx(); } catch {}
+    try { loadClickBuffer(); } catch {}
+  }, 0);
 }
 function playClick(force = false) {
   try {
@@ -277,12 +279,18 @@ function playClick(force = false) {
 function ensureAudioCtx() {
   try {
     if (!clickCtx) {
-      clickCtx = new (window.AudioContext || window.webkitAudioContext)();
-      clickGain = clickCtx.createGain();
-      clickGain.gain.value = 0.25; // louder
-      clickGain.connect(clickCtx.destination);
+      try {
+        clickCtx = new (window.AudioContext || window.webkitAudioContext)();
+        clickGain = clickCtx.createGain();
+        clickGain.gain.value = 0.25; // louder
+        clickGain.connect(clickCtx.destination);
+      } catch (e) {
+        // AudioContext creation failed (likely before user gesture), will retry later
+        clickCtx = null;
+        return;
+      }
     }
-    if (clickCtx.state === 'suspended') {
+    if (clickCtx && clickCtx.state === 'suspended') {
       clickCtx.resume().catch(() => {});
     }
   } catch {}
@@ -296,9 +304,23 @@ async function loadClickBuffer() {
         const res = await fetch(src + '?v=' + Date.now());
         if (!res.ok) continue;
         const arr = await res.arrayBuffer();
-        ensureAudioCtx();
-        const buf = await clickCtx.decodeAudioData(arr.slice(0));
-        if (buf) { clickBuffer = buf; break; }
+        // Only try to create audio context if we haven't already failed
+        if (!clickCtx) {
+          try {
+            ensureAudioCtx();
+          } catch (e) {
+            // Audio context not available yet, will retry on next click
+            continue;
+          }
+        }
+        if (!clickCtx) continue; // skip if audio context still not available
+        try {
+          const buf = await clickCtx.decodeAudioData(arr.slice(0));
+          if (buf) { clickBuffer = buf; break; }
+        } catch (e) {
+          // Decode failed, try next source
+          continue;
+        }
       } catch {}
     }
   } finally {
@@ -1184,7 +1206,7 @@ function openModal({ title = 'Confirm', body = '', actions = [] } = {}) {
   const bodyEl = document.getElementById('modal-body');
   const actionsEl = document.getElementById('modal-actions');
   titleEl.textContent = title;
-  if (typeof body === 'string') bodyEl.textContent = body; else { bodyEl.innerHTML = ''; bodyEl.appendChild(body); }
+  if (typeof body === 'string') bodyEl.textContent = body; else if (body) { bodyEl.innerHTML = ''; bodyEl.appendChild(body); } else { bodyEl.innerHTML = ''; }
   actionsEl.innerHTML = '';
   actions.forEach(a => {
     const b = document.createElement('button');
