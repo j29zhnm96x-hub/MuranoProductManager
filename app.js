@@ -1032,9 +1032,154 @@ function confirmDeleteFolder(folderId) {
   });
 }
 
+// ---------------------------- Dynamic Link Helpers ----------------------------
+function getProductParentFolder(productId) {
+  for (const fid in appState.folders) {
+    const f = appState.folders[fid];
+    if (f.products && f.products.includes(productId)) return f;
+  }
+  return null;
+}
+
+function isProductInIndependentFolder(productId) {
+  const parent = getProductParentFolder(productId);
+  return parent?.isIndependent || false;
+}
+
+function getAllSellableProducts() {
+  // Return products NOT in independent folders
+  const sellable = [];
+  for (const pid in appState.products) {
+    if (!isProductInIndependentFolder(pid)) {
+      sellable.push(appState.products[pid]);
+    }
+  }
+  return sellable.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function getAllNonIndependentFolders() {
+  const folders = [];
+  for (const fid in appState.folders) {
+    const f = appState.folders[fid];
+    if (!f.isIndependent && fid !== 'root') {
+      folders.push(f);
+    }
+  }
+  return folders.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function isProductInFolder(productId, folderId) {
+  // Check if product is in folder or any of its subfolders
+  const checkFolder = (fid) => {
+    const f = appState.folders[fid];
+    if (!f) return false;
+    if (f.products && f.products.includes(productId)) return true;
+    for (const subfid of f.subfolders || []) {
+      if (checkFolder(subfid)) return true;
+    }
+    return false;
+  };
+  return checkFolder(folderId);
+}
+
+function getProductsUsingComponent(componentId) {
+  // Components have dynamicLinks that point TO the products/folders they're used in
+  // So we check THIS component's dynamicLinks array
+  const usedIn = [];
+  const component = appState.products[componentId];
+  
+  if (!component || !component.dynamicLinks || component.dynamicLinks.length === 0) {
+    return usedIn;
+  }
+  
+  // Loop through each link this component has
+  for (const link of component.dynamicLinks) {
+    if (link.type === 'product') {
+      const product = appState.products[link.targetId];
+      if (product) {
+        usedIn.push({
+          type: 'product',
+          id: link.targetId,
+          name: product.name,
+          units: link.units || 1
+        });
+      }
+    } else if (link.type === 'folder') {
+      const folder = appState.folders[link.targetId];
+      if (folder) {
+        usedIn.push({
+          type: 'folder',
+          id: link.targetId,
+          name: folder.name,
+          units: link.units || 1
+        });
+      }
+    }
+  }
+  
+  return usedIn;
+}
+
+function processDynamicLinkDeductions(changedProductId, delta) {
+  // When a sellable product quantity increases, subtract from linked components
+  if (delta <= 0) return; // Only process additions
+  
+  const changedProduct = appState.products[changedProductId];
+  console.log(`[Dynamic Link] Processing deductions for product: ${changedProduct?.name} (ID: ${changedProductId}), delta: ${delta}`);
+  
+  const changedFolder = getProductParentFolder(changedProductId);
+  let componentsUpdated = false;
+  
+  // Scan all products for dynamic links
+  for (const pid in appState.products) {
+    const component = appState.products[pid];
+    
+    // Skip if not a dynamic component in an independent folder
+    if (!isProductInIndependentFolder(pid)) continue;
+    if (!component.isDynamic) continue;
+    if (!component.dynamicLinks || component.dynamicLinks.length === 0) continue;
+    
+    console.log(`[Dynamic Link] Checking component: ${component.name} (ID: ${pid}), links:`, component.dynamicLinks);
+    
+    // Check each link
+    for (const link of component.dynamicLinks) {
+      let shouldDeduct = false;
+      
+      if (link.type === 'product' && link.targetId === changedProductId) {
+        shouldDeduct = true;
+        console.log(`[Dynamic Link] ✓ Component ${component.name} links to this product directly`);
+      } else if (link.type === 'folder' && changedFolder && isProductInFolder(changedProductId, link.targetId)) {
+        shouldDeduct = true;
+        console.log(`[Dynamic Link] ✓ Component ${component.name} links to folder containing this product`);
+      }
+      
+      if (shouldDeduct) {
+        const deduction = delta * (link.units || 1);
+        const oldQty = Number(component.quantity || 0);
+        const newQty = Math.max(0, oldQty - deduction);
+        console.log(`[Dynamic Link] Deducting from ${component.name}: ${oldQty} - ${deduction} = ${newQty}`);
+        component.quantity = newQty;
+        componentsUpdated = true;
+      }
+    }
+  }
+  
+  if (componentsUpdated) {
+    console.log('[Dynamic Link] Components updated, saving state');
+  } else {
+    console.log('[Dynamic Link] No components were updated');
+  }
+}
+
 function openProductEditModal(productId) {
   const p = appState.products[productId];
   if (!p) return;
+  const inIndependentFolder = isProductInIndependentFolder(productId);
+  
+  // Initialize dynamic link data if not exists
+  if (!p.dynamicLinks) p.dynamicLinks = [];
+  if (p.isDynamic === undefined) p.isDynamic = false;
+  
   const wrap = document.createElement('div');
   const nameRow = document.createElement('div');
   const nameLabel = document.createElement('div'); nameLabel.textContent = 'Name'; nameLabel.style.marginBottom = '4px';
@@ -1042,22 +1187,105 @@ function openProductEditModal(productId) {
   nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
   nameRow.appendChild(nameLabel); nameRow.appendChild(nameInput);
 
-  const priceRow = document.createElement('div'); priceRow.style.marginTop = '10px';
-  const priceLabel = document.createElement('div'); priceLabel.textContent = 'Price'; priceLabel.style.marginBottom = '4px';
-  const priceInput = document.createElement('input'); priceInput.type = 'number'; priceInput.step = '0.01'; priceInput.min = '0'; priceInput.value = p.price || 0; priceInput.style.width = '100%'; priceInput.style.padding = '8px'; priceInput.style.border = '1px solid #d1d5db'; priceInput.style.borderRadius = '8px'; priceInput.inputMode = 'decimal';
-  priceInput.addEventListener('focus', () => { try { priceInput.select(); } catch {} });
-  priceRow.appendChild(priceLabel); priceRow.appendChild(priceInput);
-
-  // Target Quantity row (under Price)
-  const targetRow = document.createElement('div'); targetRow.style.marginTop = '10px';
-  const targetLabel = document.createElement('div'); targetLabel.textContent = 'Target Quantity'; targetLabel.style.marginBottom = '4px';
-  const targetInput = document.createElement('input'); targetInput.type = 'number'; targetInput.step = '1'; targetInput.min = '0'; targetInput.value = p.targetQuantity || 0; targetInput.style.width = '100%'; targetInput.style.padding = '8px'; targetInput.style.border = '1px solid #d1d5db'; targetInput.style.borderRadius = '8px'; targetInput.inputMode = 'numeric';
-  targetInput.addEventListener('focus', () => { try { targetInput.select(); } catch {} });
-  targetRow.appendChild(targetLabel); targetRow.appendChild(targetInput);
-
   wrap.appendChild(nameRow);
-  wrap.appendChild(priceRow);
-  wrap.appendChild(targetRow);
+
+  // Only show price and target for sellable products (not in independent folders)
+  let priceInput, targetInput;
+  if (!inIndependentFolder) {
+    const priceRow = document.createElement('div'); priceRow.style.marginTop = '10px';
+    const priceLabel = document.createElement('div'); priceLabel.textContent = 'Price'; priceLabel.style.marginBottom = '4px';
+    priceInput = document.createElement('input'); priceInput.type = 'number'; priceInput.step = '0.01'; priceInput.min = '0'; priceInput.value = p.price || 0; priceInput.style.width = '100%'; priceInput.style.padding = '8px'; priceInput.style.border = '1px solid #d1d5db'; priceInput.style.borderRadius = '8px'; priceInput.inputMode = 'decimal';
+    priceInput.addEventListener('focus', () => { try { priceInput.select(); } catch {} });
+    priceRow.appendChild(priceLabel); priceRow.appendChild(priceInput);
+
+    const targetRow = document.createElement('div'); targetRow.style.marginTop = '10px';
+    const targetLabel = document.createElement('div'); targetLabel.textContent = 'Target Quantity'; targetLabel.style.marginBottom = '4px';
+    targetInput = document.createElement('input'); targetInput.type = 'number'; targetInput.step = '1'; targetInput.min = '0'; targetInput.value = p.targetQuantity || 0; targetInput.style.width = '100%'; targetInput.style.padding = '8px'; targetInput.style.border = '1px solid #d1d5db'; targetInput.style.borderRadius = '8px'; targetInput.inputMode = 'numeric';
+    targetInput.addEventListener('focus', () => { try { targetInput.select(); } catch {} });
+    targetRow.appendChild(targetLabel); targetRow.appendChild(targetInput);
+
+    wrap.appendChild(priceRow);
+    wrap.appendChild(targetRow);
+  }
+
+  // Dynamic linking UI (only for products in independent folders)
+  if (inIndependentFolder) {
+    // Master switch: Dynamic Component checkbox
+    const dynamicRow = document.createElement('div'); dynamicRow.style.marginTop = '12px'; dynamicRow.style.borderTop = '1px solid #e5e7eb'; dynamicRow.style.paddingTop = '12px';
+    const dynamicCheckbox = document.createElement('input'); dynamicCheckbox.type = 'checkbox'; dynamicCheckbox.checked = p.isDynamic || false; dynamicCheckbox.style.marginRight = '8px';
+    const dynamicLabel = document.createElement('label'); dynamicLabel.style.display = 'flex'; dynamicLabel.style.alignItems = 'center'; dynamicLabel.style.cursor = 'pointer'; dynamicLabel.style.fontSize = '14px'; dynamicLabel.style.fontWeight = '600';
+    dynamicLabel.appendChild(dynamicCheckbox);
+    const dynamicText = document.createElement('span'); dynamicText.textContent = 'Dynamic Component';
+    dynamicLabel.appendChild(dynamicText);
+    dynamicRow.appendChild(dynamicLabel);
+    wrap.appendChild(dynamicRow);
+
+    // Dynamic link UI container (hidden when dynamic is unchecked)
+    const linkContainer = document.createElement('div'); linkContainer.style.marginTop = '10px'; linkContainer.style.display = dynamicCheckbox.checked ? 'block' : 'none';
+    
+    // Units per product input
+    const unitsRow = document.createElement('div'); unitsRow.style.marginBottom = '10px';
+    const unitsLabel = document.createElement('div'); unitsLabel.textContent = 'Units per Product'; unitsLabel.style.marginBottom = '4px'; unitsLabel.style.fontSize = '13px'; unitsLabel.style.color = '#6b7280';
+    const unitsInput = document.createElement('input'); unitsInput.type = 'number'; unitsInput.step = '1'; unitsInput.min = '1'; unitsInput.value = 1; unitsInput.style.width = '100%'; unitsInput.style.padding = '6px 8px'; unitsInput.style.border = '1px solid #d1d5db'; unitsInput.style.borderRadius = '6px'; unitsInput.inputMode = 'numeric';
+    unitsRow.appendChild(unitsLabel); unitsRow.appendChild(unitsInput);
+    linkContainer.appendChild(unitsRow);
+
+    // Link list display
+    const linkList = document.createElement('div'); linkList.style.background = '#f9fafb'; linkList.style.border = '1px solid #e5e7eb'; linkList.style.borderRadius = '8px'; linkList.style.padding = '8px'; linkList.style.maxHeight = '150px'; linkList.style.overflowY = 'auto'; linkList.style.marginBottom = '10px';
+    
+    const renderLinkList = () => {
+      linkList.innerHTML = '';
+      if (!p.dynamicLinks || p.dynamicLinks.length === 0) {
+        linkList.innerHTML = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:8px;">No links added</div>';
+        return;
+      }
+      p.dynamicLinks.forEach((link, idx) => {
+        const item = document.createElement('div'); item.style.display = 'flex'; item.style.alignItems = 'center'; item.style.justifyContent = 'space-between'; item.style.padding = '6px 8px'; item.style.borderRadius = '6px'; item.style.background = '#ffffff'; item.style.marginBottom = '4px'; item.style.fontSize = '13px';
+        const name = link.type === 'product' ? (appState.products[link.targetId]?.name || '???') : (appState.folders[link.targetId]?.name || '???');
+        const label = document.createElement('span'); label.textContent = `${link.type === 'product' ? 'Product' : 'Folder'}: ${name} (${link.units} unit${link.units > 1 ? 's' : ''})`;
+        const removeBtn = document.createElement('button'); removeBtn.textContent = '×'; removeBtn.style.background = 'none'; removeBtn.style.border = 'none'; removeBtn.style.color = '#ef4444'; removeBtn.style.fontSize = '18px'; removeBtn.style.cursor = 'pointer'; removeBtn.style.padding = '0 4px';
+        removeBtn.addEventListener('click', () => {
+          openModal({
+            title: 'Remove Link',
+            body: 'Unlink will break quantity sync. OK?',
+            actions: [
+              { label: 'Remove', onClick: () => { p.dynamicLinks.splice(idx, 1); renderLinkList(); } },
+              { label: 'Cancel' }
+            ]
+          });
+        });
+        item.appendChild(label); item.appendChild(removeBtn);
+        linkList.appendChild(item);
+      });
+    };
+    renderLinkList();
+    linkContainer.appendChild(linkList);
+
+    // Add Link button
+    const addLinkBtn = document.createElement('button'); addLinkBtn.textContent = 'Add Link'; addLinkBtn.style.width = '100%'; addLinkBtn.style.padding = '8px'; addLinkBtn.style.background = '#3b82f6'; addLinkBtn.style.color = '#fff'; addLinkBtn.style.border = 'none'; addLinkBtn.style.borderRadius = '6px'; addLinkBtn.style.cursor = 'pointer'; addLinkBtn.style.fontWeight = '600'; addLinkBtn.style.fontSize = '14px';
+    addLinkBtn.addEventListener('click', () => {
+      openLinkSelectorModal((selectedType, selectedId, selectedUnits) => {
+        // Check for duplicates
+        const exists = p.dynamicLinks.some(l => l.type === selectedType && l.targetId === selectedId);
+        if (exists) {
+          showToast('This link already exists');
+          return;
+        }
+        const units = Math.max(1, Number(selectedUnits || 1));
+        p.dynamicLinks.push({ type: selectedType, targetId: selectedId, units });
+        renderLinkList();
+        showToast('Link added');
+      });
+    });
+    linkContainer.appendChild(addLinkBtn);
+
+    wrap.appendChild(linkContainer);
+
+    // Toggle link UI visibility
+    dynamicCheckbox.addEventListener('change', () => {
+      linkContainer.style.display = dynamicCheckbox.checked ? 'block' : 'none';
+    });
+  }
 
   openModal({
     title: 'Edit Product',
@@ -1065,24 +1293,28 @@ function openProductEditModal(productId) {
     actions: [
       { label: 'Save', onClick: () => {
           const newName = nameInput.value.trim();
-          const newPrice = Number(priceInput.value || 0);
-          const newTarget = Number(targetInput.value || 0);
+          const newPrice = priceInput ? Number(priceInput.value || 0) : (p.price || 0);
+          const newTarget = targetInput ? Number(targetInput.value || 0) : (p.targetQuantity || 0);
           openModal({
             title: 'Confirm Save',
             body: 'Apply these changes to the product?',
             actions: [
               { label: 'Confirm', onClick: () => {
                   p.name = newName || p.name;
-                  p.price = newPrice;
-                  p.targetQuantity = newTarget;
+                  if (!inIndependentFolder) {
+                    p.price = newPrice;
+                    p.targetQuantity = newTarget;
+                  }
+                  if (inIndependentFolder) {
+                    const dynamicCheckbox = wrap.querySelector('input[type="checkbox"]');
+                    p.isDynamic = dynamicCheckbox ? dynamicCheckbox.checked : false;
+                    if (!p.isDynamic) { p.dynamicLinks = []; } // Clear links if dynamic is disabled
+                  }
                   saveStateDebounced();
-                  // update product page fields
-                  document.getElementById('pp-title').textContent = p.name;
-                  document.getElementById('pp-name').textContent = p.name;
-                  document.getElementById('pp-price').textContent = formatCurrency(p.price);
-                  document.getElementById('pp-qty').textContent = p.quantity || 0;
-                  document.getElementById('pp-target').textContent = p.targetQuantity || 0;
-                  document.getElementById('pp-total').textContent = formatCurrency(p.price * (p.quantity||0));
+                  // Refresh the entire product page to show updated links
+                  if (productPageProductId === productId) {
+                    openProductPage(productId);
+                  }
                   renderFolderList();
                 } },
               { label: 'Cancel' }
@@ -1094,6 +1326,215 @@ function openProductEditModal(productId) {
   });
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
   try { document.getElementById('modal-close').textContent = '← Back'; } catch {}
+}
+
+function openLinkSelectorModal(onSelect) {
+  const wrap = document.createElement('div');
+  
+  // Type selector (radio toggle)
+  const typeRow = document.createElement('div'); typeRow.style.marginBottom = '12px';
+  const typeLabel = document.createElement('div'); typeLabel.textContent = 'Link to'; typeLabel.style.marginBottom = '6px'; typeLabel.style.fontWeight = '600'; typeLabel.style.fontSize = '14px';
+  const typeToggle = document.createElement('div'); typeToggle.style.display = 'flex'; typeToggle.style.gap = '8px';
+  
+  const productRadio = document.createElement('input'); productRadio.type = 'radio'; productRadio.name = 'linkType'; productRadio.value = 'product'; productRadio.checked = true; productRadio.id = 'link-product';
+  const productLabel = document.createElement('label'); productLabel.htmlFor = 'link-product'; productLabel.textContent = 'Product'; productLabel.style.cursor = 'pointer'; productLabel.style.display = 'flex'; productLabel.style.alignItems = 'center'; productLabel.style.gap = '4px';
+  productLabel.prepend(productRadio);
+  
+  const folderRadio = document.createElement('input'); folderRadio.type = 'radio'; folderRadio.name = 'linkType'; folderRadio.value = 'folder'; folderRadio.id = 'link-folder';
+  const folderLabel = document.createElement('label'); folderLabel.htmlFor = 'link-folder'; folderLabel.textContent = 'Folder'; folderLabel.style.cursor = 'pointer'; folderLabel.style.display = 'flex'; folderLabel.style.alignItems = 'center'; folderLabel.style.gap = '4px';
+  folderLabel.prepend(folderRadio);
+  
+  typeToggle.appendChild(productLabel);
+  typeToggle.appendChild(folderLabel);
+  typeRow.appendChild(typeLabel);
+  typeRow.appendChild(typeToggle);
+  wrap.appendChild(typeRow);
+  
+  // Search input instead of dropdown
+  const selectRow = document.createElement('div'); selectRow.style.marginBottom = '12px';
+  const selectLabel = document.createElement('div'); selectLabel.textContent = 'Search'; selectLabel.style.marginBottom = '6px'; selectLabel.style.fontWeight = '600'; selectLabel.style.fontSize = '14px';
+  
+  // Create search input
+  const searchInput = document.createElement('input'); 
+  searchInput.type = 'text';
+  searchInput.placeholder = 'Type to search...'; 
+  searchInput.style.width = '100%'; 
+  searchInput.style.padding = '8px'; 
+  searchInput.style.border = '1px solid #d1d5db'; 
+  searchInput.style.borderRadius = '6px 6px 0 0'; 
+  searchInput.style.fontSize = '14px';
+  searchInput.style.marginBottom = '0';
+  
+  // Create results container
+  const resultsContainer = document.createElement('div');
+  resultsContainer.style.maxHeight = '200px';
+  resultsContainer.style.overflowY = 'auto';
+  resultsContainer.style.border = '1px solid #d1d5db';
+  resultsContainer.style.borderTop = 'none';
+  resultsContainer.style.borderRadius = '0 0 6px 6px';
+  resultsContainer.style.background = '#fff';
+  
+  // Store the currently selected item
+  let selectedItem = { id: '', name: '', type: '' };
+  
+  // Function to display results based on search
+  const performSearch = () => {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const type = productRadio.checked ? 'product' : 'folder';
+    resultsContainer.innerHTML = '';
+    
+    if (type === 'product') {
+      const products = getAllSellableProducts();
+      const filteredProducts = searchTerm ? 
+        products.filter(p => p.name.toLowerCase().includes(searchTerm)) : 
+        products;
+      
+      if (filteredProducts.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.textContent = 'No products found';
+        noResults.style.padding = '8px';
+        noResults.style.color = '#6b7280';
+        noResults.style.textAlign = 'center';
+        resultsContainer.appendChild(noResults);
+      } else {
+        filteredProducts.forEach(prod => {
+          const resultItem = document.createElement('div');
+          resultItem.textContent = prod.name;
+          resultItem.style.padding = '8px';
+          resultItem.style.cursor = 'pointer';
+          resultItem.style.borderBottom = '1px solid #f3f4f6';
+          resultItem.style.transition = 'background 0.2s';
+          
+          if (selectedItem.id === prod.id && selectedItem.type === 'product') {
+            resultItem.style.background = '#f3f4f6';
+            resultItem.style.fontWeight = 'bold';
+          }
+          
+          // Highlight matching text
+          if (searchTerm) {
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            resultItem.innerHTML = prod.name.replace(regex, '<span style="background-color:#fef3c7">$1</span>');
+          }
+          
+          resultItem.addEventListener('mouseenter', () => {
+            resultItem.style.background = '#f9fafb';
+          });
+          
+          resultItem.addEventListener('mouseleave', () => {
+            if (selectedItem.id === prod.id && selectedItem.type === 'product') {
+              resultItem.style.background = '#f3f4f6';
+            } else {
+              resultItem.style.background = '';
+            }
+          });
+          
+          resultItem.addEventListener('click', () => {
+            selectedItem = { id: prod.id, name: prod.name, type: 'product' };
+            searchInput.value = prod.name;
+            performSearch(); // Refresh highlighting
+          });
+          
+          resultsContainer.appendChild(resultItem);
+        });
+      }
+    } else {
+      const folders = getAllNonIndependentFolders();
+      const filteredFolders = searchTerm ? 
+        folders.filter(f => f.name.toLowerCase().includes(searchTerm)) : 
+        folders;
+      
+      if (filteredFolders.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.textContent = 'No folders found';
+        noResults.style.padding = '8px';
+        noResults.style.color = '#6b7280';
+        noResults.style.textAlign = 'center';
+        resultsContainer.appendChild(noResults);
+      } else {
+        filteredFolders.forEach(folder => {
+          const resultItem = document.createElement('div');
+          resultItem.textContent = folder.name;
+          resultItem.style.padding = '8px';
+          resultItem.style.cursor = 'pointer';
+          resultItem.style.borderBottom = '1px solid #f3f4f6';
+          resultItem.style.transition = 'background 0.2s';
+          
+          if (selectedItem.id === folder.id && selectedItem.type === 'folder') {
+            resultItem.style.background = '#f3f4f6';
+            resultItem.style.fontWeight = 'bold';
+          }
+          
+          // Highlight matching text
+          if (searchTerm) {
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            resultItem.innerHTML = folder.name.replace(regex, '<span style="background-color:#fef3c7">$1</span>');
+          }
+          
+          resultItem.addEventListener('mouseenter', () => {
+            resultItem.style.background = '#f9fafb';
+          });
+          
+          resultItem.addEventListener('mouseleave', () => {
+            if (selectedItem.id === folder.id && selectedItem.type === 'folder') {
+              resultItem.style.background = '#f3f4f6';
+            } else {
+              resultItem.style.background = '';
+            }
+          });
+          
+          resultItem.addEventListener('click', () => {
+            selectedItem = { id: folder.id, name: folder.name, type: 'folder' };
+            searchInput.value = folder.name;
+            performSearch(); // Refresh highlighting
+          });
+          
+          resultsContainer.appendChild(resultItem);
+        });
+      }
+    }
+  };
+  
+  // Initial search results
+  searchInput.addEventListener('input', performSearch);
+  productRadio.addEventListener('change', () => {
+    selectedItem = { id: '', name: '', type: '' };
+    searchInput.value = '';
+    performSearch();
+  });
+  folderRadio.addEventListener('change', () => {
+    selectedItem = { id: '', name: '', type: '' };
+    searchInput.value = '';
+    performSearch();
+  });
+  
+  selectRow.appendChild(selectLabel);
+  selectRow.appendChild(searchInput);
+  selectRow.appendChild(resultsContainer);
+  wrap.appendChild(selectRow);
+  
+  // Perform initial search to populate results
+  setTimeout(performSearch, 0);
+  
+  // Units input
+  const unitsRow = document.createElement('div');
+  const unitsLabel = document.createElement('div'); unitsLabel.textContent = 'Units used'; unitsLabel.style.marginBottom = '6px'; unitsLabel.style.fontWeight = '600'; unitsLabel.style.fontSize = '14px';
+  const unitsInput = document.createElement('input'); unitsInput.type = 'number'; unitsInput.step = '1'; unitsInput.min = '1'; unitsInput.value = 1; unitsInput.style.width = '100%'; unitsInput.style.padding = '8px'; unitsInput.style.border = '1px solid #d1d5db'; unitsInput.style.borderRadius = '6px'; unitsInput.inputMode = 'numeric';
+  unitsRow.appendChild(unitsLabel);
+  unitsRow.appendChild(unitsInput);
+  wrap.appendChild(unitsRow);
+  
+  openModal({
+    title: 'Add Link',
+    body: wrap,
+    actions: [
+      { label: 'Add', onClick: () => {
+          if (!selectedItem.id) { showToast('Please select an item'); return; }
+          const units = Math.max(1, Number(unitsInput.value || 1));
+          onSelect(selectedItem.type, selectedItem.id, units);
+        } },
+      { label: 'Cancel' }
+    ]
+  });
 }
 
 function openSettings() {
@@ -1650,10 +2091,28 @@ function renderFolderList(folderId = currentFolderId) {
       const pname = document.createElement('span'); pname.className = 'name'; pname.textContent = p.name;
       pname.addEventListener('click', () => openProductPage(p.id));
       const pmeta = document.createElement('div'); pmeta.className = 'meta';
-      const qty = Number(p.quantity || 0); const price = Number(p.price || 0);
+      const qty = Number(p.quantity || 0);
       const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `Qty: ${qty}`;
-      const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(qty * price);
-      pmeta.appendChild(qtyLine); pmeta.appendChild(valueLine);
+      
+      // Check if this is in independent folder
+      const isInIndependentFolder = isProductInIndependentFolder(p.id);
+      
+      if (!isInIndependentFolder) {
+        // Only show value for products not in independent folders
+        const price = Number(p.price || 0);
+        const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(qty * price);
+        pmeta.appendChild(valueLine);
+      } else if (p.isDynamic) {
+        // Add link icon for dynamic components
+        const linkIcon = document.createElement('div');
+        linkIcon.className = 'meta-link';
+        linkIcon.innerHTML = '🔗';
+        linkIcon.style.marginLeft = '5px';
+        linkIcon.title = 'Dynamic Component';
+        qtyLine.appendChild(linkIcon);
+      }
+      
+      pmeta.appendChild(qtyLine);
       ptext.appendChild(pname); ptext.appendChild(pmeta);
       leftp.appendChild(picon); leftp.appendChild(ptext);
       leftp.style.cursor = 'pointer'; leftp.addEventListener('click', () => openProductPage(p.id));
@@ -2431,19 +2890,157 @@ function openProductPage(productId) {
   productPageProductId = productId;
   const p = appState.products[productId];
   if (!p) return;
+  const inIndependentFolder = isProductInIndependentFolder(productId);
+  
   // header
   document.getElementById('pp-title').textContent = p.name || 'Product';
   // info
   document.getElementById('pp-name').textContent = p.name || '';
   document.getElementById('pp-qty').textContent = Number(p.quantity || 0);
-  document.getElementById('pp-price').textContent = formatCurrency(Number(p.price || 0));
-  document.getElementById('pp-target').textContent = Number(p.targetQuantity || 0);
-  document.getElementById('pp-total').textContent = formatCurrency(Number(p.price || 0) * Number(p.quantity || 0));
+  
+  // Hide price, total, and target for products in independent folders
+  const priceRow = document.getElementById('pp-price')?.closest('.pp-row');
+  const totalRow = document.getElementById('pp-total')?.closest('.pp-row');
+  const targetRow = document.getElementById('pp-target')?.closest('.pp-row');
+  
+  if (inIndependentFolder) {
+    if (priceRow) priceRow.style.display = 'none';
+    if (totalRow) totalRow.style.display = 'none';
+    if (targetRow) targetRow.style.display = 'none';
+  } else {
+    if (priceRow) priceRow.style.display = '';
+    if (totalRow) totalRow.style.display = '';
+    if (targetRow) targetRow.style.display = '';
+    document.getElementById('pp-price').textContent = formatCurrency(Number(p.price || 0));
+    document.getElementById('pp-target').textContent = Number(p.targetQuantity || 0);
+    document.getElementById('pp-total').textContent = formatCurrency(Number(p.price || 0) * Number(p.quantity || 0));
+  }
+  
   document.getElementById('pp-adjust-input').value = '';
   // image
   const prev = document.getElementById('pp-image-preview');
   if (p.imageUrl) { prev.src = p.imageUrl; prev.classList.remove('hidden'); }
   else { prev.src = ''; prev.classList.add('hidden'); }
+  
+  // Add "Used In" section for components in independent folders
+  if (inIndependentFolder) {
+    // Find or create the used-in card
+    let usedInCard = document.getElementById('pp-used-in-card');
+    if (!usedInCard) {
+      const infoGrid = document.querySelector('.pp-info-grid');
+      const parentDiv = infoGrid?.parentElement;
+      
+      if (parentDiv) {
+        usedInCard = document.createElement('div');
+        usedInCard.id = 'pp-used-in-card';
+        usedInCard.className = 'pp-card';
+        usedInCard.style.marginTop = '10px';
+        
+        const title = document.createElement('div');
+        title.className = 'pp-card-title';
+        title.textContent = 'Used In';
+        
+        const usedInGrid = document.createElement('div');
+        usedInGrid.id = 'pp-used-in-grid';
+        usedInGrid.className = 'pp-info-grid';
+        
+        usedInCard.appendChild(title);
+        usedInCard.appendChild(usedInGrid);
+        
+        parentDiv.appendChild(usedInCard);
+      }
+    }
+    
+    // Populate the used-in section
+    const usedInGrid = document.getElementById('pp-used-in-grid');
+    if (usedInGrid) {
+      usedInGrid.innerHTML = '';
+      
+      const usedInItems = getProductsUsingComponent(productId);
+      
+      if (usedInItems.length === 0) {
+        const emptyRow = document.createElement('div');
+        emptyRow.className = 'pp-row';
+        emptyRow.style.justifyContent = 'center';
+        emptyRow.style.padding = '10px';
+        emptyRow.style.color = '#6b7280';
+        emptyRow.textContent = 'Not used in any products';
+        usedInGrid.appendChild(emptyRow);
+      } else {
+        usedInItems.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'pp-row';
+          
+          const bullet = document.createElement('div');
+          bullet.className = 'pp-bullet';
+          bullet.textContent = '•';
+          bullet.style.marginRight = '5px';
+          
+          const name = document.createElement('div');
+          name.style.flex = '1';
+          name.style.cursor = 'pointer';
+          name.textContent = `${item.name} – ${item.units} unit${item.units !== 1 ? 's' : ''}`;
+          
+          const removeBtn = document.createElement('div');
+          removeBtn.className = 'pp-remove-link';
+          removeBtn.textContent = '×';
+          removeBtn.style.cursor = 'pointer';
+          removeBtn.style.fontWeight = 'bold';
+          removeBtn.style.fontSize = '18px';
+          removeBtn.style.color = '#ef4444';
+          removeBtn.style.padding = '0 8px';
+          
+          // Click on name to open that product
+          name.addEventListener('click', () => {
+            if (item.type === 'product') {
+              openProductPage(item.id);
+            } else if (item.type === 'folder') {
+              // Navigate to folder
+              currentFolderId = item.id;
+              renderAll();
+              closeProductPage();
+            }
+          });
+          
+          // Click on × to remove link
+          removeBtn.addEventListener('click', () => {
+            openModal({
+              title: 'Remove Link',
+              body: 'Unlink will break quantity sync. OK?',
+              actions: [
+                { label: 'Remove', onClick: () => {
+                  // Remove this link from the component's dynamicLinks array
+                  const component = appState.products[productId];
+                  if (component && component.dynamicLinks) {
+                    component.dynamicLinks = component.dynamicLinks.filter(link => 
+                      !(link.type === item.type && link.targetId === item.id)
+                    );
+                  }
+                  
+                  // Save state and refresh
+                  saveStateDebounced();
+                  openProductPage(productId); // Refresh current page
+                } },
+                { label: 'Cancel' }
+              ]
+            });
+          });
+          
+          row.appendChild(bullet);
+          row.appendChild(name);
+          row.appendChild(removeBtn);
+          
+          usedInGrid.appendChild(row);
+        });
+      }
+    }
+  } else {
+    // Not a component - remove used-in section if it exists
+    const usedInCard = document.getElementById('pp-used-in-card');
+    if (usedInCard) {
+      usedInCard.remove();
+    }
+  }
   // note
   const noteEl = document.getElementById('pp-note');
   if (noteEl) {
@@ -2498,10 +3095,20 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
           const signed = direction > 0 ? delta : -delta;
           appState.productionLog = appState.productionLog || [];
           appState.productionLog.push({ ts: Date.now(), productId: p.id, delta: signed, price: Number(p.price||0), value: Number(p.price||0) * signed });
+          
+          // Process dynamic link deductions if this is a sellable product and quantity increased
+          if (direction > 0 && !isProductInIndependentFolder(productPageProductId)) {
+            processDynamicLinkDeductions(productPageProductId, delta);
+          }
+          
+          // Always save state after quantity changes
           saveStateDebounced();
           document.getElementById('pp-qty').textContent = p.quantity;
-          document.getElementById('pp-total').textContent = formatCurrency((Number(p.price || 0)) * p.quantity);
-          renderFolderList();
+          // Only update total value for sellable products
+          if (!isProductInIndependentFolder(productPageProductId)) {
+            document.getElementById('pp-total').textContent = formatCurrency((Number(p.price || 0)) * p.quantity);
+          }
+          renderFolderList(); // Re-render to reflect component quantity changes
           try { const adjEl = document.getElementById('pp-adjust-input'); adjEl && adjEl.blur(); } catch {}
           try { const pp = document.getElementById('product-page'); if (pp) pp.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
         } },
