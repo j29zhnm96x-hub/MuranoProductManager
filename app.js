@@ -1454,6 +1454,11 @@ function computeStats(folderId) {
   let totalQty = 0;
   let totalValue = 0;
 
+  // Skip stats if this folder is marked as independent
+  if (folder.isIndependent) {
+    return { totalQty: 0, totalValue: 0 };
+  }
+
   // products in this folder
   for (const pid of folder.products) {
     const p = appState.products[pid];
@@ -1463,11 +1468,13 @@ function computeStats(folderId) {
     totalQty += qty;
     totalValue += qty * price;
   }
-  // subfolders
+  // subfolders (skip if subfolder is independent)
   for (const fid of folder.subfolders) {
-    const sub = computeStats(fid);
-    totalQty += sub.totalQty;
-    totalValue += sub.totalValue;
+    const sub = appState.folders[fid];
+    if (sub && sub.isIndependent) continue; // skip independent subfolders
+    const stats = computeStats(fid);
+    totalQty += stats.totalQty;
+    totalValue += stats.totalValue;
   }
   return { totalQty, totalValue };
 }
@@ -1584,6 +1591,7 @@ function renderFolderList(folderId = currentFolderId) {
       if (!f) continue;
       const stats = computeStats(fid);
       const li = document.createElement('li');
+      if (f.isIndependent) { li.classList.add('independent-folder'); }
       const left = document.createElement('div'); left.className = 'item-left';
       const icon = document.createElement('div'); icon.className = 'icon-box';
       if (f.imageUrl) { const img = document.createElement('img'); img.src = f.imageUrl; img.alt = 'folder'; icon.appendChild(img); }
@@ -1673,8 +1681,18 @@ function openFolderEditModal(folderId) {
   });
   imgRow.appendChild(imgLabel); imgRow.appendChild(imgInput); imgRow.appendChild(preview);
 
+  // Add "Make independent" checkbox
+  const indepRow = document.createElement('div'); indepRow.style.marginTop = '10px';
+  const indepCheckbox = document.createElement('input'); indepCheckbox.type = 'checkbox'; indepCheckbox.checked = f.isIndependent || false; indepCheckbox.style.marginRight = '8px';
+  const indepLabel = document.createElement('label'); indepLabel.style.display = 'flex'; indepLabel.style.alignItems = 'center'; indepLabel.style.cursor = 'pointer';
+  indepLabel.appendChild(indepCheckbox);
+  const indepText = document.createElement('span'); indepText.textContent = 'Make independent (exclude from stats)'; indepText.style.fontSize = '14px';
+  indepLabel.appendChild(indepText);
+  indepRow.appendChild(indepLabel);
+
   wrap.appendChild(nameRow);
   wrap.appendChild(imgRow);
+  wrap.appendChild(indepRow);
 
   openModal({
     title: 'Edit Folder',
@@ -1683,6 +1701,7 @@ function openFolderEditModal(folderId) {
       { label: 'Save', onClick: () => {
           const newName = nameInput.value.trim();
           f.name = newName || f.name;
+          f.isIndependent = indepCheckbox.checked;
           saveStateDebounced();
           renderAll();
         } },
@@ -1899,7 +1918,7 @@ function onFolderImageSelected(e) {
 function openAddMenu(targetFolderId) {
   openModal({
     title: 'Choose item to create',
-    body: 'Choose item to create',
+    body: null,
     actions: [
       { label: 'New Folder', onClick: () => createFolder(targetFolderId) },
       { label: 'New Product', onClick: () => openProductCreateModal(targetFolderId) },
@@ -2218,6 +2237,18 @@ async function initialCloudSync() {
 document.addEventListener('DOMContentLoaded', async () => {
   clearAllCookies();
   try { await ensureAuthenticated(); } catch {}
+  // Disable double-tap zoom and pinch zoom
+  try {
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 1) e.preventDefault(); // block pinch
+    }, { passive: false });
+    let lastTap = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300) e.preventDefault(); // block double-tap
+      lastTap = now;
+    }, { passive: false });
+  } catch {}
   // DB
   try { db = await openDB(); } catch (e) { console.error(e); showToast('IndexedDB error'); }
   appState = await readState();
