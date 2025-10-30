@@ -29,6 +29,7 @@
     </div>
     <div class="right">
       <button id="settings-btn" title="Settings" type="button"><img src="./assets/setting.png" alt="Settings" class="icon"/></button>
+      <div id="warning-icon" title="Warning"><img src="./assets/warning-icon.png" alt="Warning" class="icon"/></div>
       <div id="sync-status" title="Cloud sync status">Offline</div>
     </div>
   </div>
@@ -176,6 +177,9 @@
 
   <!-- Toasts -->
   <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Warning system script -->
+  <script src="./warning-system.js" defer></script>
 
   <!-- Hidden import input -->
   <input id="import-file" type="file" accept="application/json" class="hidden" />

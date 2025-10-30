@@ -23,9 +23,10 @@ body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none
 #sync-status { width: var(--control-h); height: var(--control-h); display: inline-grid; place-items: center; border-radius: 8px; background: #9ca3af; color: #ffffff; font-size: 18px; font-weight: 700; }
 #sync-status.status-active { background: #f59e0b; animation: sync-blink 1s ease-in-out infinite alternate; }
 #sync-status.status-ok { background: #10b981; }
-#sync-status.status-error { background: #ef4444; }
+#sync-status.status-error { background: #ef4444; animation: warning-blink 1s ease-in-out infinite alternate; }
 #sync-status.status-saved { background: #10b981; }
 @keyframes sync-blink { from { opacity: 0.6; } to { opacity: 1; } }
+@keyframes warning-blink { from { opacity: 0.6; } to { opacity: 1; } }
 
 #breadcrumbs { margin: 10px 12px; color: #6b7280; font-size: 14px; font-weight: 700; }
 #breadcrumbs .sep { margin: 0 6px; }
@@ -244,7 +245,7 @@ body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none
 .pp-value { text-align: right; font-weight: 600; }
 .pp-adjust { display: flex; gap: 8px; align-items: center; }
 .pp-adjust-label { font-weight: 600; color: #374151; flex-shrink: 0; margin-right: 4px; }
-.pp-adjust input { width: 50px; padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; text-align: center; margin-right: 8px; }
+.pp-adjust input { width: 55px; padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; text-align: center; margin-right: 8px; }
 .pp-adjust button { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #0ea5e9; color: white; flex-shrink: 0; }
 .pp-adjust .danger { background: #ef4444; border-color: #ef4444; }
 .pp-image { display: flex; gap: 8px; align-items: center; }
