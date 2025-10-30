@@ -2234,51 +2234,25 @@ function updateWarningIcon(show) {
   if (!warningIcon) {
     const rightDiv = document.querySelector('#top-bar .right');
     if (rightDiv) {
-      // Create wrapper container
+      // Create simple red exclamation mark
       warningIcon = document.createElement('div');
       warningIcon.id = 'warning-icon';
       warningIcon.className = 'hidden';
-      warningIcon.style.position = 'relative';
+      warningIcon.textContent = '!';
       warningIcon.style.display = 'inline-flex';
+      warningIcon.style.alignItems = 'center';
+      warningIcon.style.justifyContent = 'center';
       warningIcon.style.cursor = 'pointer';
       warningIcon.style.height = 'var(--control-h)';
-      warningIcon.style.width = 'var(--control-h)';
-      
-      // Create button background with animation
-      const buttonBg = document.createElement('div');
-      buttonBg.style.position = 'absolute';
-      buttonBg.style.inset = '0';
-      buttonBg.style.borderRadius = '8px';
-      buttonBg.style.background = '#ef4444';
-      buttonBg.style.border = '1px solid #dc2626';
-      buttonBg.style.animation = 'warning-button-blink 1.2s ease-in-out infinite alternate';
-      buttonBg.style.pointerEvents = 'none';
-      
-      // Create icon span with opposite animation
-      const iconSpan = document.createElement('span');
-      iconSpan.textContent = '⚠️';
-      iconSpan.style.position = 'absolute';
-      iconSpan.style.top = 'calc(50% - 2px)';
-      iconSpan.style.left = '50%';
-      iconSpan.style.transform = 'translate(-50%, -50%)';
-      iconSpan.style.fontSize = '22px';
-      iconSpan.style.lineHeight = '1';
-      iconSpan.style.color = '#fff';
-      iconSpan.style.fontWeight = '700';
-      iconSpan.style.textShadow = '-1px -1px 0 #991b1b, 1px -1px 0 #991b1b, -1px 1px 0 #991b1b, 1px 1px 0 #991b1b, -1px 0 0 #991b1b, 1px 0 0 #991b1b, 0 -1px 0 #991b1b, 0 1px 0 #991b1b';
-      iconSpan.style.animation = 'warning-icon-blink 1.2s ease-in-out infinite alternate';
-      iconSpan.style.pointerEvents = 'none';
-      
-      warningIcon.appendChild(buttonBg);
-      warningIcon.appendChild(iconSpan);
-      
-      // Insert after settings button, before search toggle
+      warningIcon.style.fontSize = '28px';
+      warningIcon.style.fontWeight = '900';
+      warningIcon.style.color = '#ef4444';
+      warningIcon.style.lineHeight = '1';
+      warningIcon.style.animation = 'warning-blink 1s ease-in-out infinite alternate';
+      warningIcon.style.padding = '0 6px';
       const settingsBtn = document.getElementById('settings-btn');
-      const searchToggle = document.getElementById('search-toggle');
-      if (searchToggle) {
-        rightDiv.insertBefore(warningIcon, searchToggle);
-      } else if (settingsBtn) {
-        rightDiv.insertBefore(warningIcon, settingsBtn.nextSibling);
+      if (settingsBtn) {
+        rightDiv.insertBefore(warningIcon, settingsBtn);
       } else {
         rightDiv.appendChild(warningIcon);
       }
@@ -2312,6 +2286,10 @@ function showLowQuantityModal() {
   title.style.fontWeight = '700';
   title.style.fontSize = '16px';
   title.style.color = '#ef4444';
+  title.style.minWidth = '100%';
+  title.style.textAlign = 'center';
+  title.style.padding = '12px';
+  title.style.borderBottom = '1px solid #ddd';
   body.appendChild(title);
   
   const list = document.createElement('div');
@@ -2370,10 +2348,7 @@ function showLowQuantityModal() {
   
   openModal({
     title: '',
-    body: body,
-    actions: [
-      { label: 'Close' }
-    ]
+    body: body
   });
 }
 

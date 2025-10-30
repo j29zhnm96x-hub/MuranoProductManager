@@ -9,9 +9,9 @@ html { touch-action: manipulation; }
 body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
 /* Layout */
-#top-bar { --control-h: 36px; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: #ffffff; border-bottom: 1px solid #e5e7eb; box-shadow: 0 1px 0 rgba(0,0,0,0.04); }
+#top-bar { --control-h: 36px; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; background: #ffffff; border-bottom: 1px solid #e5e7eb; box-shadow: 0 1px 0 rgba(0,0,0,0.04); }
 .app-logo { height: 32px; width: auto; margin-right: 8px; }
-#top-bar .left, #top-bar .center, #top-bar .right { display: flex; align-items: center; gap: 12px; }
+#top-bar .left, #top-bar .center, #top-bar .right { display: flex; align-items: center; gap: 8px; }
 #top-bar .center { flex: 1 1 auto; min-width: 0; justify-content: center; }
 #top-bar #add-btn { width: var(--control-h); height: var(--control-h); border-radius: 8px; border: 1px solid #2563eb; background: #2563eb; color: #fff; font-size: 18px; font-weight: 700; line-height: 0; display: grid; place-items: center; }
 #top-bar #import-btn, #top-bar #export-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; }
