@@ -48,10 +48,57 @@ function resetAllProductQuantities() {
   showToast('All product quantities reset to 0');
 }
 // ---------------------------- Priority Graph ----------------------------
+// Helper: Recursively collect all product IDs in a folder and its subfolders
+function getAllProductIdsInFolder(folderId) {
+  const productIds = new Set();
+  const folder = appState.folders[folderId];
+  if (!folder) return productIds;
+  
+  // Add direct products in this folder
+  if (folder.products && Array.isArray(folder.products)) {
+    for (const pid of folder.products) {
+      productIds.add(pid);
+    }
+  }
+  
+  // Recursively add products from subfolders
+  if (folder.subfolders && Array.isArray(folder.subfolders)) {
+    for (const subFolderId of folder.subfolders) {
+      const subProducts = getAllProductIdsInFolder(subFolderId);
+      subProducts.forEach(id => productIds.add(id));
+    }
+  }
+  
+  return productIds;
+}
+
 function renderPriorityGraph() {
   const box = document.getElementById('priority-graph');
   if (!box) return;
-  const list = Object.values(appState.products || {}).filter(p => !!p.priority && Number(p.targetQuantity || 0) > 0);
+  
+  // Check if we're in an independent folder - if so, hide priority graph
+  const currentFolder = appState.folders[currentFolderId];
+  if (currentFolder && currentFolder.isIndependent) {
+    box.innerHTML = '';
+    box.classList.add('hidden');
+    return;
+  }
+  
+  // Filter products based on current folder
+  let list;
+  if (currentFolderId === 'root') {
+    // At top level: show all priority products
+    list = Object.values(appState.products || {}).filter(p => !!p.priority && Number(p.targetQuantity || 0) > 0);
+  } else {
+    // Inside a folder: show priority products in this folder AND all subfolders
+    const folderProductIds = getAllProductIdsInFolder(currentFolderId);
+    list = Object.values(appState.products || {}).filter(p => 
+      !!p.priority && 
+      Number(p.targetQuantity || 0) > 0 && 
+      folderProductIds.has(p.id)
+    );
+  }
+  
   if (!list.length) { box.innerHTML = ''; box.classList.add('hidden'); return; }
   box.classList.remove('hidden');
   // Sort by progress ascending (least produced near top)
@@ -1209,7 +1256,7 @@ function openProductEditModal(productId) {
     // Warning threshold input
     const thresholdRow = document.createElement('div'); thresholdRow.style.marginTop = '10px';
     const thresholdLabel = document.createElement('div'); thresholdLabel.textContent = 'Warning Threshold'; thresholdLabel.style.marginBottom = '4px';
-    const thresholdInput = document.createElement('input'); thresholdInput.type = 'number'; thresholdInput.step = '1'; thresholdInput.min = '0'; thresholdInput.value = p.warnThreshold || 0; thresholdInput.style.width = '100%'; thresholdInput.style.padding = '8px'; thresholdInput.style.border = '1px solid #d1d5db'; thresholdInput.style.borderRadius = '8px'; thresholdInput.inputMode = 'numeric';
+    const thresholdInput = document.createElement('input'); thresholdInput.id = 'edit-warn-threshold'; thresholdInput.type = 'number'; thresholdInput.step = '1'; thresholdInput.min = '0'; thresholdInput.value = p.warnThreshold || 0; thresholdInput.style.width = '100%'; thresholdInput.style.padding = '8px'; thresholdInput.style.border = '1px solid #d1d5db'; thresholdInput.style.borderRadius = '8px'; thresholdInput.inputMode = 'numeric';
     thresholdInput.addEventListener('focus', () => { try { thresholdInput.select(); } catch {} });
     thresholdRow.appendChild(thresholdLabel); thresholdRow.appendChild(thresholdInput);
     linkContainer.appendChild(thresholdRow);
@@ -1315,7 +1362,8 @@ function openProductEditModal(productId) {
     actions: [
       { label: 'Save', onClick: () => {
           const dynamicCheckbox = wrap.querySelector('input[type="checkbox"]');
-          const newWarnThreshold = Number(wrap.querySelector('input[type="number"]').value || 0);
+          const thresholdInput = wrap.querySelector('#edit-warn-threshold');
+          const newWarnThreshold = thresholdInput ? Number(thresholdInput.value || 0) : 0;
           p.name = nameInput.value.trim();
           p.isDynamic = dynamicCheckbox ? dynamicCheckbox.checked : false;
           if (!p.isDynamic) { p.dynamicLinks = []; } // Clear links if dynamic is disabled
@@ -2186,28 +2234,53 @@ function updateWarningIcon(show) {
   if (!warningIcon) {
     const rightDiv = document.querySelector('#top-bar .right');
     if (rightDiv) {
+      // Create wrapper container
       warningIcon = document.createElement('div');
       warningIcon.id = 'warning-icon';
       warningIcon.className = 'hidden';
-      warningIcon.textContent = '⚠️';
+      warningIcon.style.position = 'relative';
+      warningIcon.style.display = 'inline-flex';
+      warningIcon.style.cursor = 'pointer';
       warningIcon.style.height = 'var(--control-h)';
       warningIcon.style.width = 'var(--control-h)';
-      warningIcon.style.borderRadius = '8px';
-      warningIcon.style.background = '#ef4444';
-      warningIcon.style.color = '#fff';
-      warningIcon.style.fontSize = '18px';
-      warningIcon.style.fontWeight = '700';
-      warningIcon.style.display = 'inline-grid';
-      warningIcon.style.placeItems = 'center';
-      warningIcon.style.cursor = 'pointer';
-      warningIcon.style.animation = 'warning-blink 1s ease-in-out infinite alternate';
       
-      // Insert before settings button
+      // Create button background with animation
+      const buttonBg = document.createElement('div');
+      buttonBg.style.position = 'absolute';
+      buttonBg.style.inset = '0';
+      buttonBg.style.borderRadius = '8px';
+      buttonBg.style.background = '#ef4444';
+      buttonBg.style.border = '1px solid #dc2626';
+      buttonBg.style.animation = 'warning-button-blink 1.2s ease-in-out infinite alternate';
+      buttonBg.style.pointerEvents = 'none';
+      
+      // Create icon span with opposite animation
+      const iconSpan = document.createElement('span');
+      iconSpan.textContent = '⚠️';
+      iconSpan.style.position = 'absolute';
+      iconSpan.style.top = 'calc(50% - 2px)';
+      iconSpan.style.left = '50%';
+      iconSpan.style.transform = 'translate(-50%, -50%)';
+      iconSpan.style.fontSize = '22px';
+      iconSpan.style.lineHeight = '1';
+      iconSpan.style.color = '#fff';
+      iconSpan.style.fontWeight = '700';
+      iconSpan.style.textShadow = '-1px -1px 0 #991b1b, 1px -1px 0 #991b1b, -1px 1px 0 #991b1b, 1px 1px 0 #991b1b, -1px 0 0 #991b1b, 1px 0 0 #991b1b, 0 -1px 0 #991b1b, 0 1px 0 #991b1b';
+      iconSpan.style.animation = 'warning-icon-blink 1.2s ease-in-out infinite alternate';
+      iconSpan.style.pointerEvents = 'none';
+      
+      warningIcon.appendChild(buttonBg);
+      warningIcon.appendChild(iconSpan);
+      
+      // Insert after settings button, before search toggle
       const settingsBtn = document.getElementById('settings-btn');
-      if (settingsBtn) {
-        rightDiv.insertBefore(warningIcon, settingsBtn);
+      const searchToggle = document.getElementById('search-toggle');
+      if (searchToggle) {
+        rightDiv.insertBefore(warningIcon, searchToggle);
+      } else if (settingsBtn) {
+        rightDiv.insertBefore(warningIcon, settingsBtn.nextSibling);
       } else {
-        rightDiv.insertBefore(warningIcon, rightDiv.firstChild);
+        rightDiv.appendChild(warningIcon);
       }
     }
   }
@@ -2216,9 +2289,11 @@ function updateWarningIcon(show) {
   
   if (show) {
     warningIcon.classList.remove('hidden');
+    warningIcon.style.display = 'inline-flex';
     warningIcon.onclick = showLowQuantityModal;
   } else {
     warningIcon.classList.add('hidden');
+    warningIcon.style.display = 'none';
     warningIcon.onclick = null;
   }
 }
@@ -2242,7 +2317,7 @@ function showLowQuantityModal() {
   const list = document.createElement('div');
   list.style.display = 'grid';
   list.style.gap = '8px';
-  list.style.maxHeight = '300px';
+  list.style.maxHeight = 'calc(80vh - 200px)';
   list.style.overflowY = 'auto';
   
   products.forEach(product => {
@@ -2264,7 +2339,7 @@ function showLowQuantityModal() {
     nameSpan.style.flex = '1';
     
     const qtySpan = document.createElement('span');
-    qtySpan.textContent = `${product.quantity} / ${product.threshold}`;
+    qtySpan.textContent = `${product.quantity} pc`;
     qtySpan.style.color = '#ef4444';
     qtySpan.style.fontWeight = '700';
     qtySpan.style.marginLeft = '10px';
@@ -2294,7 +2369,7 @@ function showLowQuantityModal() {
   body.appendChild(list);
   
   openModal({
-    title: 'Low Quantity Components',
+    title: '',
     body: body,
     actions: [
       { label: 'Close' }
@@ -3064,38 +3139,39 @@ function openProductPage(productId) {
   // info
   document.getElementById('pp-name').textContent = p.name || '';
   document.getElementById('pp-qty').textContent = Number(p.quantity || 0);
+  const warningThresholdRow = document.getElementById('pp-warning-threshold')?.closest('.pp-row');
+  if (warningThresholdRow) warningThresholdRow.remove();
+  if (p.warnThreshold > 0) {
+    const warningThresholdRowNew = document.createElement('div');
+    warningThresholdRowNew.id = 'pp-warning-threshold';
+    warningThresholdRowNew.className = 'pp-row';
+    const warningThresholdLabel = document.createElement('div');
+    warningThresholdLabel.className = 'pp-label';
+    warningThresholdLabel.textContent = 'Warning threshold';
+    const warningThresholdValue = document.createElement('div');
+    warningThresholdValue.className = 'pp-value';
+    warningThresholdValue.id = 'pp-warning-threshold-value';
+    warningThresholdValue.textContent = p.warnThreshold || 0;
+    warningThresholdRowNew.appendChild(warningThresholdLabel);
+    warningThresholdRowNew.appendChild(warningThresholdValue);
+    const infoGrid = document.querySelector('.pp-info-grid');
+    const qtyRow = document.getElementById('pp-qty')?.closest('.pp-row');
+    if (qtyRow && infoGrid) infoGrid.insertBefore(warningThresholdRowNew, qtyRow.nextSibling);
+  }
   
   // Hide price, total, and target for products in independent folders
   const priceRow = document.getElementById('pp-price')?.closest('.pp-row');
   const totalRow = document.getElementById('pp-total')?.closest('.pp-row');
   const targetRow = document.getElementById('pp-target')?.closest('.pp-row');
-  const warningThresholdRow = document.getElementById('pp-warning-threshold')?.closest('.pp-row');
   
   if (inIndependentFolder) {
     if (priceRow) priceRow.style.display = 'none';
     if (totalRow) totalRow.style.display = 'none';
     if (targetRow) targetRow.style.display = 'none';
-    if (warningThresholdRow) warningThresholdRow.style.display = 'none';
-    if (!document.getElementById('pp-warning-threshold')) {
-      const warningThresholdRowNew = document.createElement('div');
-      warningThresholdRowNew.id = 'pp-warning-threshold';
-      warningThresholdRowNew.className = 'pp-row';
-      warningThresholdRowNew.style.justifyContent = 'space-between';
-      const warningThresholdLabel = document.createElement('div');
-      warningThresholdLabel.textContent = 'Warning threshold:';
-      const warningThresholdValue = document.createElement('div');
-      warningThresholdValue.id = 'pp-warning-threshold-value';
-      warningThresholdRowNew.appendChild(warningThresholdLabel);
-      warningThresholdRowNew.appendChild(warningThresholdValue);
-      document.querySelector('.pp-info-grid').appendChild(warningThresholdRowNew);
-    }
-    const warningThresholdValueEl = document.getElementById('pp-warning-threshold-value');
-    if (warningThresholdValueEl) warningThresholdValueEl.textContent = p.warnThreshold || 0;
   } else {
     if (priceRow) priceRow.style.display = '';
     if (totalRow) totalRow.style.display = '';
     if (targetRow) targetRow.style.display = '';
-    if (warningThresholdRow) warningThresholdRow.style.display = 'none';
     document.getElementById('pp-price').textContent = formatCurrency(Number(p.price || 0));
     document.getElementById('pp-target').textContent = Number(p.targetQuantity || 0);
     document.getElementById('pp-total').textContent = formatCurrency(Number(p.price || 0) * Number(p.quantity || 0));
