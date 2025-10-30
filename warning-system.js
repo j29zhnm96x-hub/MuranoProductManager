@@ -125,7 +125,6 @@ function initializeWarningIcon() {
       const warningIcon = document.createElement('div');
       warningIcon.id = 'warning-icon';
       warningIcon.className = 'hidden';
-      warningIcon.title = 'Low quantity components';
       warningIcon.textContent = '⚠️';
       warningIcon.style.height = 'var(--control-h)';
       warningIcon.style.width = 'var(--control-h)';
