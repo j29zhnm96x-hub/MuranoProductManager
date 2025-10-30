@@ -2129,7 +2129,6 @@ function renderFolderList(folderId = currentFolderId) {
       pmeta.appendChild(qtyLine);
       ptext.appendChild(pname); ptext.appendChild(pmeta);
       leftp.appendChild(picon); leftp.appendChild(ptext);
-      leftp.style.cursor = 'pointer'; leftp.addEventListener('click', () => openProductPage(p.id));
       const actionsP = document.createElement('div'); actionsP.className = 'actions';
       // Add pencil icon if product has a note
       if (p.note && p.note.trim()) {
@@ -2140,12 +2139,11 @@ function renderFolderList(folderId = currentFolderId) {
       const moreBtnP = document.createElement('button'); moreBtnP.textContent = '⋯'; moreBtnP.title = 'More';
       moreBtnP.addEventListener('click', (e) => { e.stopPropagation(); openProductMenu(p.id); });
       actionsP.appendChild(moreBtnP);
-      // Use unified order DnD with mixed key
+      leftp.style.cursor = 'pointer'; leftp.addEventListener('click', () => openProductPage(p.id));
       attachReorderDnD(pli, 'order', `p:${p.id}`, curFolder);
       pli.appendChild(leftp); pli.appendChild(actionsP); rootUl.appendChild(pli);
     }
   }
-
   container.appendChild(rootUl);
 }
 
@@ -2156,9 +2154,8 @@ function renderAll() {
   checkLowQuantityComponents();
 }
 
-// ---------------------------- Low Quantity Warning System ----------------------------
+// Find all products with warnThreshold set and check if they're below it
 function checkLowQuantityComponents() {
-  // Find all products with warnThreshold set and check if they're below it
   const lowQuantityProducts = [];
   
   for (const [productId, product] of Object.entries(appState.products || {})) {
@@ -3090,9 +3087,10 @@ function openProductPage(productId) {
       warningThresholdValue.id = 'pp-warning-threshold-value';
       warningThresholdRowNew.appendChild(warningThresholdLabel);
       warningThresholdRowNew.appendChild(warningThresholdValue);
-      document.getElementById('pp-info-grid').appendChild(warningThresholdRowNew);
+      document.querySelector('.pp-info-grid').appendChild(warningThresholdRowNew);
     }
-    document.getElementById('pp-warning-threshold-value').textContent = p.warningThreshold || 0;
+    const warningThresholdValueEl = document.getElementById('pp-warning-threshold-value');
+    if (warningThresholdValueEl) warningThresholdValueEl.textContent = p.warnThreshold || 0;
   } else {
     if (priceRow) priceRow.style.display = '';
     if (totalRow) totalRow.style.display = '';
