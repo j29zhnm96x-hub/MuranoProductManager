@@ -1,6 +1,6 @@
 ---
-description: 
-auto_execution_mode: 1
+description: auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 - **Research Phase**: Dive deep into all sources of the codebase to uncover EVERY matching element that is related to the user request and find out about their conditions/functions.

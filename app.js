@@ -535,17 +535,7 @@ function ensureAuthOverlayElements() {
 }
 
 async function ensureAuthenticated() {
-  try { if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') return; } catch {}
-  ensureAuthOverlayElements();
-  const ov = document.getElementById('auth-overlay');
-  ov.classList.remove('hidden');
-  // Passcode-only per requirements (biometrics disabled)
-  // Fallback waits for passcode entry; do not resolve until authenticated
-  await new Promise((resolve) => {
-    const watcher = setInterval(() => {
-      if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') { clearInterval(watcher); resolve(); }
-    }, 200);
-  });
+  return;
 }
 
 // ---------------------------- Daily Progress ----------------------------
@@ -2928,7 +2918,6 @@ async function initialCloudSync() {
 // ---------------------------- Event Wiring ----------------------------
 document.addEventListener('DOMContentLoaded', async () => {
   clearAllCookies();
-  try { await ensureAuthenticated(); } catch {}
   // Disable double-tap zoom and pinch zoom
   try {
     document.addEventListener('touchstart', (e) => {
