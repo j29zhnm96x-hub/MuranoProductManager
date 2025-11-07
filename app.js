@@ -2932,9 +2932,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch {}
   // DB
   try { db = await openDB(); } catch (e) { console.error(e); showToast('IndexedDB error'); }
-  appState = await readState();
-  if (!appState) appState = initEmptyState();
-  await maybeLoadSample();
+  // Remote-first: block until latest cloud backup is loaded
+  const overlay0 = document.getElementById('refresh-overlay');
+  try { overlay0?.classList.add('show'); } catch {}
+  let loadedRemote0 = false;
+  try { loadedRemote0 = await loadLatestCloudBackup(); } catch {}
+  if (!loadedRemote0) {
+    setSyncStatus('error');
+    openModal({ title: 'Network Required', body: 'Latest cloud save is required. Please connect to the internet to continue.', actions: [] });
+    return;
+  }
+  try { overlay0?.classList.remove('show'); } catch {}
 
   // UI wiring
   document.getElementById('add-btn').addEventListener('click', () => openAddMenu(currentFolderId));
@@ -3041,8 +3049,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   attachSearch();
 
-  // Try load latest backup from cloud before first render
-  await loadLatestCloudBackup();
+  // Latest cloud backup already loaded above
   ensureDailyProgress();
   renderAll();
 
@@ -3059,16 +3066,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initialCloudSync();
   }
 
-  // Load latest snapshot if present
-  try {
-    const latest = await getLatestSnapshot();
-    if (latest && latest.state) {
-      appState = latest.state;
-      await writeState(appState);
-      renderAll();
-      showToast('Loaded latest snapshot');
-    }
-  } catch {}
+  
 
   // Product page events
   document.getElementById('pp-back').addEventListener('click', () => { closeProductPage(); });
