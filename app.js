@@ -1317,10 +1317,16 @@ function openProductEditModal(productId) {
   if (!p) return;
   const inIndependentFolder = isProductInIndependentFolder(productId);
   
-  // Initialize dynamic link data if not exists
-  if (!p.dynamicLinks) p.dynamicLinks = [];
-  if (p.isDynamic === undefined) p.isDynamic = false;
-  if (p.warnThreshold === undefined) p.warnThreshold = 0; // Initialize warnThreshold property
+  // Initialize dynamic link data if not exists - track if we modified anything
+  let needsInitSave = false;
+  if (!p.dynamicLinks) { p.dynamicLinks = []; needsInitSave = true; }
+  if (p.isDynamic === undefined) { p.isDynamic = false; needsInitSave = true; }
+  if (p.warnThreshold === undefined) { p.warnThreshold = 0; needsInitSave = true; }
+  
+  // Only save if we actually initialized new properties
+  if (needsInitSave) {
+    saveStateDebounced();
+  }
   
   const wrap = document.createElement('div');
   const nameRow = document.createElement('div');
@@ -1782,11 +1788,18 @@ function onSaveProductNote() {
   const p = appState.products[productPageProductId];
   if (!p) return;
   const val = document.getElementById('pp-note').value;
-  p.note = val;
-  saveStateDebounced();
-  // Re-render folder list to update pencil icon visibility
-  renderFolderList();
-  showToast('Note saved');
+  
+  // Only save if the note actually changed
+  const oldNote = p.note || '';
+  const newNote = val || '';
+  
+  if (oldNote !== newNote) {
+    p.note = val;
+    saveStateDebounced();
+    // Re-render folder list to update pencil icon visibility
+    renderFolderList();
+    showToast('Note saved');
+  }
 }
 
 function showToast(message, timeout = 3000) {
