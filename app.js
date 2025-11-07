@@ -696,36 +696,151 @@ let modified = false; // tracks if user has made changes that need syncing
 let connectionCheckerId = null; // interval ID for connection checker
 let wasOffline = false; // tracks previous offline state
 
-async function runAutosave(downloadAlso = false, forceUpload = false) {
-  if (autosaveInProgress) { autosaveQueued = true; return; }
-  if (!navigator.onLine || !ENABLE_CLOUD) { autosaveQueued = true; return; }
+// ============ ROBUST SAVE QUEUE SYSTEM ============
+let saveQueue = []; // Queue of pending changes
+let saveRetryTimer = null;
+let saveRetryCount = 0;
+let firstFailureTime = null; // When the first save failure occurred
+let saveModalShown = false; // Track if we're showing the critical save modal
+let lastSuccessfulSaveTime = Date.now();
+const MAX_RETRY_INTERVAL = 10000; // Max 10 seconds between retries
+const SAVE_FAILURE_MODAL_THRESHOLD = 2000; // Show modal after 2 seconds of failures
+
+// New robust save system - NEVER gives up
+async function processSaveQueue() {
+  if (!ENABLE_CLOUD) return;
+  
+  // Always show yellow/syncing when there are unsaved changes
+  if (modified) {
+    setSyncStatus('syncing');
+  }
+  
+  if (autosaveInProgress) {
+    // Already processing, will retry after current attempt
+    return;
+  }
+  
   try {
     autosaveInProgress = true;
-    setSyncStatus('syncing'); // yellow blink
-    // Use the same pipeline as manual Save button
-    await saveSnapshot(downloadAlso);
-    await uploadBackupToCloud(forceUpload);
-    // If both above succeeded, mark as synced
-    setSyncStatus('synced'); // green with check
-    modified = false; // clear modified flag after successful sync
-    lastAutosaveTs = Date.now();
+    
+    // Attempt to save
+    await saveSnapshot(false);
+    await uploadBackupToCloud(true);
+    
+    // SUCCESS! Clear everything
+    modified = false;
+    saveRetryCount = 0;
+    firstFailureTime = null;
+    lastSuccessfulSaveTime = Date.now();
+    
+    // Hide the critical save modal if it was shown
+    if (saveModalShown) {
+      closeModal();
+      saveModalShown = false;
+      showToast('Changes saved successfully', 2000);
+    }
+    
+    // Only show green checkmark when truly saved
+    setSyncStatus('synced');
+    
   } catch (e) {
-    console.warn('Autosave failed', e);
-    setSyncStatus('error');
-    autosaveQueued = true;
+    console.warn('Save attempt failed, will retry:', e);
+    
+    // Track first failure
+    if (!firstFailureTime) {
+      firstFailureTime = Date.now();
+    }
+    
+    const failureDuration = Date.now() - firstFailureTime;
+    
+    // Show critical modal if failing for more than 2 seconds
+    if (failureDuration > SAVE_FAILURE_MODAL_THRESHOLD && !saveModalShown) {
+      showCriticalSaveModal();
+      saveModalShown = true;
+    }
+    
+    // Keep status as syncing (yellow)
+    setSyncStatus('syncing');
+    
+    // Calculate exponential backoff
+    saveRetryCount++;
+    const retryDelay = Math.min(1000 * Math.pow(1.5, saveRetryCount), MAX_RETRY_INTERVAL);
+    
+    // Schedule retry
+    if (saveRetryTimer) clearTimeout(saveRetryTimer);
+    saveRetryTimer = setTimeout(() => {
+      processSaveQueue();
+    }, retryDelay);
+    
   } finally {
     autosaveInProgress = false;
-    if (autosaveQueued && navigator.onLine) {
-      autosaveQueued = false;
-      // Debounce small bursts
-      setTimeout(() => runAutosave(false, forceUpload), 500);
+  }
+}
+
+// Show critical modal warning user not to close app
+function showCriticalSaveModal() {
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+  const modalActions = document.getElementById('modal-actions');
+  
+  modalTitle.textContent = '⚠️ SAVE IN PROGRESS';
+  modalTitle.style.color = '#dc2626';
+  
+  const body = document.createElement('div');
+  body.style.textAlign = 'center';
+  body.innerHTML = `
+    <div style="background: #fee2e2; border: 2px solid #dc2626; padding: 20px; border-radius: 8px; margin: 10px 0;">
+      <div style="font-size: 18px; font-weight: bold; color: #dc2626; margin-bottom: 10px;">
+        ⚠️ SAVE FAILED - RETRYING...
+      </div>
+      <div style="color: #991b1b; margin-bottom: 15px;">
+        DO NOT CLOSE THIS APP UNTIL CHANGES ARE SAVED
+      </div>
+      <div style="font-size: 14px; color: #7f1d1d;">
+        Your changes are being saved. This may be due to network issues.
+        <br/><br/>
+        <strong>The app will keep trying until successful.</strong>
+      </div>
+      <div id="retry-status" style="margin-top: 15px; font-size: 13px; color: #991b1b;">
+        Retrying...
+      </div>
+    </div>
+  `;
+  
+  modalBody.innerHTML = '';
+  modalBody.appendChild(body);
+  
+  // No actions - user cannot dismiss this modal
+  modalActions.innerHTML = '';
+  
+  modal.classList.remove('hidden');
+  
+  // Update retry status periodically
+  const updateRetryStatus = () => {
+    if (!saveModalShown) return;
+    const statusEl = document.getElementById('retry-status');
+    if (statusEl) {
+      const duration = Math.floor((Date.now() - firstFailureTime) / 1000);
+      statusEl.textContent = `Retrying... (${duration}s since first failure, attempt ${saveRetryCount})`;
+      setTimeout(updateRetryStatus, 1000);
     }
+  };
+  setTimeout(updateRetryStatus, 1000);
+}
+
+async function runAutosave(downloadAlso = false, forceUpload = false) {
+  // This now just queues the save
+  if (modified) {
+    processSaveQueue();
   }
 }
 
 function scheduleAutosave() {
-  // Try immediately; if offline it will queue
-  runAutosave(false);
+  // Mark as modified and trigger save queue
+  if (modified) {
+    processSaveQueue();
+  }
 }
 
 // Connection checker: runs every 5 seconds to monitor connection and force sync when back online
@@ -739,26 +854,20 @@ function startConnectionChecker() {
     if (wasOffline && isOnline) {
       console.log('Connection restored');
       
-      // If we have pending changes, force sync immediately
+      // If we have pending changes, trigger save queue immediately
       if (modified) {
-        console.log('Modified flag is true, forcing sync');
-        try {
-          setSyncStatus('syncing');
-          // Force upload the current version, no questions asked
-          await saveSnapshot(false);
-          await uploadBackupToCloud(true);
-          setSyncStatus('synced');
-          modified = false;
-          showToast('Changes synced');
-        } catch (e) {
-          console.warn('Force sync failed', e);
-          setSyncStatus('error');
-        }
+        console.log('Modified flag is true, triggering save queue');
+        processSaveQueue();
       }
     }
     
     wasOffline = !isOnline;
-  }, 5000); // check every 5 seconds
+    
+    // Also check if we have unsaved changes and should retry
+    if (isOnline && modified && !autosaveInProgress) {
+      processSaveQueue();
+    }
+  }, 3000); // check every 3 seconds
 }
 
 // (moved: computeProductionInRange/exportProductionPDF defined later once)
@@ -776,18 +885,13 @@ function openActionsMenu() {
     actions: [ { label: 'Close' } ]
   });
   saveBtn.addEventListener('click', async () => { 
-    try {
-      setSyncStatus('syncing');
-      await saveSnapshot(false); // Don't download - only export should download
-      await uploadBackupToCloud(false);
-      setSyncStatus('synced');
-      modified = false;
-      closeModal();
-      showToast('Saved');
-    } catch (e) {
-      console.warn('Save failed', e);
-      setSyncStatus('error');
-      showToast('Save failed');
+    // Manual save just triggers the save queue
+    closeModal();
+    if (modified) {
+      showToast('Saving...');
+      processSaveQueue();
+    } else {
+      showToast('No changes to save');
     }
   });
   importBtn.addEventListener('click', () => { document.getElementById('import-file').click(); closeModal(); });
@@ -1924,16 +2028,22 @@ function writeState(state) {
 
 function saveStateDebounced() {
   modified = true; // mark as modified whenever any change is made
+  
+  // Immediately update UI to show unsaved state
+  setSyncStatus('syncing');
+  
   clearTimeout(saveDebounceTimer);
   saveDebounceTimer = setTimeout(async () => {
     try {
       appState.lastModified = Date.now();
       await writeState(appState);
-      // Trigger autosave to cloud backup (same logic as Save button)
-      scheduleAutosave();
+      // Trigger the robust save queue
+      processSaveQueue();
     } catch (e) {
       console.error(e);
-      showToast('Failed to save');
+      // Even IndexedDB failures shouldn't stop us
+      // We'll keep retrying
+      processSaveQueue();
     }
   }, 500);
 }
@@ -2948,17 +3058,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('add-btn').addEventListener('click', () => openAddMenu(currentFolderId));
   const saveBtn = document.getElementById('save-btn');
   if (saveBtn) saveBtn.addEventListener('click', async () => { 
-    try {
-      setSyncStatus('syncing');
-      await saveSnapshot(false); // Don't download on save button
-      await uploadBackupToCloud(false);
-      setSyncStatus('synced');
-      modified = false;
-      showToast('Saved');
-    } catch (e) {
-      console.warn('Save failed', e);
-      setSyncStatus('error');
-      showToast('Save failed');
+    if (modified) {
+      showToast('Saving...');
+      processSaveQueue();
+    } else {
+      showToast('No changes to save');
     }
   });
   const actionsBtn = document.getElementById('actions-btn');
@@ -2968,12 +3072,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
 
-  // Start connection checker (monitors every 5 seconds)
+  // Start connection checker (monitors every 3 seconds)
   wasOffline = !navigator.onLine;
   startConnectionChecker();
   
   // Start remote watcher
   startRemoteBackupWatcher();
+  
+  // Initialize save queue system - if there are any pending changes from a previous session
+  // this will ensure they get saved
+  if (modified) {
+    setSyncStatus('syncing');
+    processSaveQueue();
+  } else {
+    // If no changes, show synced status
+    setSyncStatus('synced');
+  }
 
   // Search toggle for portrait mode
   const searchToggle = document.getElementById('search-toggle');
@@ -3053,18 +3167,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   ensureDailyProgress();
   renderAll();
 
-  // Set initial sync status
-  if (navigator.onLine) {
-    setSyncStatus('synced');
-  } else {
-    setSyncStatus('error');
-  }
-
   // initial cloud
   // If we already loaded a backup successfully, skip legacy single-file sync to avoid confusing statuses
   if (!backupLoaded) {
     await initialCloudSync();
   }
+  
+  // Warn user if they try to close/refresh with unsaved changes
+  window.addEventListener('beforeunload', (e) => {
+    if (modified) {
+      e.preventDefault();
+      e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      return e.returnValue;
+    }
+  });
 
   
 
