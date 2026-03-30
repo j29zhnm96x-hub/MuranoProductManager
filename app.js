@@ -915,7 +915,7 @@ function buildModalMenuHeader(iconText, title, subtitle = 'Select an action') {
 function openActionsMenu() {
   openModal({
     title: 'Actions',
-    body: buildModalMenuHeader('✦', 'Quick Actions', 'Choose what you want to do next.'),
+    body: buildModalMenuHeader('⋯', 'Actions', 'Select an action.'),
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
@@ -1865,6 +1865,7 @@ function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout =
   const titleEl = document.getElementById('modal-title');
   const bodyEl = document.getElementById('modal-body');
   const actionsEl = document.getElementById('modal-actions');
+  const isStacked = actionsLayout === 'stack';
   titleEl.textContent = title;
   bodyEl.className = bodyClassName || '';
   if (typeof body === 'string') {
@@ -1877,14 +1878,14 @@ function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout =
     bodyEl.innerHTML = '';
   }
   actionsEl.className = 'modal-actions';
-  if (actionsLayout === 'stack') actionsEl.classList.add('stacked');
+  if (isStacked) actionsEl.classList.add('stacked');
   actionsEl.innerHTML = '';
   actions.forEach(a => {
     const b = document.createElement('button');
     b.textContent = a.label;
     const lbl = String(a.label || '').toLowerCase();
     const tone = a.tone || '';
-    if (tone === 'secondary' || lbl.includes('cancel') || lbl.includes('close') || lbl.includes('back')) {
+    if (tone === 'secondary' || (!isStacked && (lbl.includes('cancel') || lbl.includes('close') || lbl.includes('back')))) {
       b.classList.add('secondary');
     }
     try {
@@ -2119,7 +2120,19 @@ function formatHistoryDayLabel(ts) {
 function formatHistoryDayKey(ts) {
   const date = new Date(ts || 0);
   if (Number.isNaN(date.getTime())) return 'unknown';
-  return date.toISOString().slice(0, 10);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function formatHistoryFilterDate(dateValue) {
+  if (!dateValue) return 'All dates';
+  const date = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 function getHistoryBadgeLabel(entry) {
@@ -2245,16 +2258,20 @@ function renderHistoryPage() {
   const summaryEl = document.getElementById('history-summary');
   const listEl = document.getElementById('history-list');
   const searchInput = document.getElementById('history-search');
+  const dateInput = document.getElementById('history-date');
   if (!summaryEl || !listEl) return;
 
   const query = (searchInput?.value || '').trim().toLowerCase();
+  const selectedDate = dateInput?.value || '';
   const allEntries = getHistoryEntries();
-  const entries = query ? allEntries.filter(entry => matchesHistoryQuery(entry, query)) : allEntries;
+  const datedEntries = selectedDate ? allEntries.filter(entry => formatHistoryDayKey(entry.ts) === selectedDate) : allEntries;
+  const entries = query ? datedEntries.filter(entry => matchesHistoryQuery(entry, query)) : datedEntries;
   const currentStats = getOverallBusinessStats();
 
   summaryEl.innerHTML = '';
   summaryEl.appendChild(createHistoryChip('Events', String(allEntries.length)));
   summaryEl.appendChild(createHistoryChip('Showing', String(entries.length)));
+  summaryEl.appendChild(createHistoryChip('Date', formatHistoryFilterDate(selectedDate)));
   summaryEl.appendChild(createHistoryChip('Overall Qty', `${currentStats.totalQty} pc`));
   summaryEl.appendChild(createHistoryChip('Overall Value', formatCurrency(currentStats.totalValue)));
 
@@ -2266,9 +2283,15 @@ function renderHistoryPage() {
     const title = document.createElement('strong');
     title.textContent = allEntries.length ? 'No matching history events' : 'No history yet';
     const message = document.createElement('div');
-    message.textContent = allEntries.length
-      ? 'Try a different search term to find product movements.'
-      : 'Quantity changes, removals, deductions, and future stock events will appear here.';
+    if (!allEntries.length) {
+      message.textContent = 'Quantity changes, removals, deductions, and future stock events will appear here.';
+    } else if (selectedDate && query) {
+      message.textContent = `No history events matched your search on ${formatHistoryFilterDate(selectedDate)}.`;
+    } else if (selectedDate) {
+      message.textContent = `No history events were recorded on ${formatHistoryFilterDate(selectedDate)}.`;
+    } else {
+      message.textContent = 'Try a different search term to find product movements.';
+    }
     empty.appendChild(title);
     empty.appendChild(message);
     listEl.appendChild(empty);
@@ -3687,6 +3710,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historyBackBtn) historyBackBtn.addEventListener('click', closeHistoryPage);
   const historySearch = document.getElementById('history-search');
   if (historySearch) historySearch.addEventListener('input', () => renderHistoryPage());
+  const historyDate = document.getElementById('history-date');
+  if (historyDate) historyDate.addEventListener('input', () => renderHistoryPage());
+  const historyTodayBtn = document.getElementById('history-today');
+  if (historyTodayBtn) historyTodayBtn.addEventListener('click', () => {
+    const dateInput = document.getElementById('history-date');
+    if (!dateInput) return;
+    dateInput.value = todayStr();
+    renderHistoryPage();
+  });
+  const historyClearDateBtn = document.getElementById('history-clear-date');
+  if (historyClearDateBtn) historyClearDateBtn.addEventListener('click', () => {
+    const dateInput = document.getElementById('history-date');
+    if (!dateInput) return;
+    dateInput.value = '';
+    renderHistoryPage();
+  });
 
   // Start connection checker (monitors every 3 seconds)
   wasOffline = !navigator.onLine;

@@ -98,8 +98,18 @@
     <div class="history-content">
       <div class="history-toolbar">
         <div id="history-summary" class="history-summary"></div>
-        <div class="history-search-wrap">
-          <input id="history-search" type="text" placeholder="Search product, event or note..." autocomplete="off" />
+        <div class="history-controls">
+          <div class="history-search-wrap">
+            <input id="history-search" type="text" placeholder="Search product, event or note..." autocomplete="off" />
+          </div>
+          <div class="history-date-wrap">
+            <label class="history-date-label" for="history-date">Choose date</label>
+            <div class="history-date-row">
+              <input id="history-date" type="date" title="Filter history by date" aria-label="Filter history by date" />
+              <button id="history-today" type="button" class="history-mini-btn">Today</button>
+              <button id="history-clear-date" type="button" class="history-mini-btn secondary">All dates</button>
+            </div>
+          </div>
         </div>
       </div>
       <div id="history-list" class="history-list"></div>
