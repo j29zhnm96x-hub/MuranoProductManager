@@ -40,7 +40,20 @@ function showResetStatsConfirm() {
 
 function resetAllProductQuantities() {
   for (const p of Object.values(appState.products || {})) {
+    const oldQty = Number(p.quantity || 0);
     p.quantity = 0;
+    if (oldQty > 0) {
+      recordInventoryEvent({
+        eventType: 'reset_quantity',
+        productId: p.id,
+        productName: p.name || 'Product',
+        delta: -oldQty,
+        price: Number(p.price || 0),
+        value: -oldQty * Number(p.price || 0),
+        source: 'reset',
+        note: 'Reset quantity to 0'
+      });
+    }
   }
   saveStateDebounced();
   ensureDailyProgress();
@@ -875,10 +888,11 @@ function startConnectionChecker() {
 function openActionsMenu() {
   const body = document.createElement('div');
   const saveBtn = document.createElement('button'); saveBtn.textContent = 'Save (snapshot + cloud)'; saveBtn.type = 'button';
+  const historyBtn = document.createElement('button'); historyBtn.textContent = 'Stock History'; historyBtn.type = 'button';
   const importBtn = document.createElement('button'); importBtn.textContent = 'Import JSON'; importBtn.type = 'button';
   const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export JSON'; exportBtn.type = 'button';
-  [saveBtn, importBtn, exportBtn].forEach(b => { b.style.display = 'block'; b.style.marginBottom = '8px'; });
-  body.appendChild(saveBtn); body.appendChild(importBtn); body.appendChild(exportBtn);
+  [saveBtn, historyBtn, importBtn, exportBtn].forEach(b => { b.style.display = 'block'; b.style.marginBottom = '8px'; });
+  body.appendChild(saveBtn); body.appendChild(historyBtn); body.appendChild(importBtn); body.appendChild(exportBtn);
   openModal({
     title: 'Actions',
     body,
@@ -894,6 +908,7 @@ function openActionsMenu() {
       showToast('No changes to save');
     }
   });
+  historyBtn.addEventListener('click', () => { closeModal(); openHistoryPage(); });
   importBtn.addEventListener('click', () => { document.getElementById('import-file').click(); closeModal(); });
   exportBtn.addEventListener('click', () => { exportState(); closeModal(); });
 }
@@ -1300,6 +1315,18 @@ function processDynamicLinkDeductions(changedProductId, delta) {
         const newQty = Math.max(0, oldQty - deduction);
         console.log(`[Dynamic Link] Deducting from ${component.name}: ${oldQty} - ${deduction} = ${newQty}`);
         component.quantity = newQty;
+        recordInventoryEvent({
+          eventType: 'dynamic_deduction',
+          productId: component.id,
+          productName: component.name || 'Component',
+          relatedProductId: changedProductId,
+          relatedProductName: changedProduct?.name || null,
+          delta: -deduction,
+          price: Number(component.price || 0),
+          value: Number(component.price || 0) * -deduction,
+          source: 'dynamic_link',
+          note: changedProduct?.name ? `Auto-deducted because ${changedProduct.name} was increased.` : 'Auto-deducted by a dynamic link.'
+        });
         componentsUpdated = true;
       }
     }
@@ -1882,6 +1909,436 @@ function formatCurrency(value) {
   }
 }
 
+function safeHistoryNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function getOverallBusinessStats() {
+  const stats = computeStats('root');
+  return {
+    totalQty: safeHistoryNumber(stats?.totalQty),
+    totalValue: safeHistoryNumber(stats?.totalValue)
+  };
+}
+
+function computeFolderMovementStats(folderId) {
+  const folder = appState.folders[folderId];
+  if (!folder) return { totalQty: 0, totalValue: 0 };
+
+  let totalQty = 0;
+  let totalValue = 0;
+
+  for (const pid of folder.products || []) {
+    const product = appState.products[pid];
+    if (!product) continue;
+    const qty = safeHistoryNumber(product.quantity);
+    const price = safeHistoryNumber(product.price);
+    totalQty += qty;
+    totalValue += qty * price;
+  }
+
+  for (const subfolderId of folder.subfolders || []) {
+    const subStats = computeFolderMovementStats(subfolderId);
+    totalQty += subStats.totalQty;
+    totalValue += subStats.totalValue;
+  }
+
+  return { totalQty, totalValue };
+}
+
+function formatSignedQuantity(value) {
+  const num = safeHistoryNumber(value);
+  if (num > 0) return `+${num} pc`;
+  return `${num} pc`;
+}
+
+function formatSignedCurrency(value) {
+  const num = safeHistoryNumber(value);
+  if (num > 0) return `+${formatCurrency(num)}`;
+  if (num < 0) return `-${formatCurrency(Math.abs(num))}`;
+  return formatCurrency(0);
+}
+
+function recordInventoryEvent(event = {}) {
+  appState.productionLog = appState.productionLog || [];
+
+  const stats = getOverallBusinessStats();
+  const delta = safeHistoryNumber(event.delta);
+  const price = safeHistoryNumber(event.price);
+  const value = event.value !== undefined ? safeHistoryNumber(event.value) : delta * price;
+
+  const entry = {
+    id: event.id || uuid(),
+    ts: event.ts || Date.now(),
+    eventType: event.eventType || (delta > 0 ? 'manual_add' : delta < 0 ? 'manual_remove' : 'system'),
+    productId: event.productId ?? null,
+    productName: event.productName || (event.productId ? appState.products?.[event.productId]?.name || null : null),
+    relatedProductId: event.relatedProductId ?? null,
+    relatedProductName: event.relatedProductName || (event.relatedProductId ? appState.products?.[event.relatedProductId]?.name || null : null),
+    folderId: event.folderId ?? null,
+    folderName: event.folderName ?? null,
+    delta,
+    price,
+    value,
+    source: event.source || 'system',
+    note: event.note || '',
+    overallQty: event.overallQty !== undefined ? safeHistoryNumber(event.overallQty) : stats.totalQty,
+    overallValue: event.overallValue !== undefined ? safeHistoryNumber(event.overallValue) : stats.totalValue,
+  };
+
+  appState.productionLog.push(entry);
+
+  const historyPage = document.getElementById('history-page');
+  if (historyPage && !historyPage.classList.contains('hidden')) {
+    renderHistoryPage();
+  }
+
+  return entry;
+}
+
+function inferHistoryEventType(entry) {
+  if (entry.eventType) return entry.eventType;
+  if (entry.folderName || entry.folderId || entry.productId === null) return 'legacy_system_change';
+  if (safeHistoryNumber(entry.delta) > 0) return 'manual_add';
+  if (safeHistoryNumber(entry.delta) < 0) return 'manual_remove';
+  return 'system';
+}
+
+function normalizeHistoryEntry(entry, index) {
+  const delta = safeHistoryNumber(entry.delta);
+  const price = safeHistoryNumber(entry.price);
+  const value = entry.value !== undefined ? safeHistoryNumber(entry.value) : delta * price;
+
+  return {
+    id: entry.id || `legacy-${index}-${safeHistoryNumber(entry.ts)}`,
+    ts: safeHistoryNumber(entry.ts),
+    eventType: inferHistoryEventType(entry),
+    productId: entry.productId ?? null,
+    productName: entry.productName || (entry.productId ? appState.products?.[entry.productId]?.name || null : null),
+    relatedProductId: entry.relatedProductId ?? null,
+    relatedProductName: entry.relatedProductName || (entry.relatedProductId ? appState.products?.[entry.relatedProductId]?.name || null : null),
+    folderId: entry.folderId ?? null,
+    folderName: entry.folderName ?? null,
+    delta,
+    price,
+    value,
+    note: entry.note || '',
+    source: entry.source || 'system',
+    overallQty: entry.overallQty !== undefined ? safeHistoryNumber(entry.overallQty) : null,
+    overallValue: entry.overallValue !== undefined ? safeHistoryNumber(entry.overallValue) : null,
+    statusEstimated: false,
+    _index: index,
+  };
+}
+
+function getHistoryEntries() {
+  const raw = Array.isArray(appState.productionLog) ? appState.productionLog : [];
+  const asc = raw
+    .map((entry, index) => normalizeHistoryEntry(entry, index))
+    .sort((a, b) => (a.ts - b.ts) || (a._index - b._index));
+
+  const currentStats = getOverallBusinessStats();
+  let runningQty = currentStats.totalQty;
+  let runningValue = currentStats.totalValue;
+
+  for (let i = asc.length - 1; i >= 0; i -= 1) {
+    const entry = asc[i];
+    const hasStoredTotals = entry.overallQty !== null && entry.overallValue !== null;
+    if (!hasStoredTotals) {
+      entry.overallQty = runningQty;
+      entry.overallValue = runningValue;
+      entry.statusEstimated = true;
+    }
+    runningQty = safeHistoryNumber(entry.overallQty) - safeHistoryNumber(entry.delta);
+    runningValue = safeHistoryNumber(entry.overallValue) - safeHistoryNumber(entry.value);
+  }
+
+  return asc.sort((a, b) => (b.ts - a.ts) || (b._index - a._index));
+}
+
+function formatHistoryTimestamp(ts) {
+  const date = new Date(ts || 0);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function formatHistoryDayLabel(ts) {
+  const date = new Date(ts || 0);
+  if (Number.isNaN(date.getTime())) return 'Unknown date';
+  return date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function formatHistoryDayKey(ts) {
+  const date = new Date(ts || 0);
+  if (Number.isNaN(date.getTime())) return 'unknown';
+  return date.toISOString().slice(0, 10);
+}
+
+function getHistoryBadgeLabel(entry) {
+  switch (entry.eventType) {
+    case 'manual_add': return 'Added';
+    case 'manual_remove': return 'Removed';
+    case 'editor_adjustment': return 'Edited';
+    case 'dynamic_deduction': return 'Deducted';
+    case 'product_deleted': return 'Deleted';
+    case 'folder_deleted': return 'Folder deleted';
+    case 'reset_quantity': return 'Reset';
+    case 'product_duplicated': return 'Duplicated';
+    case 'import_state': return 'Import';
+    case 'legacy_system_change': return 'Legacy';
+    default: return safeHistoryNumber(entry.delta) >= 0 ? 'Change' : 'Removed';
+  }
+}
+
+function getHistoryBadgeTone(entry) {
+  switch (entry.eventType) {
+    case 'manual_add':
+    case 'product_duplicated':
+      return 'positive';
+    case 'manual_remove':
+    case 'product_deleted':
+    case 'folder_deleted':
+    case 'reset_quantity':
+      return 'negative';
+    case 'dynamic_deduction':
+      return 'warning';
+    case 'editor_adjustment':
+      return safeHistoryNumber(entry.delta) >= 0 ? 'positive' : 'negative';
+    default:
+      return 'neutral';
+  }
+}
+
+function getHistoryPrimaryText(entry) {
+  if (entry.eventType === 'folder_deleted') return entry.folderName || 'Deleted folder';
+  if (entry.eventType === 'import_state') return 'Imported JSON state';
+  return entry.productName || entry.folderName || 'Inventory event';
+}
+
+function getHistoryDescription(entry) {
+  const amount = Math.abs(safeHistoryNumber(entry.delta));
+  switch (entry.eventType) {
+    case 'manual_add':
+      return `Added ${amount} pc from the product page.`;
+    case 'manual_remove':
+      return `Removed ${amount} pc from the product page.`;
+    case 'editor_adjustment':
+      return `Saved a direct quantity edit of ${formatSignedQuantity(entry.delta)}.`;
+    case 'dynamic_deduction':
+      return entry.relatedProductName
+        ? `Automatic deduction of ${amount} pc because ${entry.relatedProductName} was increased.`
+        : `Automatic deduction of ${amount} pc from a dynamic component.`;
+    case 'product_deleted':
+      return `Deleted the product and removed ${amount} pc that were still in stock.`;
+    case 'folder_deleted':
+      return `Deleted the folder and removed ${amount} pc from it and its subfolders.`;
+    case 'reset_quantity':
+      return `Reset quantity from ${amount} pc to 0.`;
+    case 'product_duplicated':
+      return entry.note || `Duplicated a product with starting quantity ${amount} pc.`;
+    case 'import_state':
+      return entry.note || 'Merged imported JSON data into the current state.';
+    case 'legacy_system_change':
+      return entry.note || 'Legacy system change from existing history data.';
+    default:
+      if (entry.note) return entry.note;
+      if (safeHistoryNumber(entry.delta) > 0) return `Legacy addition of ${amount} pc.`;
+      if (safeHistoryNumber(entry.delta) < 0) return `Legacy removal of ${amount} pc.`;
+      return 'Legacy inventory event.';
+  }
+}
+
+function matchesHistoryQuery(entry, query) {
+  if (!query) return true;
+  const haystack = [
+    entry.productName,
+    entry.folderName,
+    entry.relatedProductName,
+    entry.note,
+    getHistoryBadgeLabel(entry),
+    getHistoryDescription(entry)
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(query);
+}
+
+function createHistoryChip(label, value) {
+  const chip = document.createElement('div');
+  chip.className = 'history-chip';
+  const labelEl = document.createElement('span');
+  labelEl.className = 'history-chip-label';
+  labelEl.textContent = label;
+  const valueEl = document.createElement('span');
+  valueEl.className = 'history-chip-value';
+  valueEl.textContent = value;
+  chip.appendChild(labelEl);
+  chip.appendChild(valueEl);
+  return chip;
+}
+
+function appendHistoryMetric(container, label, value, tone = '') {
+  const metric = document.createElement('div');
+  metric.className = `history-metric${tone ? ` ${tone}` : ''}`;
+  const labelEl = document.createElement('div');
+  labelEl.className = 'history-metric-label';
+  labelEl.textContent = label;
+  const valueEl = document.createElement('div');
+  valueEl.className = 'history-metric-value';
+  valueEl.textContent = value;
+  metric.appendChild(labelEl);
+  metric.appendChild(valueEl);
+  container.appendChild(metric);
+}
+
+function renderHistoryPage() {
+  const summaryEl = document.getElementById('history-summary');
+  const listEl = document.getElementById('history-list');
+  const searchInput = document.getElementById('history-search');
+  if (!summaryEl || !listEl) return;
+
+  const query = (searchInput?.value || '').trim().toLowerCase();
+  const allEntries = getHistoryEntries();
+  const entries = query ? allEntries.filter(entry => matchesHistoryQuery(entry, query)) : allEntries;
+  const currentStats = getOverallBusinessStats();
+
+  summaryEl.innerHTML = '';
+  summaryEl.appendChild(createHistoryChip('Events', String(allEntries.length)));
+  summaryEl.appendChild(createHistoryChip('Showing', String(entries.length)));
+  summaryEl.appendChild(createHistoryChip('Overall Qty', `${currentStats.totalQty} pc`));
+  summaryEl.appendChild(createHistoryChip('Overall Value', formatCurrency(currentStats.totalValue)));
+
+  listEl.innerHTML = '';
+
+  if (!entries.length) {
+    const empty = document.createElement('div');
+    empty.className = 'history-empty';
+    const title = document.createElement('strong');
+    title.textContent = allEntries.length ? 'No matching history events' : 'No history yet';
+    const message = document.createElement('div');
+    message.textContent = allEntries.length
+      ? 'Try a different search term to find product movements.'
+      : 'Quantity changes, removals, deductions, and future stock events will appear here.';
+    empty.appendChild(title);
+    empty.appendChild(message);
+    listEl.appendChild(empty);
+    return;
+  }
+
+  let currentDayKey = null;
+  for (const entry of entries) {
+    const dayKey = formatHistoryDayKey(entry.ts);
+    if (dayKey !== currentDayKey) {
+      currentDayKey = dayKey;
+      const dayHeader = document.createElement('div');
+      dayHeader.className = 'history-day';
+      dayHeader.textContent = formatHistoryDayLabel(entry.ts);
+      listEl.appendChild(dayHeader);
+    }
+
+    const card = document.createElement('article');
+    card.className = 'history-entry';
+    card.dataset.direction = safeHistoryNumber(entry.delta) > 0 ? 'positive' : safeHistoryNumber(entry.delta) < 0 ? 'negative' : 'neutral';
+
+    const top = document.createElement('div');
+    top.className = 'history-entry-top';
+
+    const meta = document.createElement('div');
+    meta.className = 'history-entry-meta';
+
+    const topline = document.createElement('div');
+    topline.className = 'history-entry-topline';
+
+    const badge = document.createElement('span');
+    badge.className = `history-badge ${getHistoryBadgeTone(entry)}`;
+    badge.textContent = getHistoryBadgeLabel(entry);
+
+    const time = document.createElement('span');
+    time.className = 'history-time';
+    time.textContent = formatHistoryTimestamp(entry.ts);
+
+    topline.appendChild(badge);
+    topline.appendChild(time);
+
+    const title = document.createElement('div');
+    title.className = 'history-entry-title';
+    title.textContent = getHistoryPrimaryText(entry);
+
+    const desc = document.createElement('div');
+    desc.className = 'history-entry-desc';
+    desc.textContent = getHistoryDescription(entry);
+
+    meta.appendChild(topline);
+    meta.appendChild(title);
+    meta.appendChild(desc);
+
+    if (entry.statusEstimated) {
+      const hint = document.createElement('div');
+      hint.className = 'history-entry-hint';
+      hint.textContent = 'Overall status estimated from existing legacy log data.';
+      meta.appendChild(hint);
+    }
+
+    top.appendChild(meta);
+
+    if (entry.productId && appState.products?.[entry.productId]) {
+      const openBtn = document.createElement('button');
+      openBtn.className = 'history-open-btn';
+      openBtn.type = 'button';
+      openBtn.textContent = 'Open Product';
+      openBtn.addEventListener('click', () => {
+        closeHistoryPage();
+        openProductPage(entry.productId);
+      });
+      top.appendChild(openBtn);
+    }
+
+    const metrics = document.createElement('div');
+    metrics.className = 'history-metrics';
+
+    appendHistoryMetric(metrics, 'Change', formatSignedQuantity(entry.delta), safeHistoryNumber(entry.delta) > 0 ? 'positive' : safeHistoryNumber(entry.delta) < 0 ? 'negative' : '');
+    appendHistoryMetric(metrics, 'Value change', formatSignedCurrency(entry.value), safeHistoryNumber(entry.value) > 0 ? 'positive' : safeHistoryNumber(entry.value) < 0 ? 'negative' : '');
+    appendHistoryMetric(metrics, 'Overall qty', `${safeHistoryNumber(entry.overallQty)} pc`);
+    appendHistoryMetric(metrics, 'Overall value', formatCurrency(entry.overallValue));
+    if (entry.relatedProductName) {
+      appendHistoryMetric(metrics, 'Triggered by', entry.relatedProductName);
+    }
+
+    card.appendChild(top);
+    card.appendChild(metrics);
+    listEl.appendChild(card);
+  }
+}
+
+function openHistoryPage() {
+  const page = document.getElementById('history-page');
+  const searchInput = document.getElementById('history-search');
+  if (!page) return;
+  if (searchInput) searchInput.value = '';
+  renderHistoryPage();
+  page.classList.remove('hidden');
+}
+
+function closeHistoryPage() {
+  const page = document.getElementById('history-page');
+  if (!page) return;
+  page.classList.add('hidden');
+}
+
 // Build a comprehensive, shareable text report of all folders and products
 function generateAppReportText() {
   const lines = [];
@@ -2313,6 +2770,10 @@ function renderAll() {
   renderFolderList();
   renderPriorityGraph();
   checkLowQuantityComponents();
+  const historyPage = document.getElementById('history-page');
+  if (historyPage && !historyPage.classList.contains('hidden')) {
+    renderHistoryPage();
+  }
 }
 
 // Find all products with warnThreshold set and check if they're below it
@@ -2633,34 +3094,45 @@ function createProduct(folderId) {
   openProductCreateModal(folderId);
 }
 
-function deleteFolder(folderId) {
+function deleteFolder(folderId, options = {}) {
+  const nested = !!options.nested;
   if (folderId === 'root') return showToast('Cannot delete root');
   const f = appState.folders[folderId];
   if (!f) return;
-  // Compute total value being removed for production log
-  const stats = computeStats(folderId);
+  const folderName = f.name || 'Folder';
+  const stats = computeFolderMovementStats(folderId);
   const removedValue = stats.totalValue || 0;
   const removedQty = stats.totalQty || 0;
   // recursively delete subfolders
-  for (const sf of [...f.subfolders]) deleteFolder(sf);
+  for (const sf of [...f.subfolders]) deleteFolder(sf, { nested: true });
   // delete products
   for (const pid of [...f.products]) delete appState.products[pid];
   // remove from parent
   const parent = appState.folders[f.parentId];
   if (parent) parent.subfolders = parent.subfolders.filter(x => x !== folderId);
   delete appState.folders[folderId];
-  // Log the removal as negative production
-  if (removedValue > 0 || removedQty > 0) {
-    appState.productionLog = appState.productionLog || [];
-    appState.productionLog.push({ ts: Date.now(), productId: null, delta: -removedQty, price: 0, value: -removedValue });
+  if (!nested && (removedValue > 0 || removedQty > 0)) {
+    recordInventoryEvent({
+      eventType: 'folder_deleted',
+      folderId,
+      folderName,
+      delta: -removedQty,
+      price: 0,
+      value: -removedValue,
+      source: 'delete',
+      note: 'Deleted folder and removed its remaining stock.'
+    });
   }
-  saveStateDebounced();
-  renderAll();
+  if (!nested) {
+    saveStateDebounced();
+    renderAll();
+  }
 }
 
 function deleteProduct(productId) {
   const p = appState.products[productId];
   if (!p) return;
+  const productName = p.name || 'Product';
   // Compute value being removed for production log
   const removedValue = (Number(p.price || 0)) * (Number(p.quantity || 0));
   const removedQty = Number(p.quantity || 0);
@@ -2672,8 +3144,16 @@ function deleteProduct(productId) {
   delete appState.products[productId];
   // Log the removal as negative production
   if (removedValue > 0 || removedQty > 0) {
-    appState.productionLog = appState.productionLog || [];
-    appState.productionLog.push({ ts: Date.now(), productId, delta: -removedQty, price: Number(p.price || 0), value: -removedValue });
+    recordInventoryEvent({
+      eventType: 'product_deleted',
+      productId,
+      productName,
+      delta: -removedQty,
+      price: Number(p.price || 0),
+      value: -removedValue,
+      source: 'delete',
+      note: 'Deleted product and removed remaining stock.'
+    });
   }
   saveStateDebounced();
   renderAll();
@@ -2693,11 +3173,24 @@ function saveEditorForm(e) {
     // Product save
     const p = id ? appState.products[id] : null;
     if (!p) return;
+    const oldQty = Number(p.quantity || 0);
     p.name = name || p.name;
     p.price = Number(document.getElementById('editor-price').value || 0);
     p.quantity = Number(document.getElementById('editor-quantity').value || 0);
     p.targetQuantity = Number(document.getElementById('editor-target').value || 0);
     p.priority = !!document.getElementById('editor-priority').checked;
+    if (p.quantity !== oldQty) {
+      recordInventoryEvent({
+        eventType: 'editor_adjustment',
+        productId: p.id,
+        productName: p.name || 'Product',
+        delta: p.quantity - oldQty,
+        price: Number(p.price || 0),
+        value: (p.quantity - oldQty) * Number(p.price || 0),
+        source: 'editor',
+        note: 'Quantity was changed from the editor.'
+      });
+    }
     saveStateDebounced();
     renderAll();
     closeEditor();
@@ -2776,6 +3269,18 @@ function duplicateProduct(productId) {
   for (const f of Object.values(appState.folders)) {
     const idx = f.products.indexOf(productId);
     if (idx >= 0) { f.products.push(id); break; }
+  }
+  if (Number(copy.quantity || 0) > 0) {
+    recordInventoryEvent({
+      eventType: 'product_duplicated',
+      productId: id,
+      productName: copy.name || 'Product copy',
+      delta: Number(copy.quantity || 0),
+      price: Number(copy.price || 0),
+      value: Number(copy.price || 0) * Number(copy.quantity || 0),
+      source: 'duplicate',
+      note: p.name ? `Duplicated from ${p.name}.` : 'Duplicated product.'
+    });
   }
   saveStateDebounced();
   openProductEditModal(id);
@@ -2899,16 +3404,71 @@ function importState(file) {
       const data = JSON.parse(reader.result);
       // naive merge by IDs; do not delete local
       const snapshot = structuredClone(appState);
+      let addedFolders = 0;
+      let updatedFolders = 0;
+      let addedProducts = 0;
+      let updatedProducts = 0;
+      let mergedHistoryEntries = 0;
+
+      const historySignature = (entry) => {
+        const normalized = normalizeHistoryEntry(entry || {}, 0);
+        return [
+          normalized.ts,
+          normalized.eventType,
+          normalized.productId || '',
+          normalized.productName || '',
+          normalized.relatedProductId || '',
+          normalized.folderId || '',
+          normalized.delta,
+          normalized.value,
+          normalized.note || ''
+        ].join('|');
+      };
+
+      const existingHistory = Array.isArray(appState.productionLog) ? appState.productionLog : [];
+      const historySignatures = new Set(existingHistory.map(historySignature));
+
       // folders
       for (const [id, f] of Object.entries(data.folders || {})) {
-        if (!appState.folders[id]) appState.folders[id] = f; else Object.assign(appState.folders[id], f);
+        if (!appState.folders[id]) {
+          appState.folders[id] = f;
+          addedFolders += 1;
+        } else {
+          Object.assign(appState.folders[id], f);
+          updatedFolders += 1;
+        }
       }
       // products
       for (const [id, p] of Object.entries(data.products || {})) {
-        if (!appState.products[id]) appState.products[id] = p; else Object.assign(appState.products[id], p);
+        if (!appState.products[id]) {
+          appState.products[id] = p;
+          addedProducts += 1;
+        } else {
+          Object.assign(appState.products[id], p);
+          updatedProducts += 1;
+        }
+      }
+      // history
+      if (Array.isArray(data.productionLog) && data.productionLog.length) {
+        appState.productionLog = appState.productionLog || [];
+        for (const entry of data.productionLog) {
+          const signature = historySignature(entry);
+          if (historySignatures.has(signature)) continue;
+          appState.productionLog.push(entry);
+          historySignatures.add(signature);
+          mergedHistoryEntries += 1;
+        }
       }
       // ensure root exists
       if (!appState.folders.root) appState.folders.root = { id: 'root', name: 'Home', parentId: null, imageUrl: null, subfolders: [], products: [] };
+      recordInventoryEvent({
+        eventType: 'import_state',
+        delta: 0,
+        price: 0,
+        value: 0,
+        source: 'import',
+        note: `Imported ${addedFolders} new folders, ${updatedFolders} updated folders, ${addedProducts} new products, ${updatedProducts} updated products, and ${mergedHistoryEntries} history entries.`
+      });
       appState.lastModified = Date.now();
       await writeState(appState);
       showToast('Import complete');
@@ -3084,6 +3644,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (importFileEl) importFileEl.addEventListener('change', (e) => { const f = e.target.files?.[0]; if (f) importState(f); e.target.value = ''; });
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+  const historyBackBtn = document.getElementById('history-back');
+  if (historyBackBtn) historyBackBtn.addEventListener('click', closeHistoryPage);
+  const historySearch = document.getElementById('history-search');
+  if (historySearch) historySearch.addEventListener('input', () => renderHistoryPage());
 
   // Start connection checker (monitors every 3 seconds)
   wasOffline = !navigator.onLine;
@@ -3129,6 +3693,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     // Collapse on Escape key (only in portrait mode)
     document.addEventListener('keydown', (e) => {
+      const historyPage = document.getElementById('history-page');
+      if (historyPage && !historyPage.classList.contains('hidden') && e.key === 'Escape') {
+        closeHistoryPage();
+        return;
+      }
       if (window.innerHeight > window.innerWidth && e.key === 'Escape') {
         searchBar.classList.remove('search-expanded');
         searchBar.classList.add('search-collapsed');
@@ -3472,10 +4041,17 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
     actions: [
       { label: 'Confirm', onClick: () => {
           p.quantity = newQty;
-          // log production change
           const signed = direction > 0 ? delta : -delta;
-          appState.productionLog = appState.productionLog || [];
-          appState.productionLog.push({ ts: Date.now(), productId: p.id, delta: signed, price: Number(p.price||0), value: Number(p.price||0) * signed });
+          recordInventoryEvent({
+            eventType: direction > 0 ? 'manual_add' : 'manual_remove',
+            productId: p.id,
+            productName: p.name || 'Product',
+            delta: signed,
+            price: Number(p.price || 0),
+            value: Number(p.price || 0) * signed,
+            source: 'product_page',
+            note: direction > 0 ? 'Added quantity from the product page.' : 'Removed quantity from the product page.'
+          });
           
           // Process dynamic link deductions if this is a sellable product and quantity increased
           if (direction > 0 && !isProductInIndependentFolder(productPageProductId)) {
