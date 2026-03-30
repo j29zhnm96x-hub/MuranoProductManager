@@ -2135,6 +2135,20 @@ function formatHistoryFilterDate(dateValue) {
   });
 }
 
+function shiftHistoryDateByDays(days) {
+  const dateInput = document.getElementById('history-date');
+  if (!dateInput) return;
+
+  const baseValue = dateInput.value || todayStr();
+  const baseDate = new Date(`${baseValue}T12:00:00`);
+  if (Number.isNaN(baseDate.getTime())) return;
+
+  baseDate.setDate(baseDate.getDate() + days);
+  const pad = (n) => String(n).padStart(2, '0');
+  dateInput.value = `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}-${pad(baseDate.getDate())}`;
+  renderHistoryPage();
+}
+
 function getHistoryBadgeLabel(entry) {
   switch (entry.eventType) {
     case 'manual_add': return 'Added';
@@ -3726,6 +3740,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateInput.value = '';
     renderHistoryPage();
   });
+  const historyPrevDayBtn = document.getElementById('history-prev-day');
+  if (historyPrevDayBtn) historyPrevDayBtn.addEventListener('click', () => shiftHistoryDateByDays(-1));
+  const historyNextDayBtn = document.getElementById('history-next-day');
+  if (historyNextDayBtn) historyNextDayBtn.addEventListener('click', () => shiftHistoryDateByDays(1));
+  const historyPrevWeekBtn = document.getElementById('history-prev-week');
+  if (historyPrevWeekBtn) historyPrevWeekBtn.addEventListener('click', () => shiftHistoryDateByDays(-7));
+  const historyNextWeekBtn = document.getElementById('history-next-week');
+  if (historyNextWeekBtn) historyNextWeekBtn.addEventListener('click', () => shiftHistoryDateByDays(7));
 
   // Start connection checker (monitors every 3 seconds)
   wasOffline = !navigator.onLine;

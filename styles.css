@@ -303,6 +303,7 @@ body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none
 .history-date-wrap { background: #ffffff; border: 1px solid #dbe3ec; border-radius: 14px; padding: 10px 12px; box-shadow: 0 1px 0 rgba(0,0,0,0.03); display: grid; gap: 8px; }
 .history-date-label { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
 .history-date-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.history-date-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .history-date-row input { min-width: 0; flex: 1 1 180px; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #cbd5e1; background: #f8fafc; color: #0f172a; font-size: 14px; }
 .history-mini-btn { height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #dbe5ef; background: #f8fbff; color: #0f172a; font-weight: 700; box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06); }
 .history-mini-btn:hover { background: #eef6ff; }
@@ -339,6 +340,7 @@ body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none
 
 @media (max-width: 768px) {
   .history-controls { grid-template-columns: 1fr; }
+  .history-date-nav { grid-template-columns: 1fr 1fr; }
   .history-entry-top { grid-template-columns: 1fr; }
   .history-open-btn { width: 100%; }
   .history-metrics { grid-template-columns: 1fr 1fr; }
