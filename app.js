@@ -885,32 +885,54 @@ function startConnectionChecker() {
 
 // (moved: computeProductionInRange/exportProductionPDF defined later once)
 
+function buildModalMenuHeader(iconText, title, subtitle = 'Select an action') {
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-menu-header';
+
+  const icon = document.createElement('div');
+  icon.className = 'modal-menu-icon';
+  icon.textContent = iconText;
+
+  const copy = document.createElement('div');
+  copy.className = 'modal-menu-copy';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'modal-menu-title';
+  titleEl.textContent = title;
+
+  const subtitleEl = document.createElement('div');
+  subtitleEl.className = 'modal-menu-subtitle';
+  subtitleEl.textContent = subtitle;
+
+  copy.appendChild(titleEl);
+  copy.appendChild(subtitleEl);
+  wrap.appendChild(icon);
+  wrap.appendChild(copy);
+
+  return wrap;
+}
+
 function openActionsMenu() {
-  const body = document.createElement('div');
-  const saveBtn = document.createElement('button'); saveBtn.textContent = 'Save (snapshot + cloud)'; saveBtn.type = 'button';
-  const historyBtn = document.createElement('button'); historyBtn.textContent = 'Stock History'; historyBtn.type = 'button';
-  const importBtn = document.createElement('button'); importBtn.textContent = 'Import JSON'; importBtn.type = 'button';
-  const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export JSON'; exportBtn.type = 'button';
-  [saveBtn, historyBtn, importBtn, exportBtn].forEach(b => { b.style.display = 'block'; b.style.marginBottom = '8px'; });
-  body.appendChild(saveBtn); body.appendChild(historyBtn); body.appendChild(importBtn); body.appendChild(exportBtn);
   openModal({
     title: 'Actions',
-    body,
-    actions: [ { label: 'Close' } ]
+    body: buildModalMenuHeader('✦', 'Quick Actions', 'Choose what you want to do next.'),
+    bodyClassName: 'modal-body-compact',
+    actionsLayout: 'stack',
+    actions: [
+      { label: 'Save (snapshot + cloud)', onClick: async () => {
+          if (modified) {
+            showToast('Saving...');
+            processSaveQueue();
+          } else {
+            showToast('No changes to save');
+          }
+        } },
+      { label: 'Stock History', onClick: () => openHistoryPage() },
+      { label: 'Import JSON', onClick: () => { document.getElementById('import-file').click(); } },
+      { label: 'Export JSON', onClick: () => { exportState(); } },
+      { label: 'Close' }
+    ]
   });
-  saveBtn.addEventListener('click', async () => { 
-    // Manual save just triggers the save queue
-    closeModal();
-    if (modified) {
-      showToast('Saving...');
-      processSaveQueue();
-    } else {
-      showToast('No changes to save');
-    }
-  });
-  historyBtn.addEventListener('click', () => { closeModal(); openHistoryPage(); });
-  importBtn.addEventListener('click', () => { document.getElementById('import-file').click(); closeModal(); });
-  exportBtn.addEventListener('click', () => { exportState(); closeModal(); });
 }
 
 function clearAllCookies() {
@@ -1838,21 +1860,35 @@ function showToast(message, timeout = 3000) {
   setTimeout(() => el.remove(), timeout);
 }
 
-function openModal({ title = 'Confirm', body = '', actions = [] } = {}) {
+function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout = 'row', bodyClassName = '' } = {}) {
   const modal = document.getElementById('modal');
   const titleEl = document.getElementById('modal-title');
   const bodyEl = document.getElementById('modal-body');
   const actionsEl = document.getElementById('modal-actions');
   titleEl.textContent = title;
-  if (typeof body === 'string') bodyEl.textContent = body; else if (body) { bodyEl.innerHTML = ''; bodyEl.appendChild(body); } else { bodyEl.innerHTML = ''; }
+  bodyEl.className = bodyClassName || '';
+  if (typeof body === 'string') {
+    bodyEl.innerHTML = '';
+    bodyEl.textContent = body;
+  } else if (body) {
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(body);
+  } else {
+    bodyEl.innerHTML = '';
+  }
+  actionsEl.className = 'modal-actions';
+  if (actionsLayout === 'stack') actionsEl.classList.add('stacked');
   actionsEl.innerHTML = '';
   actions.forEach(a => {
     const b = document.createElement('button');
     b.textContent = a.label;
-    // Style destructive actions as red
+    const lbl = String(a.label || '').toLowerCase();
+    const tone = a.tone || '';
+    if (tone === 'secondary' || lbl.includes('cancel') || lbl.includes('close') || lbl.includes('back')) {
+      b.classList.add('secondary');
+    }
     try {
-      const lbl = String(a.label || '').toLowerCase();
-      if (lbl.includes('delete') || lbl.includes('remove') || lbl.includes('reset')) b.classList.add('danger');
+      if (tone === 'danger' || lbl.includes('delete') || lbl.includes('remove') || lbl.includes('reset')) b.classList.add('danger');
     } catch {}
     b.addEventListener('click', async () => {
       try {
@@ -3216,7 +3252,9 @@ function onFolderImageSelected(e) {
 function openAddMenu(targetFolderId) {
   openModal({
     title: 'Choose item to create',
-    body: null,
+    body: buildModalMenuHeader('＋', 'Create Something', 'Add a folder or product in the current location.'),
+    bodyClassName: 'modal-body-compact',
+    actionsLayout: 'stack',
     actions: [
       { label: 'New Folder', onClick: () => createFolder(targetFolderId) },
       { label: 'New Product', onClick: () => openProductCreateModal(targetFolderId) },
@@ -3226,14 +3264,12 @@ function openAddMenu(targetFolderId) {
 }
 
 function openFolderMenu(folderId) {
-  const header = document.createElement('div');
-  header.style.display = 'flex'; header.style.alignItems = 'center'; header.style.gap = '8px';
-  const icon = document.createElement('span'); icon.textContent = '📁';
-  const label = document.createElement('span'); label.textContent = 'Select an action';
-  header.appendChild(icon); header.appendChild(label);
+  const folder = appState.folders[folderId];
   openModal({
     title: 'Folder actions',
-    body: header,
+    body: buildModalMenuHeader('📁', folder?.name || 'Folder', 'Choose what you want to do with this folder.'),
+    bodyClassName: 'modal-body-compact',
+    actionsLayout: 'stack',
     actions: [
       { label: 'Edit', onClick: () => openFolderEditModal(folderId) },
       { label: 'New Subfolder', onClick: () => createFolder(folderId) },
@@ -3245,9 +3281,12 @@ function openFolderMenu(folderId) {
 }
 
 function openProductMenu(productId) {
+  const product = appState.products[productId];
   openModal({
     title: 'Product actions',
-    body: 'Select an action',
+    body: buildModalMenuHeader('📦', product?.name || 'Product', 'Choose what you want to do with this product.'),
+    bodyClassName: 'modal-body-compact',
+    actionsLayout: 'stack',
     actions: [
       { label: 'Edit', onClick: () => openProductEditModal(productId) },
       { label: 'Duplicate', onClick: () => duplicateProduct(productId) },
