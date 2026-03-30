@@ -4165,6 +4165,7 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
           if (!isProductInIndependentFolder(productPageProductId)) {
             document.getElementById('pp-total').textContent = formatCurrency((Number(p.price || 0)) * p.quantity);
           }
+          inputEl.value = '';
           renderFolderList(); // Re-render to reflect component quantity changes
           try { const adjEl = document.getElementById('pp-adjust-input'); adjEl && adjEl.blur(); } catch {}
           try { const pp = document.getElementById('product-page'); if (pp) pp.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
