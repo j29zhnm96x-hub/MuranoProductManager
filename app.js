@@ -176,6 +176,7 @@ let appState = null;
 let currentFolderId = 'root';
 let saveDebounceTimer = null;
 let productPageProductId = null;
+let historyPeriodMode = 'day';
 let backupLoaded = false; // indicates a successful cloud backup load in this session
 // Persistent client ID for self-change detection
 const CLIENT_ID = (() => {
@@ -2135,7 +2136,129 @@ function formatHistoryFilterDate(dateValue) {
   });
 }
 
-function shiftHistoryDateByDays(days) {
+function createHistoryAnchorDate(dateValue) {
+  if (!dateValue) return null;
+  const date = new Date(`${dateValue}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getStartOfHistoryWeek(date) {
+  const weekStart = new Date(date);
+  const day = weekStart.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  weekStart.setDate(weekStart.getDate() + diff);
+  weekStart.setHours(0, 0, 0, 0);
+  return weekStart;
+}
+
+function getHistoryRange(dateValue, periodMode = historyPeriodMode) {
+  const anchorDate = createHistoryAnchorDate(dateValue);
+  if (!anchorDate) return null;
+
+  const start = new Date(anchorDate);
+  const end = new Date(anchorDate);
+
+  if (periodMode === 'week') {
+    const weekStart = getStartOfHistoryWeek(anchorDate);
+    start.setTime(weekStart.getTime());
+    end.setTime(weekStart.getTime());
+    end.setDate(end.getDate() + 7);
+  } else if (periodMode === 'month') {
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+    end.setTime(start.getTime());
+    end.setMonth(end.getMonth() + 1);
+  } else {
+    start.setHours(0, 0, 0, 0);
+    end.setTime(start.getTime());
+    end.setDate(end.getDate() + 1);
+  }
+
+  return { start, end };
+}
+
+function formatHistoryPeriodLabel(dateValue, periodMode = historyPeriodMode) {
+  if (!dateValue) return 'All dates';
+  const range = getHistoryRange(dateValue, periodMode);
+  if (!range) return dateValue;
+
+  if (periodMode === 'month') {
+    return range.start.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long'
+    });
+  }
+
+  if (periodMode === 'week') {
+    const weekEnd = new Date(range.end);
+    weekEnd.setDate(weekEnd.getDate() - 1);
+    const sameMonth = range.start.getMonth() === weekEnd.getMonth() && range.start.getFullYear() === weekEnd.getFullYear();
+    const startText = range.start.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: sameMonth ? undefined : 'numeric'
+    });
+    const endText = weekEnd.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    return `${startText} - ${endText}`;
+  }
+
+  return formatHistoryFilterDate(dateValue);
+}
+
+function entryMatchesHistoryPeriod(entry, dateValue, periodMode = historyPeriodMode) {
+  if (!dateValue) return true;
+  const range = getHistoryRange(dateValue, periodMode);
+  if (!range) return true;
+  const entryTs = safeHistoryNumber(entry.ts);
+  return entryTs >= range.start.getTime() && entryTs < range.end.getTime();
+}
+
+function getHistoryPeriodSummary(entries) {
+  let doneValue = 0;
+  let removedValue = 0;
+  let netValue = 0;
+
+  for (const entry of entries) {
+    const value = safeHistoryNumber(entry.value);
+    if (value > 0) doneValue += value;
+    if (value < 0) removedValue += Math.abs(value);
+    netValue += value;
+  }
+
+  return { doneValue, removedValue, netValue };
+}
+
+function updateHistoryPeriodControls() {
+  const periodButtons = [
+    { id: 'history-period-day', mode: 'day' },
+    { id: 'history-period-week', mode: 'week' },
+    { id: 'history-period-month', mode: 'month' },
+  ];
+
+  periodButtons.forEach(({ id, mode }) => {
+    const button = document.getElementById(id);
+    if (!button) return;
+    button.classList.toggle('active', historyPeriodMode === mode);
+  });
+
+  const prevButton = document.getElementById('history-prev-period');
+  const nextButton = document.getElementById('history-next-period');
+  const suffix = historyPeriodMode === 'month' ? 'month' : historyPeriodMode;
+  if (prevButton) prevButton.textContent = `Prev ${suffix}`;
+  if (nextButton) nextButton.textContent = `Next ${suffix}`;
+}
+
+function setHistoryPeriodMode(periodMode) {
+  historyPeriodMode = periodMode;
+  updateHistoryPeriodControls();
+  renderHistoryPage();
+}
+
+function shiftHistoryDateByPeriod(direction) {
   const dateInput = document.getElementById('history-date');
   if (!dateInput) return;
 
@@ -2143,7 +2266,14 @@ function shiftHistoryDateByDays(days) {
   const baseDate = new Date(`${baseValue}T12:00:00`);
   if (Number.isNaN(baseDate.getTime())) return;
 
-  baseDate.setDate(baseDate.getDate() + days);
+  if (historyPeriodMode === 'month') {
+    baseDate.setMonth(baseDate.getMonth() + direction);
+  } else if (historyPeriodMode === 'week') {
+    baseDate.setDate(baseDate.getDate() + (direction * 7));
+  } else {
+    baseDate.setDate(baseDate.getDate() + direction);
+  }
+
   const pad = (n) => String(n).padStart(2, '0');
   dateInput.value = `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}-${pad(baseDate.getDate())}`;
   renderHistoryPage();
@@ -2278,14 +2408,18 @@ function renderHistoryPage() {
   const query = (searchInput?.value || '').trim().toLowerCase();
   const selectedDate = dateInput?.value || '';
   const allEntries = getHistoryEntries();
-  const datedEntries = selectedDate ? allEntries.filter(entry => formatHistoryDayKey(entry.ts) === selectedDate) : allEntries;
-  const entries = query ? datedEntries.filter(entry => matchesHistoryQuery(entry, query)) : datedEntries;
+  const periodEntries = selectedDate ? allEntries.filter(entry => entryMatchesHistoryPeriod(entry, selectedDate, historyPeriodMode)) : allEntries;
+  const entries = query ? periodEntries.filter(entry => matchesHistoryQuery(entry, query)) : periodEntries;
   const currentStats = getOverallBusinessStats();
+  const periodSummary = getHistoryPeriodSummary(periodEntries);
 
   summaryEl.innerHTML = '';
   summaryEl.appendChild(createHistoryChip('Events', String(allEntries.length)));
   summaryEl.appendChild(createHistoryChip('Showing', String(entries.length)));
-  summaryEl.appendChild(createHistoryChip('Date', formatHistoryFilterDate(selectedDate)));
+  summaryEl.appendChild(createHistoryChip('Period', formatHistoryPeriodLabel(selectedDate, historyPeriodMode)));
+  summaryEl.appendChild(createHistoryChip('Done Value', formatCurrency(periodSummary.doneValue)));
+  summaryEl.appendChild(createHistoryChip('Removed Value', formatCurrency(periodSummary.removedValue)));
+  summaryEl.appendChild(createHistoryChip('Net Value', formatSignedCurrency(periodSummary.netValue)));
   summaryEl.appendChild(createHistoryChip('Overall Qty', `${currentStats.totalQty} pc`));
   summaryEl.appendChild(createHistoryChip('Overall Value', formatCurrency(currentStats.totalValue)));
 
@@ -2300,9 +2434,9 @@ function renderHistoryPage() {
     if (!allEntries.length) {
       message.textContent = 'Quantity changes, removals, deductions, and future stock events will appear here.';
     } else if (selectedDate && query) {
-      message.textContent = `No history events matched your search on ${formatHistoryFilterDate(selectedDate)}.`;
+      message.textContent = `No history events matched your search in ${formatHistoryPeriodLabel(selectedDate, historyPeriodMode)}.`;
     } else if (selectedDate) {
-      message.textContent = `No history events were recorded on ${formatHistoryFilterDate(selectedDate)}.`;
+      message.textContent = `No history events were recorded in ${formatHistoryPeriodLabel(selectedDate, historyPeriodMode)}.`;
     } else {
       message.textContent = 'Try a different search term to find product movements.';
     }
@@ -2402,6 +2536,7 @@ function openHistoryPage() {
   const searchInput = document.getElementById('history-search');
   if (!page) return;
   if (searchInput) searchInput.value = '';
+  updateHistoryPeriodControls();
   renderHistoryPage();
   page.classList.remove('hidden');
 }
@@ -3726,6 +3861,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historySearch) historySearch.addEventListener('input', () => renderHistoryPage());
   const historyDate = document.getElementById('history-date');
   if (historyDate) historyDate.addEventListener('input', () => renderHistoryPage());
+  const historyPeriodDayBtn = document.getElementById('history-period-day');
+  if (historyPeriodDayBtn) historyPeriodDayBtn.addEventListener('click', () => setHistoryPeriodMode('day'));
+  const historyPeriodWeekBtn = document.getElementById('history-period-week');
+  if (historyPeriodWeekBtn) historyPeriodWeekBtn.addEventListener('click', () => setHistoryPeriodMode('week'));
+  const historyPeriodMonthBtn = document.getElementById('history-period-month');
+  if (historyPeriodMonthBtn) historyPeriodMonthBtn.addEventListener('click', () => setHistoryPeriodMode('month'));
   const historyTodayBtn = document.getElementById('history-today');
   if (historyTodayBtn) historyTodayBtn.addEventListener('click', () => {
     const dateInput = document.getElementById('history-date');
@@ -3740,14 +3881,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateInput.value = '';
     renderHistoryPage();
   });
-  const historyPrevDayBtn = document.getElementById('history-prev-day');
-  if (historyPrevDayBtn) historyPrevDayBtn.addEventListener('click', () => shiftHistoryDateByDays(-1));
-  const historyNextDayBtn = document.getElementById('history-next-day');
-  if (historyNextDayBtn) historyNextDayBtn.addEventListener('click', () => shiftHistoryDateByDays(1));
-  const historyPrevWeekBtn = document.getElementById('history-prev-week');
-  if (historyPrevWeekBtn) historyPrevWeekBtn.addEventListener('click', () => shiftHistoryDateByDays(-7));
-  const historyNextWeekBtn = document.getElementById('history-next-week');
-  if (historyNextWeekBtn) historyNextWeekBtn.addEventListener('click', () => shiftHistoryDateByDays(7));
+  const historyPrevPeriodBtn = document.getElementById('history-prev-period');
+  if (historyPrevPeriodBtn) historyPrevPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(-1));
+  const historyNextPeriodBtn = document.getElementById('history-next-period');
+  if (historyNextPeriodBtn) historyNextPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(1));
 
   // Start connection checker (monitors every 3 seconds)
   wasOffline = !navigator.onLine;
