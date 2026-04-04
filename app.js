@@ -609,8 +609,7 @@ function uuid() {
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
 }
 
-// ---------------------------- Reorder (Drag & Drop) ----------------------------
-let dragSrcEl = null;
+// ---------------------------- Reorder ----------------------------
 function getFolderOrder(folder) {
   // Create/repair unified order list of keys like 'f:<id>' and 'p:<id>'
   folder.order = Array.isArray(folder.order) ? folder.order.slice() : [];
@@ -634,69 +633,253 @@ function getFolderOrder(folder) {
 function setFolderOrder(folder, order) {
   folder.order = order.slice();
 }
-function attachReorderDnD(li, kind, id, curFolder) {
-  // Long-press to enable dragging
-  li.setAttribute('draggable', 'false');
-  li.dataset.kind = kind;
-  li.dataset.id = id; // id can be raw id or mixed key like 'f:ID' or 'p:ID'
-  let lpTimer = null;
-  const enableDrag = () => { li.setAttribute('draggable', 'true'); li.classList.add('drag-ready'); };
-  const disableDrag = () => { li.setAttribute('draggable', 'false'); li.classList.remove('drag-ready'); };
+function moveFolderOrderItem(folder, itemKey, nextIndex) {
+  if (!folder) return false;
+  const order = getFolderOrder(folder).slice();
+  const currentIndex = order.indexOf(itemKey);
+  if (currentIndex < 0) return false;
+  const boundedIndex = Math.max(0, Math.min(order.length - 1, nextIndex));
+  if (currentIndex === boundedIndex) return false;
+  order.splice(currentIndex, 1);
+  order.splice(boundedIndex, 0, itemKey);
+  setFolderOrder(folder, order);
+  saveStateDebounced();
+  renderAll();
+  return true;
+}
 
-  const clearLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
-  li.addEventListener('pointerdown', () => { clearLP(); lpTimer = setTimeout(enableDrag, 200); });
-  li.addEventListener('pointerup', () => { clearLP(); });
-  li.addEventListener('pointerleave', () => { clearLP(); });
-  li.addEventListener('pointercancel', () => { clearLP(); });
+function openReorderMenu(folder, itemKey, itemLabel) {
+  const order = getFolderOrder(folder);
+  const index = order.indexOf(itemKey);
+  if (index < 0) return;
 
-  li.addEventListener('dragstart', (e) => {
-    dragSrcEl = li;
-    li.classList.add('dragging');
-    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); } catch {}
+  const moveTo = (nextIndex) => {
+    if (moveFolderOrderItem(folder, itemKey, nextIndex)) {
+      showToast('Order updated');
+    }
+  };
+
+  const actions = [];
+  if (index > 0) actions.push({ label: 'Move up', onClick: () => moveTo(index - 1) });
+  if (index < order.length - 1) actions.push({ label: 'Move down', onClick: () => moveTo(index + 1) });
+  if (index > 0) actions.push({ label: 'Move to top', onClick: () => moveTo(0) });
+  if (index < order.length - 1) actions.push({ label: 'Move to bottom', onClick: () => moveTo(order.length - 1) });
+  actions.push({ label: 'Close' });
+
+  openModal({
+    title: 'Reorder item',
+    body: buildModalMenuHeader('↕', itemLabel, 'Drag the handle or use a quick move.'),
+    bodyClassName: 'modal-body-compact',
+    actionsLayout: 'stack',
+    actions
   });
-  li.addEventListener('dragend', () => {
-    li.classList.remove('dragging');
-    document.querySelectorAll('.drop-before').forEach(n => n.classList.remove('drop-before'));
-    dragSrcEl = null;
-    // Disable drag until next long-press
-    disableDrag();
+}
+
+function createReorderHandle(li, folder, itemKey, itemLabel, disabled = false) {
+  li.dataset.id = itemKey;
+  li.classList.add('reorder-item');
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'reorder-handle';
+  button.textContent = '↕';
+
+  const title = disabled ? 'Nothing else to reorder here' : `Reorder ${itemLabel}`;
+  button.title = title;
+  button.setAttribute('aria-label', title);
+
+  if (disabled) {
+    button.disabled = true;
+    return button;
+  }
+
+  button.addEventListener('pointerdown', (e) => {
+    if (typeof e.button === 'number' && e.button !== 0) return;
+    e.stopPropagation();
+    startReorderPointerSession(e, li, folder, button);
   });
-  li.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    const target = li;
-    if (!dragSrcEl || dragSrcEl === target) return;
-    const rect = target.getBoundingClientRect();
-    const before = (e.clientY - rect.top) < rect.height / 2;
-    target.classList.toggle('drop-before', before);
+
+  button.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (button.dataset.skipClick === '1') {
+      delete button.dataset.skipClick;
+      e.preventDefault();
+      return;
+    }
+    openReorderMenu(folder, itemKey, itemLabel);
   });
-  li.addEventListener('dragleave', () => {
-    li.classList.remove('drop-before');
+
+  return button;
+}
+
+let activeReorderDrag = null;
+
+function startReorderPointerSession(e, li, folder, handle) {
+  if (!li || !folder || !li.parentElement) return;
+  if (activeReorderDrag) finishReorderPointerSession(false);
+
+  const rect = li.getBoundingClientRect();
+  activeReorderDrag = {
+    pointerId: e.pointerId,
+    folder,
+    handle,
+    item: li,
+    list: li.parentElement,
+    placeholder: null,
+    ghost: null,
+    startX: e.clientX,
+    startY: e.clientY,
+    pointerOffsetY: e.clientY - rect.top,
+    itemLeft: rect.left,
+    didDrag: false,
+    scrollContainer: document.getElementById('folder-list')
+  };
+
+  try { handle.setPointerCapture?.(e.pointerId); } catch {}
+  document.addEventListener('pointermove', onReorderPointerMove);
+  document.addEventListener('pointerup', onReorderPointerUp);
+  document.addEventListener('pointercancel', onReorderPointerCancel);
+}
+
+function activateReorderPointerDrag(state, event) {
+  if (state.didDrag) return;
+  state.didDrag = true;
+
+  const rect = state.item.getBoundingClientRect();
+  const placeholder = document.createElement('li');
+  placeholder.className = 'reorder-placeholder';
+  placeholder.style.height = `${Math.ceil(rect.height)}px`;
+  state.placeholder = placeholder;
+  state.item.parentElement.insertBefore(placeholder, state.item.nextSibling);
+
+  state.item.hidden = true;
+  state.item.classList.add('reorder-source');
+
+  const ghost = state.item.cloneNode(true);
+  ghost.classList.add('reorder-ghost');
+  ghost.style.width = `${Math.ceil(rect.width)}px`;
+  state.ghost = ghost;
+  document.body.appendChild(ghost);
+
+  document.body.classList.add('reorder-drag-active');
+  state.handle.classList.add('dragging');
+
+  updateReorderGhostPosition(state, event.clientY);
+  moveReorderPlaceholder(state, event.clientY);
+}
+
+function updateReorderGhostPosition(state, clientY) {
+  if (!state.ghost) return;
+  state.ghost.style.left = `${state.itemLeft}px`;
+  state.ghost.style.top = `${clientY - state.pointerOffsetY}px`;
+}
+
+function autoScrollReorderList(state, clientY) {
+  const container = state.scrollContainer;
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  const edgeSize = 72;
+  let delta = 0;
+
+  if (clientY < rect.top + edgeSize) {
+    delta = -Math.ceil((rect.top + edgeSize - clientY) / 14) * 10;
+  } else if (clientY > rect.bottom - edgeSize) {
+    delta = Math.ceil((clientY - (rect.bottom - edgeSize)) / 14) * 10;
+  }
+
+  if (delta !== 0) {
+    container.scrollTop += delta;
+  }
+}
+
+function moveReorderPlaceholder(state, clientY) {
+  if (!state.placeholder || !state.list) return;
+  autoScrollReorderList(state, clientY);
+
+  const siblings = Array.from(state.list.children).filter((node) => node !== state.placeholder && node !== state.item);
+  const target = siblings.find((node) => {
+    const rect = node.getBoundingClientRect();
+    return clientY < rect.top + (rect.height / 2);
   });
-  li.addEventListener('drop', (e) => {
-    e.preventDefault();
-    li.classList.remove('drop-before');
-    if (!dragSrcEl || dragSrcEl === li) return;
-    const srcId = dragSrcEl.dataset.id;
-    const dstId = li.dataset.id;
-    const arr = kind === 'order' ? getFolderOrder(curFolder) : (kind === 'folder' ? curFolder.subfolders : curFolder.products);
-    const srcIdx = arr.indexOf(srcId);
-    const dstIdx = arr.indexOf(dstId);
-    if (srcIdx < 0 || dstIdx < 0) return;
-    // Determine insertion index (before or after)
-    const rect = li.getBoundingClientRect();
-    const before = (e.clientY - rect.top) < rect.height / 2;
-    // Remove src
-    arr.splice(srcIdx, 1);
-    let insertAt = dstIdx;
-    if (!before) insertAt = dstIdx + (srcIdx < dstIdx ? 0 : 1);
-    else insertAt = dstIdx + (srcIdx < dstIdx ? -1 : 0);
-    if (insertAt < 0) insertAt = 0;
-    if (insertAt > arr.length) insertAt = arr.length;
-    arr.splice(insertAt, 0, srcId);
-    if (kind === 'order') setFolderOrder(curFolder, arr);
-    saveStateDebounced();
-    renderAll();
-  });
+
+  if (target) state.list.insertBefore(state.placeholder, target);
+  else state.list.appendChild(state.placeholder);
+}
+
+function onReorderPointerMove(e) {
+  const state = activeReorderDrag;
+  if (!state || e.pointerId !== state.pointerId) return;
+
+  const dx = e.clientX - state.startX;
+  const dy = e.clientY - state.startY;
+  if (!state.didDrag) {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    activateReorderPointerDrag(state, e);
+  }
+
+  updateReorderGhostPosition(state, e.clientY);
+  moveReorderPlaceholder(state, e.clientY);
+}
+
+function finishReorderPointerSession(commitOrder) {
+  const state = activeReorderDrag;
+  if (!state) return;
+
+  document.removeEventListener('pointermove', onReorderPointerMove);
+  document.removeEventListener('pointerup', onReorderPointerUp);
+  document.removeEventListener('pointercancel', onReorderPointerCancel);
+  try { state.handle.releasePointerCapture?.(state.pointerId); } catch {}
+
+  if (state.item) {
+    state.item.hidden = false;
+    state.item.classList.remove('reorder-source');
+  }
+  if (state.placeholder && state.placeholder.parentElement) {
+    state.placeholder.parentElement.insertBefore(state.item, state.placeholder);
+    state.placeholder.remove();
+  }
+  if (state.ghost) state.ghost.remove();
+
+  document.body.classList.remove('reorder-drag-active');
+  state.handle?.classList.remove('dragging');
+
+  const handleToSuppress = state.didDrag ? state.handle : null;
+  const shouldCommit = Boolean(commitOrder && state.didDrag && state.list && state.folder);
+  activeReorderDrag = null;
+
+  if (shouldCommit) {
+    const nextOrder = Array.from(state.list.children).map((node) => node.dataset.id).filter(Boolean);
+    if (nextOrder.length) {
+      const currentOrder = getFolderOrder(state.folder);
+      const changed = nextOrder.length === currentOrder.length && nextOrder.some((key, index) => key !== currentOrder[index]);
+      if (changed) {
+        setFolderOrder(state.folder, nextOrder);
+        saveStateDebounced();
+        renderAll();
+        showToast('Order updated');
+      }
+    }
+  }
+
+  if (handleToSuppress) {
+    handleToSuppress.dataset.skipClick = '1';
+    setTimeout(() => {
+      try { delete handleToSuppress.dataset.skipClick; } catch {}
+    }, 0);
+  }
+}
+
+function onReorderPointerUp(e) {
+  const state = activeReorderDrag;
+  if (!state || e.pointerId !== state.pointerId) return;
+  finishReorderPointerSession(true);
+}
+
+function onReorderPointerCancel(e) {
+  const state = activeReorderDrag;
+  if (!state || e.pointerId !== state.pointerId) return;
+  finishReorderPointerSession(false);
 }
 
 // ---------------------------- Autosave Pipeline ----------------------------
@@ -2888,6 +3071,7 @@ function renderFolderList(folderId = currentFolderId) {
 
   // Mixed order render (folders and products interleaved)
   const order = getFolderOrder(curFolder);
+  const canReorderItems = order.length > 1;
   for (const key of order) {
     if (key.startsWith('f:')) {
       const fid = key.slice(2);
@@ -2911,13 +3095,11 @@ function renderFolderList(folderId = currentFolderId) {
       left.appendChild(icon); left.appendChild(textCol);
       left.style.cursor = 'pointer'; left.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
       const actions = document.createElement('div'); actions.className = 'actions';
-      const actIcon = document.createElement('span'); actIcon.textContent = '📁'; actIcon.setAttribute('aria-hidden', 'true');
+      const reorderBtn = createReorderHandle(li, curFolder, `f:${fid}`, f.name || 'Folder', !canReorderItems);
       const moreBtn = document.createElement('button'); moreBtn.textContent = '⋯'; moreBtn.title = 'More';
       moreBtn.addEventListener('click', (e) => { e.stopPropagation(); openFolderMenu(fid); });
-      actions.appendChild(actIcon);
+      actions.appendChild(reorderBtn);
       actions.appendChild(moreBtn);
-      // Use unified order DnD with mixed key
-      attachReorderDnD(li, 'order', `f:${fid}`, curFolder);
       li.appendChild(left); li.appendChild(actions); rootUl.appendChild(li);
     } else if (key.startsWith('p:')) {
       const pid = key.slice(2);
@@ -2962,11 +3144,12 @@ function renderFolderList(folderId = currentFolderId) {
         noteIcon.title = 'Has note';
         actionsP.appendChild(noteIcon);
       }
+      const reorderBtnP = createReorderHandle(pli, curFolder, `p:${p.id}`, p.name || 'Product', !canReorderItems);
       const moreBtnP = document.createElement('button'); moreBtnP.textContent = '⋯'; moreBtnP.title = 'More';
       moreBtnP.addEventListener('click', (e) => { e.stopPropagation(); openProductMenu(p.id); });
+      actionsP.appendChild(reorderBtnP);
       actionsP.appendChild(moreBtnP);
       leftp.style.cursor = 'pointer'; leftp.addEventListener('click', () => openProductPage(p.id));
-      attachReorderDnD(pli, 'order', `p:${p.id}`, curFolder);
       pli.appendChild(leftp); pli.appendChild(actionsP); rootUl.appendChild(pli);
     }
   }
