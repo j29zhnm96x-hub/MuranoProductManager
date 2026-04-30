@@ -4190,6 +4190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pp-back').addEventListener('click', () => { closeProductPage(); });
   document.getElementById('pp-add-btn').addEventListener('click', () => adjustProductQuantity(+1));
   document.getElementById('pp-remove-btn').addEventListener('click', () => adjustProductQuantity(-1));
+  document.getElementById('pp-correct-btn').addEventListener('click', () => correctProductQuantity());
   document.getElementById('pp-upload-btn').addEventListener('click', () => document.getElementById('pp-image-file').click());
   document.getElementById('pp-image-file').addEventListener('change', onProductImageSelected);
   document.getElementById('pp-edit').addEventListener('click', () => { if (productPageProductId) openProductEditModal(productPageProductId); });
@@ -4493,6 +4494,29 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
       { label: 'Cancel' }
     ]
   });
+}
+
+function correctProductQuantity() {
+  if (!productPageProductId) return;
+  const p = appState.products[productPageProductId];
+  if (!p) return;
+  const inputEl = document.getElementById('pp-adjust-input');
+  const raw = String(inputEl.value || '').trim();
+  if (raw === '') { inputEl.focus(); showToast('Enter quantity'); return; }
+  const v = Number(raw);
+  if (!Number.isFinite(v) || v < 0) { inputEl.focus(); showToast('Enter valid quantity'); return; }
+  const newQty = Math.max(0, Math.floor(v));
+  p.quantity = newQty;
+  // IMPORTANT: do NOT record this as an inventory event. This is an invisible correction.
+  try { saveStateDebounced(); } catch {}
+  const qtyEl = document.getElementById('pp-qty'); if (qtyEl) qtyEl.textContent = newQty;
+  if (!isProductInIndependentFolder(productPageProductId)) {
+    const totalEl = document.getElementById('pp-total'); if (totalEl) totalEl.textContent = formatCurrency(Number(p.price || 0) * newQty);
+  }
+  inputEl.value = '';
+  renderFolderList();
+  try { inputEl.blur(); } catch {}
+  showToast('Quantity corrected (no history recorded)');
 }
 
 async function onProductImageSelected(e) {
