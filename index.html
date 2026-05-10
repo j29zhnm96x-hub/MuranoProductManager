@@ -221,7 +221,23 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').catch(() => {/* no-op */});
+        navigator.serviceWorker.register('/service-worker.js').then((reg) => {
+          reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                // New version available — activate immediately
+                newSW.postMessage({ action: 'skipWaiting' });
+              }
+            });
+          });
+        }).catch(() => {/* no-op */});
+      });
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
       });
     }
   </script>

@@ -1,5 +1,5 @@
 /* Improved offline cache with network-first for app shell */
-const CACHE_NAME = 'app-cache-v22';
+const CACHE_NAME = 'app-cache-v23';
 const ASSETS = [
   '/',
   '/index.html',
@@ -12,6 +12,10 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.action === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
