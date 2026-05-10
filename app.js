@@ -2,9 +2,9 @@ function showResetStatsConfirm() {
   // Build warning body
   const body = document.createElement('div');
   body.style.display = 'grid'; body.style.gap = '10px'; body.style.maxWidth = '520px';
-  const warn = document.createElement('div'); warn.textContent = 'ARE YOU SURE YOU WISH TO DELETE ALL PRODUCT STATISTICS, THIS IS IRREVERSABLE'; warn.style.color = '#ef4444'; warn.style.fontWeight = '700'; warn.style.textAlign = 'center';
-  const note = document.createElement('div'); note.textContent = 'This will set the Quantity of every product to 0. Folders, products and settings remain unchanged.'; note.style.textAlign = 'center';
-  const countdownEl = document.createElement('div'); countdownEl.style.textAlign = 'center'; countdownEl.style.color = '#6b7280';
+  const warn = document.createElement('div'); warn.textContent = 'ARE YOU SURE YOU WISH TO DELETE ALL PRODUCT STATISTICS, THIS IS IRREVERSABLE'; warn.style.color = '#ef4444'; warn.style.fontWeight = '700'; warn.style.textAlign = 'center'; warn.style.fontSize = '15px';
+  const note = document.createElement('div'); note.textContent = 'This will set the Quantity of every product to 0. Folders, products and settings remain unchanged.'; note.style.textAlign = 'center'; note.style.color = '#6b7280'; note.style.fontSize = '14px';
+  const countdownEl = document.createElement('div'); countdownEl.style.textAlign = 'center'; countdownEl.style.color = '#6b7280'; countdownEl.style.fontWeight = '700';
   body.appendChild(warn); body.appendChild(note); body.appendChild(countdownEl);
 
   let seconds = 10;
@@ -14,15 +14,17 @@ function showResetStatsConfirm() {
     countdownEl.textContent = `You can confirm in ${seconds}s`;
     if (confirmBtnRef) confirmBtnRef.disabled = seconds > 0;
     if (seconds > 0) { seconds -= 1; setTimeout(tick, 1000); }
-    else { countdownEl.textContent = 'You may proceed.'; }
+    else { countdownEl.textContent = '\u2713 You may proceed.'; countdownEl.style.color = '#16a34a'; }
   };
 
   openModal({
-    title: 'Confirm Reset Stats',
+    title: 'Reset All Quantities',
+    headerIcon: { symbol: '\u26A0', color: 'red' },
+    size: 'small',
     body,
     actions: [
       { label: 'Confirm', onClick: () => { resetAllProductQuantities(); } },
-      { label: 'Cancel' }
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
 
@@ -1099,11 +1101,11 @@ function buildModalMenuHeader(iconText, title, subtitle = 'Select an action') {
 function openActionsMenu() {
   openModal({
     title: 'Actions',
-    body: buildModalMenuHeader('⋯', 'Actions', 'Select an action.'),
+    body: buildModalMenuHeader('\u2699', 'Actions', 'Import, export, history and more.'),
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
-      { label: 'Save (snapshot + cloud)', onClick: async () => {
+      { label: '\uD83D\uDCBE  Save (snapshot + cloud)', onClick: async () => {
           if (modified) {
             showToast('Saving...');
             processSaveQueue();
@@ -1111,10 +1113,10 @@ function openActionsMenu() {
             showToast('No changes to save');
           }
         } },
-      { label: 'Stock History', onClick: () => openHistoryPage() },
-      { label: 'Import JSON', onClick: () => { document.getElementById('import-file').click(); } },
-      { label: 'Export JSON', onClick: () => { exportState(); } },
-      { label: 'Close' }
+      { label: '\uD83D\uDCCA  Stock History', onClick: () => openHistoryPage() },
+      { label: '\u2B07  Import JSON', onClick: () => { document.getElementById('import-file').click(); } },
+      { label: '\u2B06  Export JSON', onClick: () => { exportState(); } },
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
 }
@@ -1320,10 +1322,12 @@ function confirmDeleteProduct(productId) {
   const p = appState.products[productId];
   openModal({
     title: 'Delete Product',
+    headerIcon: { symbol: '\u2716', color: 'red' },
+    size: 'small',
     body: `Are you sure you want to delete "${p?.name || 'Product'}"?`,
     actions: [
-      { label: 'Delete', onClick: () => { deleteProduct(productId); } },
-      { label: 'Cancel' }
+      { label: 'Delete', tone: 'danger', onClick: () => { deleteProduct(productId); } },
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
 }
@@ -1386,10 +1390,12 @@ function confirmDeleteFolder(folderId) {
   const f = appState.folders[folderId];
   openModal({
     title: 'Delete Folder',
+    headerIcon: { symbol: '\u2716', color: 'red' },
+    size: 'small',
     body: `Delete folder "${f?.name || 'Folder'}" and everything inside?`,
     actions: [
-      { label: 'Delete', onClick: () => { deleteFolder(folderId); } },
-      { label: 'Cancel' }
+      { label: 'Delete', tone: 'danger', onClick: () => { deleteFolder(folderId); } },
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
 }
@@ -1562,74 +1568,130 @@ function openProductEditModal(productId) {
   }
   
   const wrap = document.createElement('div');
-  const nameRow = document.createElement('div');
-  const nameLabel = document.createElement('div'); nameLabel.textContent = 'Name'; nameLabel.style.marginBottom = '4px';
-  const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = p.name || ''; nameInput.style.width = '100%'; nameInput.style.padding = '8px'; nameInput.style.border = '1px solid #d1d5db'; nameInput.style.borderRadius = '8px';
+  
+  // Name input
+  const nameGroup = document.createElement('div');
+  nameGroup.className = 'modal-form-group';
+  const nameLabel = document.createElement('label');
+  nameLabel.className = 'modal-form-label';
+  nameLabel.textContent = 'Name';
+  const nameInput = document.createElement('input');
+  nameInput.className = 'modal-input';
+  nameInput.type = 'text';
+  nameInput.value = p.name || '';
   nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
-  nameRow.appendChild(nameLabel); nameRow.appendChild(nameInput);
+  nameGroup.appendChild(nameLabel);
+  nameGroup.appendChild(nameInput);
+  wrap.appendChild(nameGroup);
 
-  wrap.appendChild(nameRow);
-
-  // Dynamic linking UI (only for products in independent folders) - MOVED UP
+  // Dynamic linking UI (only for products in independent folders)
   let dynamicCheckbox;
   if (inIndependentFolder) {
-    // Master switch: Dynamic Component checkbox
-    const dynamicRow = document.createElement('div'); dynamicRow.style.marginTop = '12px'; dynamicRow.style.borderTop = '1px solid #e5e7eb'; dynamicRow.style.paddingTop = '12px';
-    dynamicCheckbox = document.createElement('input'); dynamicCheckbox.type = 'checkbox'; dynamicCheckbox.checked = p.isDynamic || false; dynamicCheckbox.style.marginRight = '8px';
-    const dynamicLabel = document.createElement('label'); dynamicLabel.style.display = 'flex'; dynamicLabel.style.alignItems = 'center'; dynamicLabel.style.cursor = 'pointer'; dynamicLabel.style.fontSize = '14px'; dynamicLabel.style.fontWeight = '600';
-    dynamicLabel.appendChild(dynamicCheckbox);
-    const dynamicText = document.createElement('span'); dynamicText.textContent = 'Dynamic Component';
-    dynamicLabel.appendChild(dynamicText);
-    dynamicRow.appendChild(dynamicLabel);
+    const divider = document.createElement('div');
+    divider.className = 'modal-divider';
+    wrap.appendChild(divider);
+    
+    // Dynamic Component checkbox (switch style)
+    const dynamicRow = document.createElement('label');
+    dynamicRow.className = 'modal-check-row';
+    dynamicCheckbox = document.createElement('input');
+    dynamicCheckbox.type = 'checkbox';
+    dynamicCheckbox.checked = p.isDynamic || false;
+    const track = document.createElement('span');
+    track.className = 'modal-check-track';
+    const checkLabel = document.createElement('span');
+    checkLabel.className = 'modal-check-label';
+    checkLabel.textContent = 'Dynamic Component';
+    dynamicRow.appendChild(dynamicCheckbox);
+    dynamicRow.appendChild(track);
+    dynamicRow.appendChild(checkLabel);
     wrap.appendChild(dynamicRow);
 
+    // Hint text
+    const hint = document.createElement('div');
+    hint.className = 'modal-hint';
+    hint.textContent = 'When enabled, this component will auto-deduct from stock when linked products are produced.';
+    wrap.appendChild(hint);
+
     // Dynamic link UI container (hidden when dynamic is unchecked)
-    const linkContainer = document.createElement('div'); linkContainer.style.marginTop = '10px'; linkContainer.style.display = dynamicCheckbox.checked ? 'block' : 'none';
+    const linkContainer = document.createElement('div');
+    linkContainer.style.display = dynamicCheckbox.checked ? 'block' : 'none';
 
     // Warning threshold input
-    const thresholdRow = document.createElement('div'); thresholdRow.style.marginTop = '10px';
-    const thresholdLabel = document.createElement('div'); thresholdLabel.textContent = 'Warning Threshold'; thresholdLabel.style.marginBottom = '4px';
-    const thresholdInput = document.createElement('input'); thresholdInput.id = 'edit-warn-threshold'; thresholdInput.type = 'number'; thresholdInput.step = '1'; thresholdInput.min = '0'; thresholdInput.value = p.warnThreshold || 0; thresholdInput.style.width = '100%'; thresholdInput.style.padding = '8px'; thresholdInput.style.border = '1px solid #d1d5db'; thresholdInput.style.borderRadius = '8px'; thresholdInput.inputMode = 'numeric';
+    const thresholdGroup = document.createElement('div');
+    thresholdGroup.className = 'modal-form-group';
+    const thresholdLabel = document.createElement('label');
+    thresholdLabel.className = 'modal-form-label';
+    thresholdLabel.textContent = 'Warning Threshold';
+    const thresholdInput = document.createElement('input');
+    thresholdInput.id = 'edit-warn-threshold';
+    thresholdInput.className = 'modal-input';
+    thresholdInput.type = 'number';
+    thresholdInput.step = '1';
+    thresholdInput.min = '0';
+    thresholdInput.value = p.warnThreshold || 0;
+    thresholdInput.inputMode = 'numeric';
     thresholdInput.addEventListener('focus', () => { try { thresholdInput.select(); } catch {} });
-    thresholdRow.appendChild(thresholdLabel); thresholdRow.appendChild(thresholdInput);
-    linkContainer.appendChild(thresholdRow);
+    thresholdGroup.appendChild(thresholdLabel);
+    thresholdGroup.appendChild(thresholdInput);
+    linkContainer.appendChild(thresholdGroup);
+
+    // Units info
+    const unitsInfo = document.createElement('div');
+    unitsInfo.className = 'modal-form-group';
+    const unitsLabel = document.createElement('div');
+    unitsLabel.className = 'modal-form-label';
+    unitsLabel.textContent = 'Units per Item';
+    const unitsHint = document.createElement('div');
+    unitsHint.className = 'modal-hint';
+    unitsHint.textContent = 'Set when adding a link below.';
+    unitsInfo.appendChild(unitsLabel);
+    unitsInfo.appendChild(unitsHint);
 
     // Add Link button
-    const addLinkBtn = document.createElement('button'); addLinkBtn.textContent = 'Add Link'; addLinkBtn.style.width = '100%'; addLinkBtn.style.padding = '8px'; addLinkBtn.style.background = '#3b82f6'; addLinkBtn.style.color = '#fff'; addLinkBtn.style.border = 'none'; addLinkBtn.style.borderRadius = '6px'; addLinkBtn.style.cursor = 'pointer'; addLinkBtn.style.fontWeight = '600'; addLinkBtn.style.fontSize = '14px'; addLinkBtn.style.marginBottom = '10px';
+    const addLinkBtn = document.createElement('button');
+    addLinkBtn.className = 'modal-file-btn';
+    addLinkBtn.textContent = '+ Add Link';
+    addLinkBtn.style.width = '100%';
+    addLinkBtn.style.justifyContent = 'center';
+    addLinkBtn.style.marginBottom = '8px';
     
-    // Units input
-    const unitsRow = document.createElement('div'); unitsRow.style.marginBottom = '10px';
-    const unitsLabel = document.createElement('div'); unitsLabel.textContent = 'Units per Item'; unitsLabel.style.marginBottom = '4px'; unitsLabel.style.fontSize = '13px'; unitsLabel.style.color = '#6b7280';
-    const unitsDisplay = document.createElement('div'); unitsDisplay.style.fontSize = '12px'; unitsDisplay.style.color = '#9ca3af'; unitsDisplay.textContent = '(Set in link selector when adding)';
-    unitsRow.appendChild(unitsLabel); unitsRow.appendChild(unitsDisplay);
     linkContainer.appendChild(addLinkBtn);
-    linkContainer.appendChild(unitsRow);
+    linkContainer.appendChild(unitsInfo);
 
     // Link list display
-    const linkList = document.createElement('div'); linkList.style.background = '#f9fafb'; linkList.style.border = '1px solid #e5e7eb'; linkList.style.borderRadius = '8px'; linkList.style.padding = '8px'; linkList.style.maxHeight = '150px'; linkList.style.overflowY = 'auto'; linkList.style.marginBottom = '10px';
+    const linkList = document.createElement('div');
+    linkList.className = 'modal-link-list';
     
     const renderLinkList = () => {
       linkList.innerHTML = '';
       if (!p.dynamicLinks || p.dynamicLinks.length === 0) {
-        linkList.innerHTML = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:8px;">No links added</div>';
+        linkList.innerHTML = '<div class="modal-empty">No links added yet</div>';
         return;
       }
       p.dynamicLinks.forEach((link, idx) => {
-        const item = document.createElement('div'); item.style.display = 'flex'; item.style.alignItems = 'center'; item.style.justifyContent = 'space-between'; item.style.padding = '6px 8px'; item.style.borderRadius = '6px'; item.style.background = '#ffffff'; item.style.marginBottom = '4px'; item.style.fontSize = '13px';
-        const name = link.type === 'product' ? (appState.products[link.targetId]?.name || '???') : (appState.folders[link.targetId]?.name || '???');
-        const label = document.createElement('span'); label.textContent = `${link.type === 'product' ? 'Product' : 'Folder'}: ${name} (${link.units} unit${link.units > 1 ? 's' : ''})`;
-        const removeBtn = document.createElement('button'); removeBtn.textContent = '×'; removeBtn.style.background = 'none'; removeBtn.style.border = 'none'; removeBtn.style.color = '#ef4444'; removeBtn.style.fontSize = '18px'; removeBtn.style.cursor = 'pointer'; removeBtn.style.padding = '0 4px';
+        const item = document.createElement('div');
+        item.className = 'modal-link-item';
+        const targetName = link.type === 'product' ? (appState.products[link.targetId]?.name || '???') : (appState.folders[link.targetId]?.name || '???');
+        const label = document.createElement('span');
+        label.innerHTML = `<span class="modal-units-badge">${link.units}u</span> ${targetName} <span style="color:#94a3b8;font-size:12px">(${link.type})</span>`;
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'modal-link-remove';
+        removeBtn.textContent = '×';
         removeBtn.addEventListener('click', () => {
           openModal({
             title: 'Remove Link',
             body: 'Unlink will break quantity sync. OK?',
+            headerIcon: { symbol: '!', color: 'red' },
+            size: 'small',
             actions: [
-              { label: 'Remove', onClick: () => { p.dynamicLinks.splice(idx, 1); renderLinkList(); } },
+              { label: 'Remove', tone: 'danger', onClick: () => { p.dynamicLinks.splice(idx, 1); renderLinkList(); } },
               { label: 'Cancel' }
             ]
           });
         });
-        item.appendChild(label); item.appendChild(removeBtn);
+        item.appendChild(label);
+        item.appendChild(removeBtn);
         linkList.appendChild(item);
       });
     };
@@ -1644,27 +1706,21 @@ function openProductEditModal(productId) {
           showToast('This link already exists');
           return;
         }
-        // Use the units from the link selector modal
         const units = Math.max(1, Number(selectedUnits || 1));
         p.dynamicLinks.push({ type: selectedType, targetId: selectedId, units });
         renderLinkList();
         showToast('Link added');
-        // Save state immediately
         saveStateDebounced();
-        // Close the modal first, then update product page
         closeModal();
-        // Refresh product page immediately if it's open
         if (productPageProductId === productId) {
-          setTimeout(() => {
-            openProductPage(productId);
-          }, 100);
+          setTimeout(() => { openProductPage(productId); }, 100);
         }
       });
     });
 
     wrap.appendChild(linkContainer);
 
-    // Toggle link UI visibility
+    // Toggle link UI visibility on checkbox change
     dynamicCheckbox.addEventListener('change', () => {
       linkContainer.style.display = dynamicCheckbox.checked ? 'block' : 'none';
     });
@@ -1673,101 +1729,136 @@ function openProductEditModal(productId) {
   // Only show price and target for sellable products (not in independent folders)
   let priceInput, targetInput;
   if (!inIndependentFolder) {
-    const priceRow = document.createElement('div'); priceRow.style.marginTop = '10px';
-    const priceLabel = document.createElement('div'); priceLabel.textContent = 'Price'; priceLabel.style.marginBottom = '4px';
-    priceInput = document.createElement('input'); priceInput.type = 'number'; priceInput.step = '0.01'; priceInput.min = '0'; priceInput.value = p.price || 0; priceInput.style.width = '100%'; priceInput.style.padding = '8px'; priceInput.style.border = '1px solid #d1d5db'; priceInput.style.borderRadius = '8px'; priceInput.inputMode = 'decimal';
+    const divider = document.createElement('div');
+    divider.className = 'modal-divider';
+    wrap.appendChild(divider);
+    
+    const priceGroup = document.createElement('div');
+    priceGroup.className = 'modal-form-group';
+    const priceLabel = document.createElement('label');
+    priceLabel.className = 'modal-form-label';
+    priceLabel.textContent = 'Price ';
+    const priceHint = document.createElement('span');
+    priceHint.className = 'optional';
+    priceHint.textContent = '(€)';
+    priceLabel.appendChild(priceHint);
+    priceInput = document.createElement('input');
+    priceInput.className = 'modal-input';
+    priceInput.type = 'number';
+    priceInput.step = '0.01';
+    priceInput.min = '0';
+    priceInput.value = p.price || 0;
+    priceInput.inputMode = 'decimal';
     priceInput.addEventListener('focus', () => { try { priceInput.select(); } catch {} });
-    priceRow.appendChild(priceLabel); priceRow.appendChild(priceInput);
+    priceGroup.appendChild(priceLabel);
+    priceGroup.appendChild(priceInput);
+    wrap.appendChild(priceGroup);
 
-    const targetRow = document.createElement('div'); targetRow.style.marginTop = '10px';
-    const targetLabel = document.createElement('div'); targetLabel.textContent = 'Target Quantity'; targetLabel.style.marginBottom = '4px';
-    targetInput = document.createElement('input'); targetInput.type = 'number'; targetInput.step = '1'; targetInput.min = '0'; targetInput.value = p.targetQuantity || 0; targetInput.style.width = '100%'; targetInput.style.padding = '8px'; targetInput.style.border = '1px solid #d1d5db'; targetInput.style.borderRadius = '8px'; targetInput.inputMode = 'numeric';
+    const targetGroup = document.createElement('div');
+    targetGroup.className = 'modal-form-group';
+    const targetLabel = document.createElement('label');
+    targetLabel.className = 'modal-form-label';
+    targetLabel.textContent = 'Target Quantity ';
+    const targetHint = document.createElement('span');
+    targetHint.className = 'optional';
+    targetHint.textContent = '(pc)';
+    targetLabel.appendChild(targetHint);
+    targetInput = document.createElement('input');
+    targetInput.className = 'modal-input';
+    targetInput.type = 'number';
+    targetInput.step = '1';
+    targetInput.min = '0';
+    targetInput.value = p.targetQuantity || 0;
+    targetInput.inputMode = 'numeric';
     targetInput.addEventListener('focus', () => { try { targetInput.select(); } catch {} });
-    targetRow.appendChild(targetLabel); targetRow.appendChild(targetInput);
-
-    wrap.appendChild(priceRow);
-    wrap.appendChild(targetRow);
+    targetGroup.appendChild(targetLabel);
+    targetGroup.appendChild(targetInput);
+    wrap.appendChild(targetGroup);
   }
 
   openModal({
     title: 'Edit Product',
+    headerIcon: { symbol: '\u270E', color: 'blue' },
     body: wrap,
     actions: [
       { label: 'Save', onClick: () => {
           const dynamicCheckbox = wrap.querySelector('input[type="checkbox"]');
           const thresholdInput = wrap.querySelector('#edit-warn-threshold');
           const newWarnThreshold = thresholdInput ? Number(thresholdInput.value || 0) : 0;
-          p.name = nameInput.value.trim();
+          p.name = nameInput.value.trim() || p.name;
           p.isDynamic = dynamicCheckbox ? dynamicCheckbox.checked : false;
-          if (!p.isDynamic) { p.dynamicLinks = []; } // Clear links if dynamic is disabled
+          if (!p.isDynamic) { p.dynamicLinks = []; }
           p.warnThreshold = newWarnThreshold;
           if (!inIndependentFolder) {
             p.price = priceInput ? Number(priceInput.value || 0) : (p.price || 0);
             p.targetQuantity = targetInput ? Number(targetInput.value || 0) : (p.targetQuantity || 0);
           }
           saveStateDebounced();
-          // Close the confirmation modal
           closeModal();
-          // Refresh the entire product page to show updated links
           if (productPageProductId === productId) {
-            setTimeout(() => {
-              openProductPage(productId);
-            }, 100);
+            setTimeout(() => { openProductPage(productId); }, 100);
           }
           renderFolderList();
         } },
-      { label: 'Cancel' }
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
-  try { document.getElementById('modal-close').textContent = '← Back'; } catch {}
 }
 
 function openLinkSelectorModal(onSelect) {
   const wrap = document.createElement('div');
   
   // Type selector (radio toggle)
-  const typeRow = document.createElement('div'); typeRow.style.marginBottom = '12px';
-  const typeLabel = document.createElement('div'); typeLabel.textContent = 'Link to'; typeLabel.style.marginBottom = '6px'; typeLabel.style.fontWeight = '600'; typeLabel.style.fontSize = '14px';
-  const typeToggle = document.createElement('div'); typeToggle.style.display = 'flex'; typeToggle.style.gap = '8px';
+  const typeGroup = document.createElement('div');
+  typeGroup.className = 'modal-form-group';
+  const typeLabel = document.createElement('div');
+  typeLabel.className = 'modal-form-label';
+  typeLabel.textContent = 'Link to';
+  const typeToggle = document.createElement('div');
+  typeToggle.className = 'modal-radio-group';
   
-  const productRadio = document.createElement('input'); productRadio.type = 'radio'; productRadio.name = 'linkType'; productRadio.value = 'product'; productRadio.checked = true; productRadio.id = 'link-product';
-  const productLabel = document.createElement('label'); productLabel.htmlFor = 'link-product'; productLabel.textContent = 'Product'; productLabel.style.cursor = 'pointer'; productLabel.style.display = 'flex'; productLabel.style.alignItems = 'center'; productLabel.style.gap = '4px';
-  productLabel.prepend(productRadio);
+  const productLabel = document.createElement('label');
+  productLabel.className = 'modal-radio-option';
+  const productRadio = document.createElement('input');
+  productRadio.type = 'radio'; productRadio.name = 'linkType'; productRadio.value = 'product'; productRadio.checked = true;
+  const productText = document.createElement('span');
+  productText.textContent = 'Product';
+  productLabel.appendChild(productRadio);
+  productLabel.appendChild(productText);
   
-  const folderRadio = document.createElement('input'); folderRadio.type = 'radio'; folderRadio.name = 'linkType'; folderRadio.value = 'folder'; folderRadio.id = 'link-folder';
-  const folderLabel = document.createElement('label'); folderLabel.htmlFor = 'link-folder'; folderLabel.textContent = 'Folder'; folderLabel.style.cursor = 'pointer'; folderLabel.style.display = 'flex'; folderLabel.style.alignItems = 'center'; folderLabel.style.gap = '4px';
-  folderLabel.prepend(folderRadio);
+  const folderLabel = document.createElement('label');
+  folderLabel.className = 'modal-radio-option';
+  const folderRadio = document.createElement('input');
+  folderRadio.type = 'radio'; folderRadio.name = 'linkType'; folderRadio.value = 'folder';
+  const folderText = document.createElement('span');
+  folderText.textContent = 'Folder';
+  folderLabel.appendChild(folderRadio);
+  folderLabel.appendChild(folderText);
   
   typeToggle.appendChild(productLabel);
   typeToggle.appendChild(folderLabel);
-  typeRow.appendChild(typeLabel);
-  typeRow.appendChild(typeToggle);
-  wrap.appendChild(typeRow);
+  typeGroup.appendChild(typeLabel);
+  typeGroup.appendChild(typeToggle);
+  wrap.appendChild(typeGroup);
+
+  // Search input with results container
+  const searchGroup = document.createElement('div');
+  searchGroup.className = 'modal-form-group';
+  const searchLabel = document.createElement('div');
+  searchLabel.className = 'modal-form-label';
+  searchLabel.textContent = 'Search & Select';
   
-  // Search input instead of dropdown
-  const selectRow = document.createElement('div'); selectRow.style.marginBottom = '12px';
-  const selectLabel = document.createElement('div'); selectLabel.textContent = 'Search'; selectLabel.style.marginBottom = '6px'; selectLabel.style.fontWeight = '600'; selectLabel.style.fontSize = '14px';
+  const resultsWrap = document.createElement('div');
+  resultsWrap.className = 'modal-search-results';
   
-  // Create search input
-  const searchInput = document.createElement('input'); 
+  const searchInput = document.createElement('input');
+  searchInput.className = 'modal-input';
   searchInput.type = 'text';
-  searchInput.placeholder = 'Type to search...'; 
-  searchInput.style.width = '100%'; 
-  searchInput.style.padding = '8px'; 
-  searchInput.style.border = '1px solid #d1d5db'; 
-  searchInput.style.borderRadius = '6px 6px 0 0'; 
-  searchInput.style.fontSize = '14px';
-  searchInput.style.marginBottom = '0';
+  searchInput.placeholder = 'Type to search...';
   
-  // Create results container
   const resultsContainer = document.createElement('div');
-  resultsContainer.style.maxHeight = '200px';
-  resultsContainer.style.overflowY = 'auto';
-  resultsContainer.style.border = '1px solid #d1d5db';
-  resultsContainer.style.borderTop = 'none';
-  resultsContainer.style.borderRadius = '0 0 6px 6px';
-  resultsContainer.style.background = '#fff';
+  resultsContainer.className = 'modal-results-list';
   
   // Store the currently selected item
   let selectedItem = { id: '', name: '', type: '' };
@@ -1786,47 +1877,29 @@ function openLinkSelectorModal(onSelect) {
       
       if (filteredProducts.length === 0) {
         const noResults = document.createElement('div');
+        noResults.className = 'modal-empty';
         noResults.textContent = 'No products found';
-        noResults.style.padding = '8px';
-        noResults.style.color = '#6b7280';
-        noResults.style.textAlign = 'center';
         resultsContainer.appendChild(noResults);
       } else {
         filteredProducts.forEach(prod => {
           const resultItem = document.createElement('div');
-          resultItem.textContent = prod.name;
-          resultItem.style.padding = '8px';
-          resultItem.style.cursor = 'pointer';
-          resultItem.style.borderBottom = '1px solid #f3f4f6';
-          resultItem.style.transition = 'background 0.2s';
-          
+          resultItem.className = 'modal-result-item';
           if (selectedItem.id === prod.id && selectedItem.type === 'product') {
-            resultItem.style.background = '#f3f4f6';
-            resultItem.style.fontWeight = 'bold';
+            resultItem.classList.add('selected');
           }
           
           // Highlight matching text
           if (searchTerm) {
             const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            resultItem.innerHTML = prod.name.replace(regex, '<span style="background-color:#fef3c7">$1</span>');
+            resultItem.innerHTML = prod.name.replace(regex, '<span class="modal-result-highlight">$1</span>');
+          } else {
+            resultItem.textContent = prod.name;
           }
-          
-          resultItem.addEventListener('mouseenter', () => {
-            resultItem.style.background = '#f9fafb';
-          });
-          
-          resultItem.addEventListener('mouseleave', () => {
-            if (selectedItem.id === prod.id && selectedItem.type === 'product') {
-              resultItem.style.background = '#f3f4f6';
-            } else {
-              resultItem.style.background = '';
-            }
-          });
           
           resultItem.addEventListener('click', () => {
             selectedItem = { id: prod.id, name: prod.name, type: 'product' };
             searchInput.value = prod.name;
-            performSearch(); // Refresh highlighting
+            performSearch();
           });
           
           resultsContainer.appendChild(resultItem);
@@ -1840,47 +1913,28 @@ function openLinkSelectorModal(onSelect) {
       
       if (filteredFolders.length === 0) {
         const noResults = document.createElement('div');
+        noResults.className = 'modal-empty';
         noResults.textContent = 'No folders found';
-        noResults.style.padding = '8px';
-        noResults.style.color = '#6b7280';
-        noResults.style.textAlign = 'center';
         resultsContainer.appendChild(noResults);
       } else {
         filteredFolders.forEach(folder => {
           const resultItem = document.createElement('div');
-          resultItem.textContent = folder.name;
-          resultItem.style.padding = '8px';
-          resultItem.style.cursor = 'pointer';
-          resultItem.style.borderBottom = '1px solid #f3f4f6';
-          resultItem.style.transition = 'background 0.2s';
-          
+          resultItem.className = 'modal-result-item';
           if (selectedItem.id === folder.id && selectedItem.type === 'folder') {
-            resultItem.style.background = '#f3f4f6';
-            resultItem.style.fontWeight = 'bold';
+            resultItem.classList.add('selected');
           }
           
-          // Highlight matching text
           if (searchTerm) {
             const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            resultItem.innerHTML = folder.name.replace(regex, '<span style="background-color:#fef3c7">$1</span>');
+            resultItem.innerHTML = folder.name.replace(regex, '<span class="modal-result-highlight">$1</span>');
+          } else {
+            resultItem.textContent = folder.name;
           }
-          
-          resultItem.addEventListener('mouseenter', () => {
-            resultItem.style.background = '#f9fafb';
-          });
-          
-          resultItem.addEventListener('mouseleave', () => {
-            if (selectedItem.id === folder.id && selectedItem.type === 'folder') {
-              resultItem.style.background = '#f3f4f6';
-            } else {
-              resultItem.style.background = '';
-            }
-          });
           
           resultItem.addEventListener('click', () => {
             selectedItem = { id: folder.id, name: folder.name, type: 'folder' };
             searchInput.value = folder.name;
-            performSearch(); // Refresh highlighting
+            performSearch();
           });
           
           resultsContainer.appendChild(resultItem);
@@ -1902,25 +1956,40 @@ function openLinkSelectorModal(onSelect) {
     performSearch();
   });
   
-  selectRow.appendChild(selectLabel);
-  selectRow.appendChild(searchInput);
-  selectRow.appendChild(resultsContainer);
-  wrap.appendChild(selectRow);
+  resultsWrap.appendChild(searchInput);
+  resultsWrap.appendChild(resultsContainer);
+  searchGroup.appendChild(searchLabel);
+  searchGroup.appendChild(resultsWrap);
+  wrap.appendChild(searchGroup);
   
   // Perform initial search to populate results
   setTimeout(performSearch, 0);
   
   // Units input
-  const unitsRow = document.createElement('div');
-  const unitsLabel = document.createElement('div'); unitsLabel.textContent = 'Units used'; unitsLabel.style.marginBottom = '6px'; unitsLabel.style.fontWeight = '600'; unitsLabel.style.fontSize = '14px';
-  const unitsInput = document.createElement('input'); unitsInput.type = 'number'; unitsInput.step = '1'; unitsInput.min = '1'; unitsInput.value = 1; unitsInput.style.width = '100%'; unitsInput.style.padding = '8px'; unitsInput.style.border = '1px solid #d1d5db'; unitsInput.style.borderRadius = '6px'; unitsInput.inputMode = 'numeric';
+  const unitsGroup = document.createElement('div');
+  unitsGroup.className = 'modal-form-group';
+  const unitsLabel = document.createElement('div');
+  unitsLabel.className = 'modal-form-label';
+  unitsLabel.textContent = 'Units used';
+  const unitsHint = document.createElement('div');
+  unitsHint.className = 'modal-hint';
+  unitsHint.textContent = 'How many of this component per 1 finished product.';
+  const unitsInput = document.createElement('input');
+  unitsInput.className = 'modal-input';
+  unitsInput.type = 'number';
+  unitsInput.step = '1';
+  unitsInput.min = '1';
+  unitsInput.value = 1;
+  unitsInput.inputMode = 'numeric';
   unitsInput.addEventListener('focus', () => { try { unitsInput.select(); } catch {} });
-  unitsRow.appendChild(unitsLabel);
-  unitsRow.appendChild(unitsInput);
-  wrap.appendChild(unitsRow);
+  unitsGroup.appendChild(unitsLabel);
+  unitsGroup.appendChild(unitsHint);
+  unitsGroup.appendChild(unitsInput);
+  wrap.appendChild(unitsGroup);
   
   openModal({
     title: 'Add Link',
+    headerIcon: { symbol: '\uD83D\uDD17', color: 'purple' },
     body: wrap,
     actions: [
       { label: 'Add', onClick: () => {
@@ -1928,7 +1997,7 @@ function openLinkSelectorModal(onSelect) {
           const units = Math.max(1, Number(unitsInput.value || 1));
           onSelect(selectedItem.type, selectedItem.id, units);
         } },
-      { label: 'Cancel' }
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
 }
@@ -1993,9 +2062,10 @@ function openSettings() {
   plannedInput.addEventListener('change', syncWidths);
   openModal({
     title: 'Settings',
+    headerIcon: { symbol: '\u2699', color: 'slate' },
     body: wrap,
     actions: [
-      { label: 'Reset Stats', onClick: () => showResetStatsConfirm() },
+      { label: 'Reset Stats', tone: 'danger', onClick: () => showResetStatsConfirm() },
       { label: 'Show Report', onClick: () => { setTimeout(() => openReportModal(), 0); } },
       { label: 'Save', onClick: () => {
           appState.settings = appState.settings || {};
@@ -2011,7 +2081,8 @@ function openSettings() {
           saveStateDebounced();
           renderAll();
           showToast('Settings saved');
-        } }
+        } },
+      { label: 'Close', tone: 'secondary' }
     ]
   });
 }
@@ -2044,12 +2115,36 @@ function showToast(message, timeout = 3000) {
   setTimeout(() => el.remove(), timeout);
 }
 
-function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout = 'row', bodyClassName = '' } = {}) {
+function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout = 'row', bodyClassName = '', headerIcon = null, size = '' } = {}) {
   const modal = document.getElementById('modal');
   const titleEl = document.getElementById('modal-title');
   const bodyEl = document.getElementById('modal-body');
   const actionsEl = document.getElementById('modal-actions');
+  const headerEl = document.querySelector('.modal-header');
+  const contentEl = document.querySelector('.modal-content');
   const isStacked = actionsLayout === 'stack';
+  
+  // Remove existing header icon if any
+  const oldIcon = headerEl?.querySelector('.modal-header-icon');
+  if (oldIcon) oldIcon.remove();
+  
+  // Set header icon
+  if (headerIcon) {
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'modal-header-icon';
+    if (typeof headerIcon === 'object') {
+      iconSpan.textContent = headerIcon.symbol || '';
+      if (headerIcon.color) iconSpan.classList.add(headerIcon.color);
+    } else {
+      iconSpan.textContent = headerIcon;
+    }
+    headerEl?.insertBefore(iconSpan, titleEl);
+  }
+  
+  // Set size class
+  contentEl.className = 'modal-content';
+  if (size) contentEl.classList.add(size);
+  
   titleEl.textContent = title;
   bodyEl.className = bodyClassName || '';
   if (typeof body === 'string') {
@@ -3423,38 +3518,74 @@ function openFolderEditModal(folderId) {
   const f = appState.folders[folderId];
   if (!f) return;
   const wrap = document.createElement('div');
-  const nameRow = document.createElement('div');
-  const nameLabel = document.createElement('div'); nameLabel.textContent = 'Name'; nameLabel.style.marginBottom = '4px';
-  const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = f.name || ''; nameInput.style.width = '100%'; nameInput.style.padding = '8px'; nameInput.style.border = '1px solid #d1d5db'; nameInput.style.borderRadius = '8px';
+  
+  // Name input
+  const nameGroup = document.createElement('div');
+  nameGroup.className = 'modal-form-group';
+  const nameLabel = document.createElement('label');
+  nameLabel.className = 'modal-form-label';
+  nameLabel.textContent = 'Name';
+  const nameInput = document.createElement('input');
+  nameInput.className = 'modal-input';
+  nameInput.type = 'text';
+  nameInput.value = f.name || '';
   nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
-  nameRow.appendChild(nameLabel); nameRow.appendChild(nameInput);
+  nameGroup.appendChild(nameLabel);
+  nameGroup.appendChild(nameInput);
+  wrap.appendChild(nameGroup);
 
-  const imgRow = document.createElement('div'); imgRow.style.marginTop = '10px';
-  const imgLabel = document.createElement('div'); imgLabel.textContent = 'Image'; imgLabel.style.marginBottom = '4px';
-  const imgInput = document.createElement('input'); imgInput.type = 'file'; imgInput.accept = 'image/*';
-  const preview = document.createElement('div'); preview.style.marginTop = '6px'; preview.innerHTML = f.imageUrl ? `<img src="${f.imageUrl}" alt="folder" style="max-width:100%;border-radius:8px;border:1px solid #e5e7eb;"/>` : '';
+  // Image upload
+  const imgGroup = document.createElement('div');
+  imgGroup.className = 'modal-form-group';
+  const imgLabel = document.createElement('label');
+  imgLabel.className = 'modal-form-label';
+  imgLabel.textContent = 'Image';
+  const fileWrap = document.createElement('div');
+  fileWrap.className = 'modal-file-wrap';
+  const fileBtn = document.createElement('span');
+  fileBtn.className = 'modal-file-btn';
+  fileBtn.textContent = 'Choose Image';
+  const imgInput = document.createElement('input');
+  imgInput.type = 'file';
+  imgInput.accept = 'image/*';
+  imgInput.style.display = 'none';
+  fileBtn.addEventListener('click', () => imgInput.click());
+  fileWrap.appendChild(fileBtn);
+  fileWrap.appendChild(imgInput);
+  const preview = document.createElement('div');
+  preview.className = 'modal-img-preview';
+  if (f.imageUrl) {
+    preview.innerHTML = `<img src="${f.imageUrl}" alt="folder" />`;
+  }
   imgInput.addEventListener('change', async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
-    try { const dataUrl = await resizeImageToDataURL(file, 300, 300); f.imageUrl = dataUrl; preview.innerHTML = `<img src="${f.imageUrl}" alt="folder" style="max-width:100%;border-radius:8px;border:1px solid #e5e7eb;"/>`; saveStateDebounced(); }
+    try { const dataUrl = await resizeImageToDataURL(file, 300, 300); f.imageUrl = dataUrl; preview.innerHTML = `<img src="${f.imageUrl}" alt="folder" />`; saveStateDebounced(); }
     catch {}
   });
-  imgRow.appendChild(imgLabel); imgRow.appendChild(imgInput); imgRow.appendChild(preview);
+  imgGroup.appendChild(imgLabel);
+  imgGroup.appendChild(fileWrap);
+  imgGroup.appendChild(preview);
+  wrap.appendChild(imgGroup);
 
-  // Add "Make independent" checkbox
-  const indepRow = document.createElement('div'); indepRow.style.marginTop = '10px';
-  const indepCheckbox = document.createElement('input'); indepCheckbox.type = 'checkbox'; indepCheckbox.checked = f.isIndependent || false; indepCheckbox.style.marginRight = '8px';
-  const indepLabel = document.createElement('label'); indepLabel.style.display = 'flex'; indepLabel.style.alignItems = 'center'; indepLabel.style.cursor = 'pointer';
-  indepLabel.appendChild(indepCheckbox);
-  const indepText = document.createElement('span'); indepText.textContent = 'Make independent (exclude from stats)'; indepText.style.fontSize = '14px';
-  indepLabel.appendChild(indepText);
+  // "Make independent" checkbox (switch style)
+  const indepRow = document.createElement('label');
+  indepRow.className = 'modal-check-row';
+  const indepCheckbox = document.createElement('input');
+  indepCheckbox.type = 'checkbox';
+  indepCheckbox.checked = f.isIndependent || false;
+  const indepTrack = document.createElement('span');
+  indepTrack.className = 'modal-check-track';
+  const indepLabel = document.createElement('span');
+  indepLabel.className = 'modal-check-label';
+  indepLabel.textContent = 'Make independent (exclude from stats)';
+  indepRow.appendChild(indepCheckbox);
+  indepRow.appendChild(indepTrack);
   indepRow.appendChild(indepLabel);
-
-  wrap.appendChild(nameRow);
-  wrap.appendChild(imgRow);
   wrap.appendChild(indepRow);
 
   openModal({
     title: 'Edit Folder',
+    headerIcon: { symbol: '\uD83D\uDCC1', color: 'amber' },
     body: wrap,
     actions: [
       { label: 'Save', onClick: () => {
@@ -3464,7 +3595,7 @@ function openFolderEditModal(folderId) {
           saveStateDebounced();
           renderAll();
         } },
-      { label: 'Cancel' }
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
@@ -3473,28 +3604,59 @@ function openFolderEditModal(folderId) {
 // Create Product modal (name + optional image)
 function openProductCreateModal(folderId) {
   const wrap = document.createElement('div');
-  const nameRow = document.createElement('div');
-  const nameLabel = document.createElement('div'); nameLabel.textContent = 'Name'; nameLabel.style.marginBottom = '4px';
-  const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.placeholder = 'Product name'; nameInput.style.width = '100%'; nameInput.style.padding = '8px'; nameInput.style.border = '1px solid #cbd5e1'; nameInput.style.borderRadius = '8px';
+  
+  // Name input
+  const nameGroup = document.createElement('div');
+  nameGroup.className = 'modal-form-group';
+  const nameLabel = document.createElement('label');
+  nameLabel.className = 'modal-form-label';
+  nameLabel.textContent = 'Name';
+  const nameInput = document.createElement('input');
+  nameInput.className = 'modal-input';
+  nameInput.type = 'text';
+  nameInput.placeholder = 'Product name';
   nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
-  nameRow.appendChild(nameLabel); nameRow.appendChild(nameInput);
+  nameGroup.appendChild(nameLabel);
+  nameGroup.appendChild(nameInput);
+  wrap.appendChild(nameGroup);
 
-  const imgRow = document.createElement('div'); imgRow.style.marginTop = '10px';
-  const imgLabel = document.createElement('div'); imgLabel.textContent = 'Image'; imgLabel.style.marginBottom = '4px';
-  const imgInput = document.createElement('input'); imgInput.type = 'file'; imgInput.accept = 'image/*';
-  const preview = document.createElement('div'); preview.style.marginTop = '6px';
+  // Image upload
+  const imgGroup = document.createElement('div');
+  imgGroup.className = 'modal-form-group';
+  const imgLabel = document.createElement('label');
+  imgLabel.className = 'modal-form-label';
+  imgLabel.textContent = 'Image ';
+  const imgOpt = document.createElement('span');
+  imgOpt.className = 'optional';
+  imgOpt.textContent = '(optional)';
+  imgLabel.appendChild(imgOpt);
+  const fileWrap = document.createElement('div');
+  fileWrap.className = 'modal-file-wrap';
+  const fileBtn = document.createElement('span');
+  fileBtn.className = 'modal-file-btn';
+  fileBtn.textContent = 'Choose Image';
+  const imgInput = document.createElement('input');
+  imgInput.type = 'file';
+  imgInput.accept = 'image/*';
+  imgInput.style.display = 'none';
+  fileBtn.addEventListener('click', () => imgInput.click());
+  fileWrap.appendChild(fileBtn);
+  fileWrap.appendChild(imgInput);
+  const preview = document.createElement('div');
+  preview.className = 'modal-img-preview';
   imgInput.addEventListener('change', async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
-    try { const dataUrl = await resizeImageToDataURL(file, 300, 300); preview.innerHTML = `<img src="${dataUrl}" alt="product" style="max-width:100%;border-radius:8px;border:1px solid #cbd5e1;"/>`; preview.dataset.src = dataUrl; }
+    try { const dataUrl = await resizeImageToDataURL(file, 300, 300); preview.innerHTML = `<img src="${dataUrl}" alt="product" />`; preview.dataset.src = dataUrl; }
     catch {}
   });
-  imgRow.appendChild(imgLabel); imgRow.appendChild(imgInput); imgRow.appendChild(preview);
-
-  wrap.appendChild(nameRow);
-  wrap.appendChild(imgRow);
+  imgGroup.appendChild(imgLabel);
+  imgGroup.appendChild(fileWrap);
+  imgGroup.appendChild(preview);
+  wrap.appendChild(imgGroup);
 
   openModal({
     title: 'New Product',
+    headerIcon: { symbol: '\uD83D\uDCE6', color: 'green' },
     body: wrap,
     actions: [
       { label: 'Create', onClick: async () => {
@@ -3506,7 +3668,7 @@ function openProductCreateModal(folderId) {
           saveStateDebounced();
           renderAll();
         } },
-      { label: 'Cancel' }
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
@@ -3786,14 +3948,31 @@ function openMoveDialog(type, id) {
   const wrapper = document.createElement('div');
   const list = document.createElement('div');
   list.style.display = 'grid';
-  list.style.gap = '8px';
+  list.style.gap = '6px';
   const radios = [];
   const addFolderOption = (fid, label, disabled) => {
     const row = document.createElement('label');
-    row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '8px';
+    row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '10px';
+    row.style.padding = '8px 10px';
+    row.style.borderRadius = '8px';
+    row.style.border = '1px solid #e2e8f0';
+    row.style.background = disabled ? '#f8fafc' : '#ffffff';
+    row.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    row.style.opacity = disabled ? '0.5' : '1';
+    row.style.transition = 'border-color 0.15s ease, background 0.15s ease';
     const r = document.createElement('input'); r.type = 'radio'; r.name = 'move-target'; r.value = fid; r.disabled = !!disabled;
-    const span = document.createElement('span'); span.textContent = label;
-    row.appendChild(r); row.appendChild(span); list.appendChild(row); radios.push(r);
+    r.style.accentColor = '#3b82f6';
+    const span = document.createElement('span');
+    span.textContent = label;
+    span.style.fontSize = '14px';
+    span.style.fontWeight = disabled ? '400' : '600';
+    span.style.color = disabled ? '#94a3b8' : '#0f172a';
+    row.appendChild(r); row.appendChild(span);
+    if (!disabled) {
+      row.addEventListener('mouseenter', () => { row.style.borderColor = '#93c5fd'; row.style.background = '#f8faff'; });
+      row.addEventListener('mouseleave', () => { row.style.borderColor = '#e2e8f0'; row.style.background = '#ffffff'; });
+    }
+    list.appendChild(row); radios.push(r);
   };
   const build = (fid, prefix) => {
     const f = appState.folders[fid];
@@ -3805,7 +3984,8 @@ function openMoveDialog(type, id) {
   build('root', '');
   wrapper.appendChild(list);
   openModal({
-    title: 'Move to…',
+    title: 'Move to\u2026',
+    headerIcon: { symbol: '\u27A1', color: 'blue' },
     body: wrapper,
     actions: [
       { label: 'Confirm', onClick: () => {
@@ -3814,7 +3994,7 @@ function openMoveDialog(type, id) {
           const target = r.value;
           if (type === 'product') moveProductTo(id, target); else moveFolderTo(id, target);
         } },
-      { label: 'Cancel' }
+      { label: 'Cancel', tone: 'secondary' }
     ]
   });
 }
@@ -3972,7 +4152,7 @@ function importState(file) {
     } catch (e) {
       console.error(e);
       showToast('Import failed: invalid JSON');
-      openModal({ title: 'Import failed', body: 'Invalid JSON format.' });
+      openModal({ title: 'Import failed', headerIcon: { symbol: '\u2716', color: 'red' }, size: 'small', body: 'Invalid JSON format.' });
     }
   };
   reader.readAsText(file);
@@ -4042,12 +4222,13 @@ async function resolveRemoteConflict(remote) {
     `;
     openModal({
       title: 'Sync Conflict',
+      headerIcon: { symbol: '\u26A0', color: 'amber' },
       body,
       actions: [
         { label: 'Overwrite Remote', onClick: () => resolve('overwrite') },
         { label: 'Load Remote', onClick: () => resolve('load_remote') },
         { label: 'Auto-merge', onClick: () => resolve('merge') },
-        { label: 'Cancel', onClick: () => resolve('cancel') },
+        { label: 'Cancel', tone: 'secondary', onClick: () => resolve('cancel') },
       ]
     });
   });
@@ -4118,7 +4299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try { loadedRemote0 = await loadLatestCloudBackup(); } catch {}
   if (!loadedRemote0) {
     setSyncStatus('error');
-    openModal({ title: 'Network Required', body: 'Latest cloud save is required. Please connect to the internet to continue.', actions: [] });
+    openModal({ title: 'Network Required', headerIcon: { symbol: '\u26A0', color: 'amber' }, size: 'small', body: 'Latest cloud save is required. Please connect to the internet to continue.', actions: [] });
     return;
   }
   try { overlay0?.classList.remove('show'); } catch {}
@@ -4490,9 +4671,11 @@ function openProductPage(productId) {
             e.stopPropagation();
             openModal({
               title: 'Remove Link',
+              headerIcon: { symbol: '!', color: 'red' },
+              size: 'small',
               body: 'Unlink will break quantity sync. OK?',
               actions: [
-                { label: 'Remove', onClick: () => {
+                { label: 'Remove', tone: 'danger', onClick: () => {
                   const component = appState.products[productId];
                   if (component && component.dynamicLinks) {
                     component.dynamicLinks = component.dynamicLinks.filter(link => 
@@ -4502,7 +4685,7 @@ function openProductPage(productId) {
                   saveStateDebounced();
                   openProductPage(productId);
                 } },
-                { label: 'Cancel' }
+                { label: 'Cancel', tone: 'secondary' }
               ]
             });
           });
@@ -4566,6 +4749,8 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
   const newQty = direction > 0 ? qty + delta : Math.max(0, qty - delta);
   openModal({
     title: 'Confirm Quantity Change',
+    headerIcon: { symbol: direction > 0 ? '\u2795' : '\u2796', color: direction > 0 ? 'green' : 'red' },
+    size: 'small',
     body: `Change quantity from ${qty} to ${newQty}?`,
     actions: [
       { label: 'Confirm', onClick: () => {
