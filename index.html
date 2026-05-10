@@ -92,36 +92,31 @@
   <div id="history-page" class="hidden" aria-label="Inventory history">
     <div class="history-header">
       <div class="history-left">
-        <button id="history-back" class="history-back" type="button">← Back</button>
+        <button id="history-back" class="history-back" type="button">Back</button>
       </div>
       <div class="history-title">Inventory History</div>
+      <button id="history-totop" class="history-totop" type="button">Top</button>
     </div>
     <div class="history-content">
       <div class="history-toolbar">
         <div id="history-summary" class="history-summary"></div>
         <div class="history-controls">
-          <div class="history-search-wrap">
-            <input id="history-search" type="text" placeholder="Search product, event or note..." autocomplete="off" />
+          <div class="history-controls-line1">
+            <div class="history-search-wrap">
+              <input id="history-search" type="text" placeholder="Search product, event or note..." autocomplete="off" />
+            </div>
           </div>
-          <div class="history-date-wrap">
-            <label class="history-date-label" for="history-date">Choose date</label>
-            <div class="history-date-row">
-              <input id="history-date" type="date" title="Filter history by date" aria-label="Filter history by date" />
-              <button id="history-today" type="button" class="history-mini-btn">Today</button>
-              <button id="history-clear-date" type="button" class="history-mini-btn secondary">All dates</button>
-            </div>
-            <div class="history-period-wrap">
-              <div class="history-period-label">View period</div>
-              <div class="history-period-row" role="group" aria-label="History period selector">
-                <button id="history-period-day" type="button" class="history-period-btn active">Day</button>
-                <button id="history-period-week" type="button" class="history-period-btn">Week</button>
-                <button id="history-period-month" type="button" class="history-period-btn">Month</button>
-              </div>
-            </div>
-            <div class="history-date-nav" aria-label="History date navigation">
-              <button id="history-prev-period" type="button" class="history-mini-btn secondary">Prev day</button>
-              <button id="history-next-period" type="button" class="history-mini-btn secondary">Next day</button>
-            </div>
+          <div class="history-controls-line2">
+            <input id="history-date" type="date" class="history-date-input" title="Filter history by date" aria-label="Filter history by date" />
+            <button id="history-today" type="button" class="history-ctrl-btn">Today</button>
+            <button id="history-clear-date" type="button" class="history-ctrl-btn secondary">All dates</button>
+            <span class="history-ctrl-divider">|</span>
+            <button id="history-period-day" type="button" class="history-ctrl-btn active">Day</button>
+            <button id="history-period-week" type="button" class="history-ctrl-btn">Week</button>
+            <button id="history-period-month" type="button" class="history-ctrl-btn">Month</button>
+            <span class="history-ctrl-divider">|</span>
+            <button id="history-prev-period" type="button" class="history-ctrl-btn secondary">&#9664;</button>
+            <button id="history-next-period" type="button" class="history-ctrl-btn secondary">&#9654;</button>
           </div>
         </div>
       </div>

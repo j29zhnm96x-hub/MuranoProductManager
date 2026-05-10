@@ -2290,6 +2290,21 @@ function formatHistoryTimestamp(ts) {
   });
 }
 
+function formatHistoryTimeCompact(ts) {
+  const date = new Date(ts || 0);
+  if (Number.isNaN(date.getTime())) return '--:--';
+  const pad = (n) => String(n).padStart(2, '0');
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const now = new Date();
+  const isToday = date.getFullYear() === now.getFullYear() &&
+                  date.getMonth() === now.getMonth() &&
+                  date.getDate() === now.getDate();
+  if (isToday) return `${hours}:${minutes}`;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()} ${hours}:${minutes}`;
+}
+
 function formatHistoryDayLabel(ts) {
   const date = new Date(ts || 0);
   if (Number.isNaN(date.getTime())) return 'Unknown date';
@@ -2431,8 +2446,8 @@ function updateHistoryPeriodControls() {
   const prevButton = document.getElementById('history-prev-period');
   const nextButton = document.getElementById('history-next-period');
   const suffix = historyPeriodMode === 'month' ? 'month' : historyPeriodMode;
-  if (prevButton) prevButton.textContent = `Prev ${suffix}`;
-  if (nextButton) nextButton.textContent = `Next ${suffix}`;
+  if (prevButton) prevButton.title = `Previous ${suffix}`;
+  if (nextButton) nextButton.title = `Next ${suffix}`;
 }
 
 function setHistoryPeriodMode(periodMode) {
@@ -2596,16 +2611,51 @@ function renderHistoryPage() {
   const currentStats = getOverallBusinessStats();
   const periodSummary = getHistoryPeriodSummary(periodEntries);
 
+  /* ── Summary grid (Excel-like) ─────────────────────────── */
   summaryEl.innerHTML = '';
-  summaryEl.appendChild(createHistoryChip('Events', String(allEntries.length)));
-  summaryEl.appendChild(createHistoryChip('Showing', String(entries.length)));
-  summaryEl.appendChild(createHistoryChip('Period', formatHistoryPeriodLabel(selectedDate, historyPeriodMode)));
-  summaryEl.appendChild(createHistoryChip('Done Value', formatCurrency(periodSummary.doneValue)));
-  summaryEl.appendChild(createHistoryChip('Removed Value', formatCurrency(periodSummary.removedValue)));
-  summaryEl.appendChild(createHistoryChip('Net Value', formatSignedCurrency(periodSummary.netValue)));
-  summaryEl.appendChild(createHistoryChip('Overall Qty', `${currentStats.totalQty} pc`));
-  summaryEl.appendChild(createHistoryChip('Overall Value', formatCurrency(currentStats.totalValue)));
 
+  const netTone = periodSummary.netValue > 0 ? 'positive' : periodSummary.netValue < 0 ? 'negative' : '';
+  const row1 = [
+    { label: 'Events', value: String(allEntries.length) },
+    { label: 'Showing', value: String(entries.length) },
+    { label: 'Period', value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode) },
+    { label: 'Done', value: formatCurrency(periodSummary.doneValue), tone: 'positive' },
+    { label: 'Removed', value: formatCurrency(periodSummary.removedValue), tone: 'negative' },
+    { label: 'Net', value: formatSignedCurrency(periodSummary.netValue), tone: netTone },
+  ];
+  row1.forEach(d => {
+    const cell = document.createElement('div');
+    cell.className = 'history-summary-cell';
+    const lbl = document.createElement('div');
+    lbl.className = 'history-summary-label';
+    lbl.textContent = d.label;
+    const val = document.createElement('div');
+    val.className = `history-summary-value${d.tone ? ' ' + d.tone : ''}`;
+    val.textContent = d.value;
+    cell.appendChild(lbl);
+    cell.appendChild(val);
+    summaryEl.appendChild(cell);
+  });
+
+  const row2 = [
+    { label: 'Overall Qty', value: `${currentStats.totalQty} pc`, span: 3 },
+    { label: 'Overall Value', value: formatCurrency(currentStats.totalValue), span: 3 },
+  ];
+  row2.forEach(d => {
+    const cell = document.createElement('div');
+    cell.className = `history-summary-cell history-summary-span${d.span}`;
+    const lbl = document.createElement('div');
+    lbl.className = 'history-summary-label';
+    lbl.textContent = d.label;
+    const val = document.createElement('div');
+    val.className = 'history-summary-value';
+    val.textContent = d.value;
+    cell.appendChild(lbl);
+    cell.appendChild(val);
+    summaryEl.appendChild(cell);
+  });
+
+  /* ── Entry list ────────────────────────────────────────── */
   listEl.innerHTML = '';
 
   if (!entries.length) {
@@ -2615,7 +2665,7 @@ function renderHistoryPage() {
     title.textContent = allEntries.length ? 'No matching history events' : 'No history yet';
     const message = document.createElement('div');
     if (!allEntries.length) {
-      message.textContent = 'Quantity changes, removals, deductions, and future stock events will appear here.';
+      message.textContent = 'Quantity changes, removals, deductions, and other stock events will appear here.';
     } else if (selectedDate && query) {
       message.textContent = `No history events matched your search in ${formatHistoryPeriodLabel(selectedDate, historyPeriodMode)}.`;
     } else if (selectedDate) {
@@ -2640,76 +2690,127 @@ function renderHistoryPage() {
       listEl.appendChild(dayHeader);
     }
 
+    const delta = safeHistoryNumber(entry.delta);
+    const value = safeHistoryNumber(entry.value);
+    const direction = delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral';
     const card = document.createElement('article');
     card.className = 'history-entry';
-    card.dataset.direction = safeHistoryNumber(entry.delta) > 0 ? 'positive' : safeHistoryNumber(entry.delta) < 0 ? 'negative' : 'neutral';
+    card.dataset.direction = direction;
 
-    const top = document.createElement('div');
-    top.className = 'history-entry-top';
+    /* Product image (32x32) */
+    const product = entry.productId ? appState.products?.[entry.productId] : null;
+    if (product?.imageUrl) {
+      const img = document.createElement('img');
+      img.className = 'history-entry-img';
+      img.src = product.imageUrl;
+      img.alt = '';
+      card.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'history-entry-placeholder';
+      ph.textContent = product?.name ? product.name.charAt(0).toUpperCase() : '?';
+      card.appendChild(ph);
+    }
 
-    const meta = document.createElement('div');
-    meta.className = 'history-entry-meta';
-
-    const topline = document.createElement('div');
-    topline.className = 'history-entry-topline';
-
+    /* Badge */
     const badge = document.createElement('span');
     badge.className = `history-badge ${getHistoryBadgeTone(entry)}`;
     badge.textContent = getHistoryBadgeLabel(entry);
+    card.appendChild(badge);
 
-    const time = document.createElement('span');
-    time.className = 'history-time';
-    time.textContent = formatHistoryTimestamp(entry.ts);
+    /* Body (title + expandable details) */
+    const body = document.createElement('div');
+    body.className = 'history-entry-body';
 
-    topline.appendChild(badge);
-    topline.appendChild(time);
+    const row = document.createElement('div');
+    row.className = 'history-entry-row';
 
-    const title = document.createElement('div');
+    const title = document.createElement('span');
     title.className = 'history-entry-title';
     title.textContent = getHistoryPrimaryText(entry);
+    row.appendChild(title);
 
-    const desc = document.createElement('div');
-    desc.className = 'history-entry-desc';
-    desc.textContent = getHistoryDescription(entry);
+    /* Delta inline */
+    const dSpan = document.createElement('span');
+    dSpan.className = `history-entry-delta ${direction}`;
+    dSpan.textContent = formatSignedQuantity(delta);
+    row.appendChild(dSpan);
 
-    meta.appendChild(topline);
-    meta.appendChild(title);
-    meta.appendChild(desc);
+    /* Value change inline */
+    const vSpan = document.createElement('span');
+    vSpan.className = `history-entry-delta ${value >= 0 ? 'positive' : 'negative'}`;
+    vSpan.textContent = value >= 0 ? `(+${formatCurrency(value)})` : `(-${formatCurrency(Math.abs(value))})`;
+    row.appendChild(vSpan);
 
-    if (entry.statusEstimated) {
-      const hint = document.createElement('div');
-      hint.className = 'history-entry-hint';
-      hint.textContent = 'Overall status estimated from existing legacy log data.';
-      meta.appendChild(hint);
+    /* Causal product for deductions */
+    if (entry.relatedProductName && entry.eventType === 'dynamic_deduction') {
+      const causal = document.createElement('span');
+      causal.className = 'history-entry-causal';
+      causal.textContent = `\u2190 ${entry.relatedProductName}`;
+      row.appendChild(causal);
     }
 
-    top.appendChild(meta);
+    /* Expand/collapse toggle */
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'history-entry-expand';
+    expandBtn.type = 'button';
+    expandBtn.textContent = '\u25B8';
+    expandBtn.addEventListener('click', () => {
+      const dl = body.querySelector('.history-entry-details');
+      if (!dl) return;
+      const hidden = dl.style.display === 'none' || !dl.style.display;
+      dl.style.display = hidden ? 'block' : 'none';
+      expandBtn.textContent = hidden ? '\u25BE' : '\u25B8';
+      expandBtn.classList.toggle('expanded', hidden);
+    });
+    row.appendChild(expandBtn);
 
+    body.appendChild(row);
+
+    /* Details line (hidden by default) */
+    const details = document.createElement('div');
+    details.className = 'history-entry-details';
+    details.style.display = 'none';
+    const parts = [];
+    if (entry.overallQty !== null) parts.push(`Qty: ${entry.overallQty} pc`);
+    if (entry.overallValue !== null) parts.push(`Value: ${formatCurrency(entry.overallValue)}`);
+    if (entry.note) parts.push(entry.note);
+    if (entry.relatedProductName && entry.eventType !== 'dynamic_deduction') {
+      parts.push(`From: ${entry.relatedProductName}`);
+    }
+    if (entry.statusEstimated) {
+      details.textContent = parts.join('  \u00B7  ');
+      details.appendChild(document.createTextNode('  '));
+      const hint = document.createElement('span');
+      hint.className = 'history-entry-hint';
+      hint.textContent = 'Estimated';
+      details.appendChild(hint);
+    } else {
+      details.textContent = parts.join('  \u00B7  ');
+    }
+    body.appendChild(details);
+
+    card.appendChild(body);
+
+    /* Compact time */
+    const time = document.createElement('span');
+    time.className = 'history-entry-time';
+    time.textContent = formatHistoryTimeCompact(entry.ts);
+    card.appendChild(time);
+
+    /* Nav arrow */
     if (entry.productId && appState.products?.[entry.productId]) {
-      const openBtn = document.createElement('button');
-      openBtn.className = 'history-open-btn';
-      openBtn.type = 'button';
-      openBtn.textContent = 'Open Product';
-      openBtn.addEventListener('click', () => {
+      const navBtn = document.createElement('button');
+      navBtn.className = 'history-entry-nav';
+      navBtn.type = 'button';
+      navBtn.textContent = '\u2192';
+      navBtn.addEventListener('click', () => {
         closeHistoryPage();
         openProductPage(entry.productId);
       });
-      top.appendChild(openBtn);
+      card.appendChild(navBtn);
     }
 
-    const metrics = document.createElement('div');
-    metrics.className = 'history-metrics';
-
-    appendHistoryMetric(metrics, 'Change', formatSignedQuantity(entry.delta), safeHistoryNumber(entry.delta) > 0 ? 'positive' : safeHistoryNumber(entry.delta) < 0 ? 'negative' : '');
-    appendHistoryMetric(metrics, 'Value change', formatSignedCurrency(entry.value), safeHistoryNumber(entry.value) > 0 ? 'positive' : safeHistoryNumber(entry.value) < 0 ? 'negative' : '');
-    appendHistoryMetric(metrics, 'Overall qty', `${safeHistoryNumber(entry.overallQty)} pc`);
-    appendHistoryMetric(metrics, 'Overall value', formatCurrency(entry.overallValue));
-    if (entry.relatedProductName) {
-      appendHistoryMetric(metrics, 'Triggered by', entry.relatedProductName);
-    }
-
-    card.appendChild(top);
-    card.appendChild(metrics);
     listEl.appendChild(card);
   }
 }
@@ -2722,6 +2823,7 @@ function openHistoryPage() {
   updateHistoryPeriodControls();
   renderHistoryPage();
   page.classList.remove('hidden');
+  page.scrollTop = 0;
 }
 
 function closeHistoryPage() {
@@ -4068,6 +4170,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historyPrevPeriodBtn) historyPrevPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(-1));
   const historyNextPeriodBtn = document.getElementById('history-next-period');
   if (historyNextPeriodBtn) historyNextPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(1));
+
+  const historyTotopBtn = document.getElementById('history-totop');
+  if (historyTotopBtn) historyTotopBtn.addEventListener('click', () => {
+    const page = document.getElementById('history-page');
+    if (page) page.scrollTop = 0;
+  });
 
   // Start connection checker (monitors every 3 seconds)
   wasOffline = !navigator.onLine;
