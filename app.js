@@ -816,7 +816,19 @@ function todayStr() {
 }
 function ensureStateFields() {
   if (!appState) return;
-  appState.shopCategories = appState.shopCategories || [];
+  // shopCategories: array of { id, name (group), items: [{ id, name, price }] }
+  if (!appState.shopCategories) {
+    appState.shopCategories = [];
+  } else {
+    // Ensure each category has items array
+    for (const cat of appState.shopCategories) {
+      if (!cat.items) cat.items = [];
+      if (!cat.id) cat.id = uuid();
+      for (const item of cat.items) {
+        if (!item.id) item.id = uuid();
+      }
+    }
+  }
   appState.companyInfo = appState.companyInfo || { name: '', address: '', oib: '', phone: '', email: '' };
   appState.season = appState.season || { startDate: null, snapshot: null };
   appState.pendingTransfers = appState.pendingTransfers || [];
@@ -2276,6 +2288,138 @@ function openLinkSelectorModal(onSelect) {
   });
 }
 
+function openShopCategories() {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:grid;gap:12px;max-width:500px;';
+
+  function renderCategories() {
+    wrap.innerHTML = '';
+    const cats = appState.shopCategories || [];
+
+    // Add new group
+    const addGroupRow = document.createElement('div');
+    addGroupRow.style.cssText = 'display:flex;gap:6px;align-items:center;';
+    const groupInput = document.createElement('input');
+    groupInput.placeholder = __('New group name') || 'New group name';
+    groupInput.style.cssText = 'flex:1;padding:6px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;';
+    const addGroupBtn = document.createElement('button');
+    addGroupBtn.textContent = __('Add') || 'Add';
+    addGroupBtn.style.cssText = 'padding:6px 14px;border-radius:8px;border:1px solid #0ea5e9;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;';
+    addGroupBtn.addEventListener('click', () => {
+      const name = groupInput.value.trim();
+      if (!name) return;
+      appState.shopCategories.push({ id: uuid(), name, items: [] });
+      groupInput.value = '';
+      saveStateDebounced();
+      renderCategories();
+    });
+    addGroupRow.appendChild(groupInput);
+    addGroupRow.appendChild(addGroupBtn);
+    wrap.appendChild(addGroupRow);
+
+    if (!cats.length) {
+      const empty = document.createElement('div');
+      empty.textContent = __('No categories yet') || 'No categories yet';
+      empty.style.cssText = 'color:#9ca3af;font-size:14px;text-align:center;padding:20px;';
+      wrap.appendChild(empty);
+      return;
+    }
+
+    for (const cat of cats) {
+      const groupBox = document.createElement('div');
+      groupBox.style.cssText = 'border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
+
+      // Group header
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f9fafb;border-bottom:1px solid #e5e7eb;';
+      const hTitle = document.createElement('span');
+      hTitle.style.cssText = 'font-weight:700;font-size:14px;flex:1;';
+      hTitle.textContent = cat.name;
+      const delGroupBtn = document.createElement('button');
+      delGroupBtn.textContent = '\u2715';
+      delGroupBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;';
+      delGroupBtn.addEventListener('click', () => {
+        appState.shopCategories = appState.shopCategories.filter(c => c.id !== cat.id);
+        saveStateDebounced();
+        renderCategories();
+      });
+      header.appendChild(hTitle);
+      header.appendChild(delGroupBtn);
+      groupBox.appendChild(header);
+
+      // Items list
+      const itemsDiv = document.createElement('div');
+      itemsDiv.style.cssText = 'display:grid;gap:1px;background:#f3f4f6;';
+
+      for (const item of (cat.items || [])) {
+        const itemRow = document.createElement('div');
+        itemRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px 6px 16px;background:#ffffff;';
+        const iName = document.createElement('span');
+        iName.style.cssText = 'flex:1;font-size:14px;';
+        iName.textContent = item.name;
+        const iPrice = document.createElement('span');
+        iPrice.style.cssText = 'color:#6b7280;font-size:13px;font-weight:600;';
+        iPrice.textContent = `${item.price}\u20AC`;
+        const delItemBtn = document.createElement('button');
+        delItemBtn.textContent = '\u2715';
+        delItemBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;';
+        delItemBtn.addEventListener('click', () => {
+          cat.items = cat.items.filter(i => i.id !== item.id);
+          saveStateDebounced();
+          renderCategories();
+        });
+        itemRow.appendChild(iName);
+        itemRow.appendChild(iPrice);
+        itemRow.appendChild(delItemBtn);
+        itemsDiv.appendChild(itemRow);
+      }
+
+      // Add item row
+      const addRow = document.createElement('div');
+      addRow.style.cssText = 'display:flex;gap:6px;align-items:center;padding:6px 10px 6px 16px;background:#ffffff;';
+      const itemInput = document.createElement('input');
+      itemInput.placeholder = 'Ogrlica 06';
+      itemInput.style.cssText = 'flex:1;padding:5px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;';
+      const addItemBtn = document.createElement('button');
+      addItemBtn.textContent = '+';
+      addItemBtn.style.cssText = 'padding:4px 12px;border-radius:6px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-weight:700;cursor:pointer;font-size:14px;';
+      addItemBtn.addEventListener('click', () => {
+        const name = itemInput.value.trim();
+        if (!name) return;
+        // Extract price from last number in name
+        const nums = name.match(/\d+/g);
+        const price = nums ? parseInt(nums[nums.length - 1], 10) : 0;
+        cat.items.push({ id: uuid(), name, price });
+        itemInput.value = '';
+        saveStateDebounced();
+        renderCategories();
+      });
+      addRow.appendChild(itemInput);
+      addRow.appendChild(addItemBtn);
+      itemsDiv.appendChild(addRow);
+
+      groupBox.appendChild(itemsDiv);
+      wrap.appendChild(groupBox);
+
+      // Add item input keyboard support
+      itemInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addItemBtn.click();
+      });
+    }
+  }
+
+  renderCategories();
+
+  openModal({
+    title: __('Shop Categories'),
+    headerIcon: { symbol: '\uD83C\uDFEA', color: 'slate' },
+    body: wrap,
+    actions: [
+      { label: __('Close'), tone: 'secondary' }
+    ]
+  });
+}
+
 function openSettings() {
   const wrap = document.createElement('div');
   wrap.className = 'settings-wrap';
@@ -2354,6 +2498,7 @@ function openSettings() {
     actions: [
       { label: __('Reset Stats'), tone: 'danger', onClick: () => showResetStatsConfirm() },
       { label: __('Show Report'), onClick: () => { setTimeout(() => openReportModal(), 0); } },
+      { label: __('Shop Categories'), tone: 'secondary', onClick: () => { openShopCategories(); } },
       { label: __('Save'), onClick: () => {
           appState.settings = appState.settings || {};
           appState.settings.plannedValue = Number(plannedInput.value || 0);
