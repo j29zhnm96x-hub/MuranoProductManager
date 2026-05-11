@@ -814,6 +814,24 @@ async function ensureAuthenticated() {
 function todayStr() {
   const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10);
 }
+function ensureStateFields() {
+  if (!appState) return;
+  appState.shopCategories = appState.shopCategories || [];
+  appState.companyInfo = appState.companyInfo || { name: '', address: '', oib: '', phone: '', email: '' };
+  appState.season = appState.season || { startDate: null, snapshot: null };
+  appState.pendingTransfers = appState.pendingTransfers || [];
+  appState.transferLog = appState.transferLog || [];
+  appState.onSiteProduction = appState.onSiteProduction || [];
+  appState.documents = appState.documents || [];
+  appState.returnLog = appState.returnLog || [];
+  // Ensure each product has shopCategory field
+  if (appState.products) {
+    for (const p of Object.values(appState.products)) {
+      if (p.shopCategory === undefined) p.shopCategory = '';
+    }
+  }
+}
+
 function ensureDailyProgress() {
   appState.dailyProgress = appState.dailyProgress || { date: null, startValue: 0, fixedGoal: 0 };
   const cur = todayStr();
@@ -4530,11 +4548,11 @@ async function initialCloudSync() {
       if (choice === 'overwrite') {
         await uploadToCloud();
       } else if (choice === 'load_remote') {
-        appState = remote; await writeState(appState); renderAll(); modified = false; setSyncStatus('synced');
+        appState = remote; ensureStateFields(); await writeState(appState); renderAll(); modified = false; setSyncStatus('synced');
       } else if (choice === 'merge') {
         const snapshot = structuredClone(appState);
         const merged = autoMerge(appState, remote);
-        appState = merged; await writeState(appState); renderAll(); setSyncStatus('synced');
+        appState = merged; ensureStateFields(); await writeState(appState); renderAll(); setSyncStatus('synced');
         // create downloadable snapshot of conflicts (simple)
         const blob = new Blob([JSON.stringify({ local: snapshot, remote }, null, 2)], { type: 'application/json' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'conflict.json'; a.click(); URL.revokeObjectURL(a.href);
@@ -4575,6 +4593,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   try { overlay0?.classList.remove('show'); } catch {}
+
+  // Ensure all state fields exist (for backward compatibility)
+  ensureStateFields();
 
   // UI wiring
   document.getElementById('add-btn').addEventListener('click', () => openAddMenu(currentFolderId));
