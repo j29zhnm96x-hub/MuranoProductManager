@@ -16,14 +16,14 @@
   <!-- Top Bar -->
   <div id="top-bar">
     <div class="left">
-      <div id="sync-status" title="Cloud sync status">Offline</div>
-      <button id="save-btn" class="btn-save" title="Save state" type="button">Save</button>
-      <button id="actions-btn" class="btn-save" title="Actions" type="button">Actions</button>
+      <div id="sync-status" title="Cloud sync status" data-i18n="Offline">Offline</div>
+      <button id="save-btn" class="btn-save" title="Save state" type="button" data-i18n="Save">Save</button>
+      <button id="actions-btn" class="btn-save" title="Actions" type="button" data-i18n="Actions">Actions</button>
       <button id="add-btn" title="Add folder or product">+</button>
     </div>
     <div class="center">
       <div id="search-bar">
-        <input id="search-input" type="text" placeholder="Search products..." />
+        <input id="search-input" type="text" placeholder="Search products..." data-i18n="Search" data-i18n-type="placeholder" />
         <div id="search-results" class="dropdown hidden"></div>
       </div>
     </div>
@@ -42,46 +42,46 @@
   <div id="product-page" class="hidden" aria-label="Product detail">
     <div class="pp-header">
       <div class="pp-left">
-        <button id="pp-back" class="pp-back" type="button">← Back</button>
-        <button id="pp-edit" class="pp-edit" title="Edit details" type="button">Edit</button>
+        <button id="pp-back" class="pp-back" type="button">← <span data-i18n="Back">Back</span></button>
+        <button id="pp-edit" class="pp-edit" title="Edit details" type="button" data-i18n="Edit">Edit</button>
       </div>
       <div id="pp-title" class="pp-title"></div>
     </div>
     <div class="pp-content">
       <div class="pp-card">
-        <div class="pp-card-title">Product Information</div>
+        <div class="pp-card-title" data-i18n="Product Information">Product Information</div>
         <div class="pp-info-grid">
-          <div class="pp-row"><div class="pp-label">Name</div><div class="pp-value" id="pp-name"></div></div>
-          <div class="pp-row"><div class="pp-label">Quantity</div><div class="pp-value" id="pp-qty"></div></div>
-          <div class="pp-row"><div class="pp-label">Price</div><div class="pp-value" id="pp-price"></div></div>
-          <div class="pp-row"><div class="pp-label">Total Value</div><div class="pp-value" id="pp-total"></div></div>
-          <div class="pp-row"><div class="pp-label">Target Quantity</div><div class="pp-value" id="pp-target"></div></div>
+          <div class="pp-row"><div class="pp-label" data-i18n="Name">Name</div><div class="pp-value" id="pp-name"></div></div>
+          <div class="pp-row"><div class="pp-label" data-i18n="Quantity">Quantity</div><div class="pp-value" id="pp-qty"></div></div>
+          <div class="pp-row"><div class="pp-label" data-i18n="Price">Price</div><div class="pp-value" id="pp-price"></div></div>
+          <div class="pp-row"><div class="pp-label" data-i18n="Total Value">Total Value</div><div class="pp-value" id="pp-total"></div></div>
+          <div class="pp-row"><div class="pp-label" data-i18n="Target Quantity">Target Quantity</div><div class="pp-value" id="pp-target"></div></div>
         </div>
       </div>
 
       <div class="pp-card">
         <div class="pp-adjust">
-          <div class="pp-adjust-label">Adjust Quantity</div>
+          <div class="pp-adjust-label" data-i18n="Adjust Quantity">Adjust Quantity</div>
             <input id="pp-adjust-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="" />
-            <button id="pp-add-btn" type="button">Add</button>
-            <button id="pp-remove-btn" class="danger" type="button">Remove</button>
-            <button id="pp-correct-btn" class="pp-correct" type="button" style="margin-left: auto">Correct</button>
+            <button id="pp-add-btn" type="button" data-i18n="Add">Add</button>
+            <button id="pp-remove-btn" class="danger" type="button" data-i18n="Remove">Remove</button>
+            <button id="pp-correct-btn" class="pp-correct" type="button" style="margin-left: auto" data-i18n="Correct">Correct</button>
         </div>
       </div>
 
       <div class="pp-card">
-        <div class="pp-card-title">Image</div>
+        <div class="pp-card-title" data-i18n="Image">Image</div>
         <div class="pp-image">
           <img id="pp-image-preview" alt="product" class="pp-image-preview hidden" />
-          <button id="pp-upload-btn" type="button">Upload Image</button>
+          <button id="pp-upload-btn" type="button" data-i18n="Upload Image">Upload Image</button>
           <input id="pp-image-file" type="file" accept="image/*" class="hidden" />
         </div>
       </div>
 
       <div class="pp-card">
-        <div class="pp-card-title">Note</div>
+        <div class="pp-card-title" data-i18n="Note">Note</div>
         <div class="pp-note">
-          <textarea id="pp-note" rows="1" placeholder="Add a note…"></textarea>
+          <textarea id="pp-note" rows="1" placeholder="Add a note…" data-i18n="Add a note..." data-i18n-type="placeholder"></textarea>
           <div class="pp-note-actions"></div>
         </div>
       </div>
@@ -92,9 +92,9 @@
   <div id="history-page" class="hidden" aria-label="Inventory history">
     <div class="history-header">
       <div class="history-left">
-        <button id="history-back" class="history-back" type="button">Back</button>
+        <button id="history-back" class="history-back" type="button" data-i18n="Back">Back</button>
       </div>
-      <div class="history-title">Inventory History</div>
+      <div class="history-title" data-i18n="Stock History">Inventory History</div>
       <button id="history-totop" class="history-totop" type="button">Top</button>
     </div>
     <div class="history-content">
@@ -103,17 +103,17 @@
         <div class="history-controls">
           <div class="history-controls-line1">
             <div class="history-search-wrap">
-              <input id="history-search" type="text" placeholder="Search product, event or note..." autocomplete="off" />
+              <input id="history-search" type="text" placeholder="Search product, event or note..." autocomplete="off" data-i18n="Search product, event or note..." data-i18n-type="placeholder" />
             </div>
           </div>
           <div class="history-controls-line2">
             <input id="history-date" type="date" class="history-date-input" title="Filter history by date" aria-label="Filter history by date" />
-            <button id="history-today" type="button" class="history-ctrl-btn">Today</button>
-            <button id="history-clear-date" type="button" class="history-ctrl-btn secondary">All dates</button>
+            <button id="history-today" type="button" class="history-ctrl-btn" data-i18n="Today">Today</button>
+            <button id="history-clear-date" type="button" class="history-ctrl-btn secondary" data-i18n="All dates">All dates</button>
             <span class="history-ctrl-divider">|</span>
-            <button id="history-period-day" type="button" class="history-ctrl-btn active">Day</button>
-            <button id="history-period-week" type="button" class="history-ctrl-btn">Week</button>
-            <button id="history-period-month" type="button" class="history-ctrl-btn">Month</button>
+            <button id="history-period-day" type="button" class="history-ctrl-btn active" data-i18n="Day">Day</button>
+            <button id="history-period-week" type="button" class="history-ctrl-btn" data-i18n="Week">Week</button>
+            <button id="history-period-month" type="button" class="history-ctrl-btn" data-i18n="Month">Month</button>
             <span class="history-ctrl-divider">|</span>
             <button id="history-prev-period" type="button" class="history-ctrl-btn secondary">&#9664;</button>
             <button id="history-next-period" type="button" class="history-ctrl-btn secondary">&#9654;</button>
@@ -137,7 +137,7 @@
 
     <div id="editor-panel" class="hidden" aria-label="Editor panel">
       <div class="editor-header">
-        <span id="editor-title">Editor</span>
+        <span id="editor-title" data-i18n="Editor">Editor</span>
         <button id="editor-close" title="Close">✕</button>
       </div>
       <form id="editor-form">
@@ -146,37 +146,37 @@
         <input type="hidden" id="editor-entity-type" />
 
         <label>
-          <span>Name</span>
+          <span data-i18n="Name">Name</span>
           <input id="editor-name" type="text" required />
         </label>
 
         <!-- Product-only fields -->
         <div id="product-fields" class="hidden">
           <label>
-            <span>Price</span>
+            <span data-i18n="Price">Price</span>
             <input id="editor-price" type="number" min="0" step="0.01" />
           </label>
           <label>
-            <span>Target Quantity</span>
+            <span data-i18n="Target Quantity">Target Quantity</span>
             <input id="editor-target" type="number" min="0" step="1" />
           </label>
           <label>
-            <span>Quantity</span>
+            <span data-i18n="Quantity">Quantity</span>
             <input id="editor-quantity" type="number" min="0" step="1" />
           </label>
           <label>
-            <span>Priority product</span>
+            <span data-i18n="Priority product">Priority product</span>
             <input id="editor-priority" type="checkbox" />
           </label>
           <label>
-            <span>Max Quantity (guideline)</span>
+            <span data-i18n="Max Quantity (guideline)">Max Quantity (guideline)</span>
             <input id="editor-maxqty" type="number" min="0" step="1" />
           </label>
 
           <div class="custom-fields">
             <div class="custom-fields-header">
-              <span>Custom fields</span>
-              <button type="button" id="add-custom-field">+ Field</button>
+              <span data-i18n="Custom fields">Custom fields</span>
+              <button type="button" id="add-custom-field" data-i18n="+ Field">+ Field</button>
             </div>
             <div id="custom-fields-container"></div>
           </div>
@@ -185,15 +185,15 @@
         <!-- Folder-only fields -->
         <div id="folder-fields" class="hidden">
           <label>
-            <span>Image</span>
+            <span data-i18n="Image">Image</span>
             <input id="editor-image" type="file" accept="image/*" />
           </label>
           <div class="image-preview hidden" id="folder-image-preview"></div>
         </div>
 
         <div class="editor-actions">
-          <button type="submit" id="save-entity">Save</button>
-          <button type="button" id="delete-entity" class="danger">Delete</button>
+          <button type="submit" id="save-entity" data-i18n="Save">Save</button>
+          <button type="button" id="delete-entity" class="danger" data-i18n="Delete">Delete</button>
         </div>
       </form>
     </div>
@@ -203,7 +203,7 @@
   <div id="modal" class="hidden" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
-        <span id="modal-title">Confirm</span>
+        <span id="modal-title" data-i18n="Confirm">Confirm</span>
         <button id="modal-close">✕</button>
       </div>
       <div id="modal-body"></div>

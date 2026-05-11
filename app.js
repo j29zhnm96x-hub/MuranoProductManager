@@ -1,3 +1,259 @@
+// ── Translation System ──────────────────────────────────────────
+const LANG = {
+  hr: {
+    'Home': 'Početna', 'Save': 'Spremi', 'Actions': 'Akcije',
+    'Settings': 'Postavke', 'Search': 'Traži', 'Back': 'Natrag',
+    'Top': 'Vrh', 'Edit': 'Uredi', 'Delete': 'Izbriši',
+    'Cancel': 'Odustani', 'Confirm': 'Potvrdi', 'Close': 'Zatvori',
+    'Add': 'Dodaj', 'Remove': 'Ukloni',
+    'Daily goal': 'Dnevni cilj', 'To do': 'Preostalo',
+    'Extra': 'Višak', 'Days left': 'Preostalo dana',
+    'Total Qty': 'Uk. količina', 'Total Value': 'Uk. vrijednost',
+    'Produced today': 'Danas proizvedeno',
+    'Priority Progress': 'Prioritetni',
+    'Priority products progress': 'Prioritetni',
+    'Folder and product tree': 'Mape i proizvodi',
+    'Qty:': 'Kol.:', 'More': 'Više',
+    'Dynamic Component': 'Dinamička komp.',
+    'Has note': 'Bilješka',
+    'Inventory History': 'Povijest stanja',
+    'Stock History': 'Povijest stanja',
+    'Search product, event or note...': 'Traži proizvod, događaj...',
+    'Today': 'Danas', 'All dates': 'Svi datumi',
+    'Day': 'Dan', 'Week': 'Tjedan', 'Month': 'Mjesec',
+    'Events': 'Događaji', 'Showing': 'Prikazano',
+    'Period': 'Razdoblje', 'Overall Qty': 'Uk. količina',
+    'Overall Value': 'Uk. vrijednost',
+    'Total Produced': 'Proizvedeno', 'Total Removed': 'Uklonjeno',
+    'Net Change': 'Neto',
+    'Added': 'Dodano', 'Removed': 'Uklonjeno',
+    'Edited': 'Uređeno', 'Deducted': 'Oduzeto',
+    'Deleted': 'Izbrisano', 'Folder deleted': 'Mapa izbrisana',
+    'Reset': 'Resetirano', 'Duplicated': 'Duplicirano',
+    'Import': 'Uvoz', 'Legacy': 'Naslijeđeno', 'Change': 'Promjena',
+    'No history yet': 'Još nema povijesti',
+    'No matching history events': 'Nema odgovarajućih događaja',
+    'Products': 'Proizvodi', 'Folders': 'Mape',
+    'Name': 'Naziv', 'Quantity': 'Količina', 'Price': 'Cijena',
+    'Total Value': 'Uk. vrijednost', 'Target Quantity': 'Ciljana kol.',
+    'Adjust Quantity': 'Prilagodi količinu',
+    'Correct': 'Ispravak', 'Upload Image': 'Prenesi sliku',
+    'Image': 'Slika', 'Note': 'Bilješka', 'Add a note...': 'Dodaj bilješku...',
+    'Warning threshold': 'Prag upozorenja',
+    'Used In': 'Koristi se u',
+    'Not used in any products': 'Ne koristi se ni u jednom proizvodu',
+    'Product Information': 'Info o proizvodu',
+    'Editor': 'Uređivač', 'Save': 'Spremi',
+    'New Product': 'Novi proizvod', 'New Folder': 'Novi proizvod',
+    'Edit Product': 'Uredi proizvod', 'Edit Folder': 'Uredi mapu',
+    'Choose Image': 'Odaberi sliku',
+    'Priority product': 'Prioritetni',
+    'Max Quantity (guideline)': 'Maks. količina',
+    'Custom fields': 'Dodatna polja', '+ Field': '+ Polje',
+    'Key': 'Ključ', 'Value': 'Vrijednost',
+    'Make independent (exclude from stats)': 'Neovisna mapa',
+    'Move to...': 'Premjesti u...',
+    'Actions menu': 'Akcije',
+    'Select an action.': 'Odaberite akciju.',
+    'Save (snapshot + cloud)': 'Spremi (snimka + oblak)',
+    'Import JSON': 'Uvezi JSON', 'Export JSON': 'Izvezi JSON',
+    'Settings saved': 'Postavke spremljene',
+    'Changes saved successfully': 'Promjene spremljene',
+    'No changes to save': 'Nema promjena',
+    'Saving...': 'Spremanje...',
+    'Quantity corrected (no history recorded)': 'Količina ispravljena',
+    'Enter quantity': 'Unesi količinu',
+    'Enter valid quantity': 'Unesi ispravnu količinu',
+    'Order updated': 'Redoslijed ažuriran',
+    'Note saved': 'Bilješka spremljena',
+    'Cannot delete root': 'Ne može se izbrisati korijen',
+    'Import complete': 'Uvoz završen',
+    'Import failed: invalid JSON': 'Uvoz nije uspio',
+    'Network Required': 'Potrebna mreža',
+    'Reset All Quantities': 'Resetiraj sve količine',
+    'Reset Stats': 'Resetiraj stat.',
+    'Show Report': 'Prikaži izvještaj',
+    'Planned total': 'Planirani iznos',
+    'End date': 'Datum završetka',
+    'e.g. 30000': 'npr. 30000',
+    'Sync Conflict': 'Sukob sink.',
+    'Overwrite Remote': 'Prepiši udaljeno',
+    'Load Remote': 'Učitaj udaljeno',
+    'Auto-merge': 'Spoji automatski',
+    'Latest cloud save is required. Please connect to the internet to continue.': 'Potrebna je najnovija snimka. Spojite se na internet.',
+    'Shop': 'Prodaja',
+    'Shop Categories': 'Kategorije prodaje',
+    'Transfer from Warehouse': 'Prijenos iz skladišta',
+    'Return from Shop': 'Povrat iz prodaje',
+    'In-Season Production': 'Proizvodnja na licu mjesta',
+    'Master Confirm': 'Potvrdi sve',
+    'Decline All': 'Odustani od svega',
+    'Create new document': 'Novi dokument',
+    'Update last document': 'Ažuriraj zadnji',
+    'Print': 'Ispiš', 'Preview': 'Pregled', 'Share': 'Podijeli',
+    'Company Name': 'Naziv tvrtke', 'Address': 'Adresa',
+    'OIB': 'OIB', 'Phone': 'Telefon', 'Email': 'Email',
+    'Season start': 'Početak sezone',
+    'Set Season Start': 'Postavi početak',
+    'End Season Report': 'Izvještaj sezone',
+    'Sold': 'Prodano',
+    'Remaining in warehouse': 'Ostalo u skladištu',
+    'Delete test data': 'Izbriši testne podatke',
+    'Inspector List': 'Popis za inspekciju',
+    'On-site production doc': 'Popis izrađenih na mjestu',
+    'Total:': 'Ukupno:', 'pc': 'kom',
+    'Unknown': 'Nepoznato',
+    'Incorrect password. Try again.': 'Netočna lozinka. Pokušajte ponovno.',
+    'Enter Password': 'Lozinka',
+    'Submit': 'Potvrdi', 'Clear': 'Izbriši',
+    'Language': 'Jezik',
+  },
+  en: {
+    'Home': 'Home', 'Save': 'Save', 'Actions': 'Actions',
+    'Settings': 'Settings', 'Search': 'Search', 'Back': 'Back',
+    'Top': 'Top', 'Edit': 'Edit', 'Delete': 'Delete',
+    'Cancel': 'Cancel', 'Confirm': 'Confirm', 'Close': 'Close',
+    'Add': 'Add', 'Remove': 'Remove',
+    'Daily goal': 'Daily goal', 'To do': 'To do',
+    'Extra': 'Extra', 'Days left': 'Days left',
+    'Total Qty': 'Total Qty', 'Total Value': 'Total Value',
+    'Produced today': 'Produced today',
+    'Priority Progress': 'Priority Progress',
+    'Priority products progress': 'Priority products progress',
+    'Folder and product tree': 'Folder and product tree',
+    'Qty:': 'Qty:', 'More': 'More',
+    'Dynamic Component': 'Dynamic Component',
+    'Has note': 'Has note',
+    'Inventory History': 'Inventory History',
+    'Stock History': 'Stock History',
+    'Search product, event or note...': 'Search product, event or note...',
+    'Today': 'Today', 'All dates': 'All dates',
+    'Day': 'Day', 'Week': 'Week', 'Month': 'Month',
+    'Events': 'Events', 'Showing': 'Showing',
+    'Period': 'Period', 'Overall Qty': 'Overall Qty',
+    'Overall Value': 'Overall Value',
+    'Total Produced': 'Total Produced', 'Total Removed': 'Total Removed',
+    'Net Change': 'Net Change',
+    'Added': 'Added', 'Removed': 'Removed',
+    'Edited': 'Edited', 'Deducted': 'Deducted',
+    'Deleted': 'Deleted', 'Folder deleted': 'Folder deleted',
+    'Reset': 'Reset', 'Duplicated': 'Duplicated',
+    'Import': 'Import', 'Legacy': 'Legacy', 'Change': 'Change',
+    'No history yet': 'No history yet',
+    'No matching history events': 'No matching history events',
+    'Products': 'Products', 'Folders': 'Folders',
+    'Name': 'Name', 'Quantity': 'Quantity', 'Price': 'Price',
+    'Total Value': 'Total Value',
+    'Target Quantity': 'Target Quantity',
+    'Adjust Quantity': 'Adjust Quantity',
+    'Correct': 'Correct', 'Upload Image': 'Upload Image',
+    'Image': 'Image', 'Note': 'Note',
+    'Add a note...': 'Add a note...',
+    'Warning threshold': 'Warning threshold',
+    'Used In': 'Used In',
+    'Not used in any products': 'Not used in any products',
+    'Product Information': 'Product Information',
+    'Editor': 'Editor', 'Save': 'Save',
+    'New Product': 'New Product', 'New Folder': 'New Folder',
+    'Edit Product': 'Edit Product', 'Edit Folder': 'Edit Folder',
+    'Choose Image': 'Choose Image',
+    'Priority product': 'Priority product',
+    'Max Quantity (guideline)': 'Max Quantity (guideline)',
+    'Custom fields': 'Custom fields', '+ Field': '+ Field',
+    'Key': 'Key', 'Value': 'Value',
+    'Make independent (exclude from stats)': 'Make independent (exclude from stats)',
+    'Move to...': 'Move to...',
+    'Actions menu': 'Actions menu',
+    'Select an action.': 'Select an action.',
+    'Save (snapshot + cloud)': 'Save (snapshot + cloud)',
+    'Import JSON': 'Import JSON', 'Export JSON': 'Export JSON',
+    'Settings saved': 'Settings saved',
+    'Changes saved successfully': 'Changes saved successfully',
+    'No changes to save': 'No changes to save',
+    'Saving...': 'Saving...',
+    'Quantity corrected (no history recorded)': 'Quantity corrected (no history recorded)',
+    'Enter quantity': 'Enter quantity',
+    'Enter valid quantity': 'Enter valid quantity',
+    'Order updated': 'Order updated',
+    'Note saved': 'Note saved',
+    'Cannot delete root': 'Cannot delete root',
+    'Import complete': 'Import complete',
+    'Import failed: invalid JSON': 'Import failed: invalid JSON',
+    'Network Required': 'Network Required',
+    'Reset All Quantities': 'Reset All Quantities',
+    'Reset Stats': 'Reset Stats',
+    'Show Report': 'Show Report',
+    'Planned total': 'Planned total',
+    'End date': 'End date',
+    'e.g. 30000': 'e.g. 30000',
+    'Sync Conflict': 'Sync Conflict',
+    'Overwrite Remote': 'Overwrite Remote',
+    'Load Remote': 'Load Remote',
+    'Auto-merge': 'Auto-merge',
+    'Latest cloud save is required. Please connect to the internet to continue.': 'Latest cloud save is required. Please connect to the internet to continue.',
+    'Shop': 'Shop',
+    'Shop Categories': 'Shop Categories',
+    'Transfer from Warehouse': 'Transfer from Warehouse',
+    'Return from Shop': 'Return from Shop',
+    'In-Season Production': 'In-Season Production',
+    'Master Confirm': 'Master Confirm',
+    'Decline All': 'Decline All',
+    'Create new document': 'Create new document',
+    'Update last document': 'Update last document',
+    'Print': 'Print', 'Preview': 'Preview', 'Share': 'Share',
+    'Company Name': 'Company Name', 'Address': 'Address',
+    'OIB': 'OIB', 'Phone': 'Phone', 'Email': 'Email',
+    'Season start': 'Season start',
+    'Set Season Start': 'Set Season Start',
+    'End Season Report': 'End Season Report',
+    'Sold': 'Sold',
+    'Remaining in warehouse': 'Remaining in warehouse',
+    'Delete test data': 'Delete test data',
+    'Inspector List': 'Inspector List',
+    'On-site production doc': 'On-site production doc',
+    'Total:': 'Total:', 'pc': 'pc',
+    'Unknown': 'Unknown',
+    'Incorrect password. Try again.': 'Incorrect password. Try again.',
+    'Enter Password': 'Enter Password',
+    'Submit': 'Submit', 'Clear': 'Clear',
+    'Language': 'Language',
+  }
+};
+
+let currentLang = localStorage.getItem('muranopm_lang') || 'hr';
+function __(key) {
+  const lang = LANG[currentLang];
+  if (lang && lang[key] !== undefined) return lang[key];
+  // Fallback: try English
+  if (currentLang !== 'en' && LANG.en && LANG.en[key] !== undefined) return LANG.en[key];
+  return key;
+}
+function setLang(lang) {
+  if (LANG[lang]) {
+    currentLang = lang;
+    localStorage.setItem('muranopm_lang', lang);
+    if (appState) {
+      appState.settings = appState.settings || {};
+      appState.settings.language = lang;
+    }
+    translateStaticUI();
+  }
+}
+function translateStaticUI() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      if (el.getAttribute('data-i18n-type') === 'placeholder') {
+        el.placeholder = __(key);
+      } else {
+        el.value = __(key);
+      }
+    } else {
+      el.textContent = __(key);
+    }
+  });
+}
+
 function showResetStatsConfirm() {
   // Build warning body
   const body = document.createElement('div');
@@ -18,13 +274,13 @@ function showResetStatsConfirm() {
   };
 
   openModal({
-    title: 'Reset All Quantities',
+    title: __('Reset All Quantities'),
     headerIcon: { symbol: '\u26A0', color: 'red' },
     size: 'small',
     body,
     actions: [
-      { label: 'Confirm', onClick: () => { resetAllProductQuantities(); } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Confirm'), onClick: () => { resetAllProductQuantities(); } },
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
 
@@ -119,7 +375,7 @@ function renderPriorityGraph() {
   // Sort by progress ascending (least produced near top)
   list.sort((a,b) => (a.quantity/(a.targetQuantity||1)) - (b.quantity/(b.targetQuantity||1)));
   const wrap = document.createElement('div');
-  wrap.innerHTML = `<div class="pg-title">Priority Progress</div>`;
+  wrap.innerHTML = `<div class="pg-title">${__('Priority Progress')}</div>`;
   const ul = document.createElement('div'); ul.className = 'pg-list';
   // Smoothly interpolate color from red (0%) to green (100%)
   const pctColor = (p) => {
@@ -470,7 +726,7 @@ function ensureAuthOverlayElements() {
   
   const ov = document.createElement('div'); ov.id = 'auth-overlay';
   const box = document.createElement('div'); box.className = 'auth-box';
-  const title = document.createElement('div'); title.className = 'auth-title'; title.textContent = 'Enter Password';
+  const title = document.createElement('div'); title.className = 'auth-title'; title.textContent = __('Enter Password');
   const message = document.createElement('div'); message.id = 'auth-message'; message.className = 'auth-message';
   const inp = document.createElement('input'); 
   inp.id = 'auth-code'; 
@@ -503,7 +759,7 @@ function ensureAuthOverlayElements() {
   
   // Add Clear button
   const btnClear = document.createElement('button');
-  btnClear.textContent = 'Clear';
+  btnClear.textContent = __('Clear');
   btnClear.addEventListener('click', () => {
     inp.value = '';
     message.textContent = '';
@@ -512,7 +768,7 @@ function ensureAuthOverlayElements() {
   
   // Add Submit button
   const submitBtn = document.createElement('button');
-  submitBtn.textContent = 'Submit';
+  submitBtn.textContent = __('Submit');
   submitBtn.className = 'auth-submit';
   
   function tryPasscode() {
@@ -521,7 +777,7 @@ function ensureAuthOverlayElements() {
       ov.classList.add('hidden');
       message.textContent = '';
     } else {
-      message.textContent = 'Incorrect password. Try again.';
+      message.textContent = __('Incorrect password. Try again.');
       inp.value = '';
       setTimeout(() => inp.focus(), 100);
     }
@@ -657,7 +913,7 @@ function openReorderMenu(folder, itemKey, itemLabel) {
 
   const moveTo = (nextIndex) => {
     if (moveFolderOrderItem(folder, itemKey, nextIndex)) {
-      showToast('Order updated');
+      showToast(__('Order updated'));
     }
   };
 
@@ -859,7 +1115,7 @@ function finishReorderPointerSession(commitOrder) {
         setFolderOrder(state.folder, nextOrder);
         saveStateDebounced();
         renderAll();
-        showToast('Order updated');
+        showToast(__('Order updated'));
       }
     }
   }
@@ -936,7 +1192,7 @@ async function processSaveQueue() {
     if (saveModalShown) {
       closeModal();
       saveModalShown = false;
-      showToast('Changes saved successfully', 2000);
+      showToast(__('Changes saved successfully'), 2000);
     }
     
     // Only show green checkmark when truly saved
@@ -1100,23 +1356,23 @@ function buildModalMenuHeader(iconText, title, subtitle = 'Select an action') {
 
 function openActionsMenu() {
   openModal({
-    title: 'Actions',
-    body: buildModalMenuHeader('\u2699', 'Actions', 'Import, export, history and more.'),
+    title: __('Actions'),
+    body: buildModalMenuHeader('\u2699', __('Actions'), 'Import, export, history and more.'),
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
-      { label: '\uD83D\uDCBE  Save (snapshot + cloud)', onClick: async () => {
+      { label: '\uD83D\uDCBE  ' + __('Save (snapshot + cloud)'), onClick: async () => {
           if (modified) {
-            showToast('Saving...');
+            showToast(__('Saving...'));
             processSaveQueue();
           } else {
-            showToast('No changes to save');
+            showToast(__('No changes to save'));
           }
         } },
-      { label: '\uD83D\uDCCA  Stock History', onClick: () => openHistoryPage() },
-      { label: '\u2B07  Import JSON', onClick: () => { document.getElementById('import-file').click(); } },
-      { label: '\u2B06  Export JSON', onClick: () => { exportState(); } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: '\uD83D\uDCCA  ' + __('Stock History'), onClick: () => openHistoryPage() },
+      { label: '\u2B07  ' + __('Import JSON'), onClick: () => { document.getElementById('import-file').click(); } },
+      { label: '\u2B06  ' + __('Export JSON'), onClick: () => { exportState(); } },
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
 }
@@ -1326,8 +1582,8 @@ function confirmDeleteProduct(productId) {
     size: 'small',
     body: `Are you sure you want to delete "${p?.name || 'Product'}"?`,
     actions: [
-      { label: 'Delete', tone: 'danger', onClick: () => { deleteProduct(productId); } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Delete'), tone: 'danger', onClick: () => { deleteProduct(productId); } },
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
 }
@@ -1394,8 +1650,8 @@ function confirmDeleteFolder(folderId) {
     size: 'small',
     body: `Delete folder "${f?.name || 'Folder'}" and everything inside?`,
     actions: [
-      { label: 'Delete', tone: 'danger', onClick: () => { deleteFolder(folderId); } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Delete'), tone: 'danger', onClick: () => { deleteFolder(folderId); } },
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
 }
@@ -1574,7 +1830,7 @@ function openProductEditModal(productId) {
   nameGroup.className = 'modal-form-group';
   const nameLabel = document.createElement('label');
   nameLabel.className = 'modal-form-label';
-  nameLabel.textContent = 'Name';
+  nameLabel.textContent = __('Name');
   const nameInput = document.createElement('input');
   nameInput.className = 'modal-input';
   nameInput.type = 'text';
@@ -1601,7 +1857,7 @@ function openProductEditModal(productId) {
     track.className = 'modal-check-track';
     const checkLabel = document.createElement('span');
     checkLabel.className = 'modal-check-label';
-    checkLabel.textContent = 'Dynamic Component';
+    checkLabel.textContent = __('Dynamic Component');
     dynamicRow.appendChild(dynamicCheckbox);
     dynamicRow.appendChild(track);
     dynamicRow.appendChild(checkLabel);
@@ -1622,7 +1878,7 @@ function openProductEditModal(productId) {
     thresholdGroup.className = 'modal-form-group';
     const thresholdLabel = document.createElement('label');
     thresholdLabel.className = 'modal-form-label';
-    thresholdLabel.textContent = 'Warning Threshold';
+    thresholdLabel.textContent = __('Warning threshold');
     const thresholdInput = document.createElement('input');
     thresholdInput.id = 'edit-warn-threshold';
     thresholdInput.className = 'modal-input';
@@ -1685,8 +1941,8 @@ function openProductEditModal(productId) {
             headerIcon: { symbol: '!', color: 'red' },
             size: 'small',
             actions: [
-              { label: 'Remove', tone: 'danger', onClick: () => { p.dynamicLinks.splice(idx, 1); renderLinkList(); } },
-              { label: 'Cancel' }
+              { label: __('Remove'), tone: 'danger', onClick: () => { p.dynamicLinks.splice(idx, 1); renderLinkList(); } },
+              { label: __('Cancel') }
             ]
           });
         });
@@ -1737,7 +1993,7 @@ function openProductEditModal(productId) {
     priceGroup.className = 'modal-form-group';
     const priceLabel = document.createElement('label');
     priceLabel.className = 'modal-form-label';
-    priceLabel.textContent = 'Price ';
+    priceLabel.textContent = __('Price') + ' ';
     const priceHint = document.createElement('span');
     priceHint.className = 'optional';
     priceHint.textContent = '(€)';
@@ -1758,7 +2014,7 @@ function openProductEditModal(productId) {
     targetGroup.className = 'modal-form-group';
     const targetLabel = document.createElement('label');
     targetLabel.className = 'modal-form-label';
-    targetLabel.textContent = 'Target Quantity ';
+    targetLabel.textContent = __('Target Quantity') + ' ';
     const targetHint = document.createElement('span');
     targetHint.className = 'optional';
     targetHint.textContent = '(pc)';
@@ -1777,11 +2033,11 @@ function openProductEditModal(productId) {
   }
 
   openModal({
-    title: 'Edit Product',
+    title: __('Edit Product'),
     headerIcon: { symbol: '\u270E', color: 'blue' },
     body: wrap,
     actions: [
-      { label: 'Save', onClick: () => {
+      { label: __('Save'), onClick: () => {
           const dynamicCheckbox = wrap.querySelector('input[type="checkbox"]');
           const thresholdInput = wrap.querySelector('#edit-warn-threshold');
           const newWarnThreshold = thresholdInput ? Number(thresholdInput.value || 0) : 0;
@@ -1800,7 +2056,7 @@ function openProductEditModal(productId) {
           }
           renderFolderList();
         } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
@@ -1992,12 +2248,12 @@ function openLinkSelectorModal(onSelect) {
     headerIcon: { symbol: '\uD83D\uDD17', color: 'purple' },
     body: wrap,
     actions: [
-      { label: 'Add', onClick: () => {
+      { label: __('Add'), onClick: () => {
           if (!selectedItem.id) { showToast('Please select an item'); return; }
           const units = Math.max(1, Number(unitsInput.value || 1));
           onSelect(selectedItem.type, selectedItem.id, units);
         } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
 }
@@ -2006,10 +2262,10 @@ function openSettings() {
   const wrap = document.createElement('div');
   wrap.className = 'settings-wrap';
   const plannedGroup = document.createElement('div'); plannedGroup.className = 'set-row';
-  const plannedLabel = document.createElement('label'); plannedLabel.className = 'set-col'; plannedLabel.innerHTML = `<div class="set-k">Planned total</div>`;
-  const plannedInput = document.createElement('input'); plannedInput.type = 'number'; plannedInput.min = '0'; plannedInput.step = '1'; plannedInput.inputMode = 'numeric'; plannedInput.placeholder = 'e.g. 30000'; plannedInput.value = appState.settings?.plannedValue ?? '';
+  const plannedLabel = document.createElement('label'); plannedLabel.className = 'set-col'; plannedLabel.innerHTML = `<div class="set-k">${__('Planned total')}</div>`;
+  const plannedInput = document.createElement('input'); plannedInput.type = 'number'; plannedInput.min = '0'; plannedInput.step = '1'; plannedInput.inputMode = 'numeric'; plannedInput.placeholder = __('e.g. 30000'); plannedInput.value = appState.settings?.plannedValue ?? '';
   plannedLabel.appendChild(plannedInput);
-  const dateLabel = document.createElement('label'); dateLabel.className = 'set-col'; dateLabel.innerHTML = `<div class="set-k">End date</div>`;
+  const dateLabel = document.createElement('label'); dateLabel.className = 'set-col'; dateLabel.innerHTML = `<div class="set-k">${__('End date')}</div>`;
   const dateInput = document.createElement('input'); dateInput.type = 'date'; dateInput.value = appState.settings?.endDate ? new Date(appState.settings.endDate).toISOString().slice(0,10) : '';
   dateLabel.appendChild(dateInput);
   plannedGroup.appendChild(plannedLabel); plannedGroup.appendChild(dateLabel);
@@ -2060,16 +2316,31 @@ function openSettings() {
   dateInput.addEventListener('change', syncWidths);
   plannedInput.addEventListener('input', syncWidths);
   plannedInput.addEventListener('change', syncWidths);
+  // Language toggle
+  const langGroup = document.createElement('div'); langGroup.className = 'set-row';
+  const langLabel = document.createElement('label'); langLabel.className = 'set-col';
+  langLabel.innerHTML = `<div class="set-k">${__('Language')}</div>`;
+  const langSelect = document.createElement('select'); langSelect.style.cssText = 'padding:6px 10px;border-radius:10px;border:1px solid #d1d5db;font-size:14px;';
+  const optHr = document.createElement('option'); optHr.value = 'hr'; optHr.textContent = 'Hrvatski';
+  const optEn = document.createElement('option'); optEn.value = 'en'; optEn.textContent = 'English';
+  langSelect.appendChild(optHr); langSelect.appendChild(optEn);
+  langSelect.value = currentLang;
+  langLabel.appendChild(langSelect);
+  langGroup.appendChild(langLabel);
+  wrap.appendChild(langGroup);
+
   openModal({
-    title: 'Settings',
+    title: __('Settings'),
     headerIcon: { symbol: '\u2699', color: 'slate' },
     body: wrap,
     actions: [
-      { label: 'Reset Stats', tone: 'danger', onClick: () => showResetStatsConfirm() },
-      { label: 'Show Report', onClick: () => { setTimeout(() => openReportModal(), 0); } },
-      { label: 'Save', onClick: () => {
+      { label: __('Reset Stats'), tone: 'danger', onClick: () => showResetStatsConfirm() },
+      { label: __('Show Report'), onClick: () => { setTimeout(() => openReportModal(), 0); } },
+      { label: __('Save'), onClick: () => {
           appState.settings = appState.settings || {};
           appState.settings.plannedValue = Number(plannedInput.value || 0);
+          if (appState.settings) appState.settings.language = langSelect.value;
+          setLang(langSelect.value);
           if (dateInput.value) {
             const endLocal = new Date(`${dateInput.value}T23:59:59`);
             appState.settings.endDate = endLocal.toISOString();
@@ -2080,9 +2351,9 @@ function openSettings() {
           recomputeDailyGoalNow();
           saveStateDebounced();
           renderAll();
-          showToast('Settings saved');
+          showToast(__('Settings saved'));
         } },
-      { label: 'Close', tone: 'secondary' }
+      { label: __('Close'), tone: 'secondary' }
     ]
   });
 }
@@ -2102,7 +2373,7 @@ function onSaveProductNote() {
     saveStateDebounced();
     // Re-render folder list to update pencil icon visibility
     renderFolderList();
-    showToast('Note saved');
+    showToast(__('Note saved'));
   }
 }
 
@@ -2574,17 +2845,17 @@ function shiftHistoryDateByPeriod(direction) {
 
 function getHistoryBadgeLabel(entry) {
   switch (entry.eventType) {
-    case 'manual_add': return 'Added';
-    case 'manual_remove': return 'Removed';
-    case 'editor_adjustment': return 'Edited';
-    case 'dynamic_deduction': return 'Deducted';
-    case 'product_deleted': return 'Deleted';
-    case 'folder_deleted': return 'Folder deleted';
-    case 'reset_quantity': return 'Reset';
-    case 'product_duplicated': return 'Duplicated';
-    case 'import_state': return 'Import';
-    case 'legacy_system_change': return 'Legacy';
-    default: return safeHistoryNumber(entry.delta) >= 0 ? 'Change' : 'Removed';
+    case 'manual_add': return __('Added');
+    case 'manual_remove': return __('Removed');
+    case 'editor_adjustment': return __('Edited');
+    case 'dynamic_deduction': return __('Deducted');
+    case 'product_deleted': return __('Deleted');
+    case 'folder_deleted': return __('Folder deleted');
+    case 'reset_quantity': return __('Reset');
+    case 'product_duplicated': return __('Duplicated');
+    case 'import_state': return __('Import');
+    case 'legacy_system_change': return __('Legacy');
+    default: return safeHistoryNumber(entry.delta) >= 0 ? __('Change') : __('Removed');
   }
 }
 
@@ -2711,12 +2982,12 @@ function renderHistoryPage() {
 
   const netTone = periodSummary.netValue > 0 ? 'positive' : periodSummary.netValue < 0 ? 'negative' : '';
   const row1 = [
-    { label: 'Events', value: String(allEntries.length) },
-    { label: 'Showing', value: String(entries.length) },
-    { label: 'Period', value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode) },
-    { label: 'Done', value: formatCurrency(periodSummary.doneValue), tone: 'positive' },
-    { label: 'Removed', value: formatCurrency(periodSummary.removedValue), tone: 'negative' },
-    { label: 'Net', value: formatSignedCurrency(periodSummary.netValue), tone: netTone },
+    { label: __('Events'), value: String(allEntries.length) },
+    { label: __('Showing'), value: String(entries.length) },
+    { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode) },
+    { label: __('Total Produced'), value: formatCurrency(periodSummary.doneValue), tone: 'positive' },
+    { label: __('Total Removed'), value: formatCurrency(periodSummary.removedValue), tone: 'negative' },
+    { label: __('Net Change'), value: formatSignedCurrency(periodSummary.netValue), tone: netTone },
   ];
   row1.forEach(d => {
     const cell = document.createElement('div');
@@ -2733,8 +3004,8 @@ function renderHistoryPage() {
   });
 
   const row2 = [
-    { label: 'Overall Qty', value: `${currentStats.totalQty} pc`, span: 3 },
-    { label: 'Overall Value', value: formatCurrency(currentStats.totalValue), span: 3 },
+    { label: __('Overall Qty'), value: `${currentStats.totalQty} pc`, span: 3 },
+    { label: __('Overall Value'), value: formatCurrency(currentStats.totalValue), span: 3 },
   ];
   row2.forEach(d => {
     const cell = document.createElement('div');
@@ -2757,7 +3028,7 @@ function renderHistoryPage() {
     const empty = document.createElement('div');
     empty.className = 'history-empty';
     const title = document.createElement('strong');
-    title.textContent = allEntries.length ? 'No matching history events' : 'No history yet';
+    title.textContent = allEntries.length ? __('No matching history events') : __('No history yet');
     const message = document.createElement('div');
     if (!allEntries.length) {
       message.textContent = 'Quantity changes, removals, deductions, and other stock events will appear here.';
@@ -3181,7 +3452,7 @@ function renderBreadcrumbs() {
     const f = appState.folders[fid];
     const span = document.createElement('span');
     span.className = 'crumb';
-    span.textContent = f?.name || 'Unknown';
+    span.textContent = f?.name || __('Unknown');
     span.addEventListener('click', () => {
       currentFolderId = fid;
       renderAll();
@@ -3229,7 +3500,7 @@ function renderFolderList(folderId = currentFolderId) {
       const itemRemain = document.createElement('div');
       itemRemain.className = 'sb-item sb-daily';
       const goalReached = addedToday >= fixedDailyGoal;
-      const goalLabel = goalReached ? 'Produced today' : 'Daily goal';
+      const goalLabel = goalReached ? __('Produced today') : __('Daily goal');
       const goalValue = goalReached ? formatCurrency(addedToday) : formatCurrency(fixedDailyGoal);
       itemRemain.innerHTML = `
         <div class="sb-col">
@@ -3237,11 +3508,11 @@ function renderFolderList(folderId = currentFolderId) {
           <div class="sb-v">${goalValue}</div>
         </div>
         <div class="sb-col">
-          <div class="sb-k sb-bad">To do</div>
+          <div class="sb-k sb-bad">${__('To do')}</div>
           <div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div>
         </div>
         ${extraToday>0?`<div class="sb-col">
-          <div class="sb-k sb-good">Extra</div>
+          <div class="sb-k sb-good">${__('Extra')}</div>
           <div class="sb-v sb-good">+${formatCurrency(extraToday)}</div>
         </div>`:''}
       `;
@@ -3254,13 +3525,13 @@ function renderFolderList(folderId = currentFolderId) {
       const today = new Date(); today.setHours(0,0,0,0);
       const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
       const daysLeft = Math.max(0, rawDays);
-      const itemDays = document.createElement('div'); itemDays.className = 'sb-item'; itemDays.innerHTML = `<div class="sb-k">Days left</div><div class="sb-v">${daysLeft}</div>`;
+      const itemDays = document.createElement('div'); itemDays.className = 'sb-item'; itemDays.innerHTML = `<div class="sb-k">${__('Days left')}</div><div class="sb-v">${daysLeft}</div>`;
       wrap.appendChild(itemDays);
     }
 
     // Finally totals: Qty and Value
-    const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">Total Qty</div><div class="sb-v">${stats.totalQty} pc</div>`;
-    const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">Total Value</div><div class="sb-v">${formatCurrency(stats.totalValue)}</div>`;
+    const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">${__('Total Qty')}</div><div class="sb-v">${stats.totalQty} pc</div>`;
+    const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">${__('Total Value')}</div><div class="sb-v">${formatCurrency(stats.totalValue)}</div>`;
     wrap.appendChild(itemQty); wrap.appendChild(itemVal);
 
     statsBar.appendChild(wrap);
@@ -3285,7 +3556,7 @@ function renderFolderList(folderId = currentFolderId) {
       const name = document.createElement('span'); name.className = 'name'; name.textContent = f.name;
       name.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
       const meta = document.createElement('div'); meta.className = 'meta';
-      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `Qty: ${stats.totalQty}`;
+      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `${__('Qty:')} ${stats.totalQty}`;
       const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(stats.totalValue);
       meta.appendChild(qtyLine); meta.appendChild(valueLine);
       textCol.appendChild(name); textCol.appendChild(meta);
@@ -3293,7 +3564,7 @@ function renderFolderList(folderId = currentFolderId) {
       left.style.cursor = 'pointer'; left.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
       const actions = document.createElement('div'); actions.className = 'actions';
       const reorderBtn = createReorderHandle(li, curFolder, `f:${fid}`, f.name || 'Folder', !canReorderItems);
-      const moreBtn = document.createElement('button'); moreBtn.textContent = '⋯'; moreBtn.title = 'More';
+      const moreBtn = document.createElement('button'); moreBtn.textContent = '⋯'; moreBtn.title = __('More');
       moreBtn.addEventListener('click', (e) => { e.stopPropagation(); openFolderMenu(fid); });
       actions.appendChild(reorderBtn);
       actions.appendChild(moreBtn);
@@ -3311,7 +3582,7 @@ function renderFolderList(folderId = currentFolderId) {
       const pname = document.createElement('span'); pname.className = 'name'; pname.textContent = p.name;
       const pmeta = document.createElement('div'); pmeta.className = 'meta';
       const qty = Number(p.quantity || 0);
-      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `Qty: ${qty}`;
+      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `${__('Qty:')} ${qty}`;
       
       // Check if this is in independent folder
       const isInIndependentFolder = isProductInIndependentFolder(p.id);
@@ -3327,7 +3598,7 @@ function renderFolderList(folderId = currentFolderId) {
         linkIcon.className = 'meta-link';
         linkIcon.innerHTML = '🔗';
         linkIcon.style.marginLeft = '5px';
-        linkIcon.title = 'Dynamic Component';
+        linkIcon.title = __('Dynamic Component');
         qtyLine.appendChild(linkIcon);
       }
       
@@ -3338,11 +3609,11 @@ function renderFolderList(folderId = currentFolderId) {
       // Add pencil icon if product has a note
       if (p.note && p.note.trim()) {
         const noteIcon = document.createElement('span'); noteIcon.textContent = '✏️'; noteIcon.setAttribute('aria-hidden', 'true');
-        noteIcon.title = 'Has note';
+        noteIcon.title = __('Has note');
         actionsP.appendChild(noteIcon);
       }
       const reorderBtnP = createReorderHandle(pli, curFolder, `p:${p.id}`, p.name || 'Product', !canReorderItems);
-      const moreBtnP = document.createElement('button'); moreBtnP.textContent = '⋯'; moreBtnP.title = 'More';
+      const moreBtnP = document.createElement('button'); moreBtnP.textContent = '⋯'; moreBtnP.title = __('More');
       moreBtnP.addEventListener('click', (e) => { e.stopPropagation(); openProductMenu(p.id); });
       actionsP.appendChild(reorderBtnP);
       actionsP.appendChild(moreBtnP);
@@ -3524,7 +3795,7 @@ function openFolderEditModal(folderId) {
   nameGroup.className = 'modal-form-group';
   const nameLabel = document.createElement('label');
   nameLabel.className = 'modal-form-label';
-  nameLabel.textContent = 'Name';
+  nameLabel.textContent = __('Name');
   const nameInput = document.createElement('input');
   nameInput.className = 'modal-input';
   nameInput.type = 'text';
@@ -3539,12 +3810,12 @@ function openFolderEditModal(folderId) {
   imgGroup.className = 'modal-form-group';
   const imgLabel = document.createElement('label');
   imgLabel.className = 'modal-form-label';
-  imgLabel.textContent = 'Image';
+  imgLabel.textContent = __('Image');
   const fileWrap = document.createElement('div');
   fileWrap.className = 'modal-file-wrap';
   const fileBtn = document.createElement('span');
   fileBtn.className = 'modal-file-btn';
-  fileBtn.textContent = 'Choose Image';
+  fileBtn.textContent = __('Choose Image');
   const imgInput = document.createElement('input');
   imgInput.type = 'file';
   imgInput.accept = 'image/*';
@@ -3577,25 +3848,25 @@ function openFolderEditModal(folderId) {
   indepTrack.className = 'modal-check-track';
   const indepLabel = document.createElement('span');
   indepLabel.className = 'modal-check-label';
-  indepLabel.textContent = 'Make independent (exclude from stats)';
+  indepLabel.textContent = __('Make independent (exclude from stats)');
   indepRow.appendChild(indepCheckbox);
   indepRow.appendChild(indepTrack);
   indepRow.appendChild(indepLabel);
   wrap.appendChild(indepRow);
 
   openModal({
-    title: 'Edit Folder',
+    title: __('Edit Folder'),
     headerIcon: { symbol: '\uD83D\uDCC1', color: 'amber' },
     body: wrap,
     actions: [
-      { label: 'Save', onClick: () => {
+      { label: __('Save'), onClick: () => {
           const newName = nameInput.value.trim();
           f.name = newName || f.name;
           f.isIndependent = indepCheckbox.checked;
           saveStateDebounced();
           renderAll();
         } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
@@ -3610,10 +3881,11 @@ function openProductCreateModal(folderId) {
   nameGroup.className = 'modal-form-group';
   const nameLabel = document.createElement('label');
   nameLabel.className = 'modal-form-label';
-  nameLabel.textContent = 'Name';
+  nameLabel.textContent = __('Name');
   const nameInput = document.createElement('input');
   nameInput.className = 'modal-input';
   nameInput.type = 'text';
+  nameInput.value = '';
   nameInput.placeholder = 'Product name';
   nameInput.addEventListener('focus', () => { try { nameInput.select(); } catch {} });
   nameGroup.appendChild(nameLabel);
@@ -3625,7 +3897,7 @@ function openProductCreateModal(folderId) {
   imgGroup.className = 'modal-form-group';
   const imgLabel = document.createElement('label');
   imgLabel.className = 'modal-form-label';
-  imgLabel.textContent = 'Image ';
+  imgLabel.textContent = __('Image') + ' ';
   const imgOpt = document.createElement('span');
   imgOpt.className = 'optional';
   imgOpt.textContent = '(optional)';
@@ -3634,7 +3906,7 @@ function openProductCreateModal(folderId) {
   fileWrap.className = 'modal-file-wrap';
   const fileBtn = document.createElement('span');
   fileBtn.className = 'modal-file-btn';
-  fileBtn.textContent = 'Choose Image';
+  fileBtn.textContent = __('Choose Image');
   const imgInput = document.createElement('input');
   imgInput.type = 'file';
   imgInput.accept = 'image/*';
@@ -3655,7 +3927,7 @@ function openProductCreateModal(folderId) {
   wrap.appendChild(imgGroup);
 
   openModal({
-    title: 'New Product',
+    title: __('New Product'),
     headerIcon: { symbol: '\uD83D\uDCE6', color: 'green' },
     body: wrap,
     actions: [
@@ -3668,7 +3940,7 @@ function openProductCreateModal(folderId) {
           saveStateDebounced();
           renderAll();
         } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
   setTimeout(() => { try { nameInput.focus(); nameInput.select(); } catch {} }, 0);
@@ -3689,7 +3961,7 @@ function openEditor(type, id) {
   document.getElementById('editor-image').value = '';
 
   if (type === 'folder') {
-    title.textContent = 'Edit Folder';
+    title.textContent = __('Edit Folder');
     const f = appState.folders[id];
     document.getElementById('editor-name').value = f?.name || '';
     document.getElementById('folder-fields').classList.remove('hidden');
@@ -3699,7 +3971,7 @@ function openEditor(type, id) {
       prev.classList.remove('hidden');
     }
   } else {
-    title.textContent = id ? 'Edit Product' : 'New Product';
+    title.textContent = id ? __('Edit Product') : __('New Product');
     const p = id ? appState.products[id] : { name: '', price: 0, quantity: 0, note: '', targetQuantity: 0, priority: false };
     document.getElementById('editor-name').value = p.name || '';
     document.getElementById('editor-price').value = p.price ?? 0;
@@ -3713,7 +3985,7 @@ function openEditor(type, id) {
   panel.classList.remove('hidden');
   // Back label
   const backBtn = document.getElementById('editor-close');
-  if (backBtn) backBtn.textContent = '← Back';
+  if (backBtn) backBtn.textContent = '← ' + __('Back');
   // Focus and preselect name field
   const nameEl = document.getElementById('editor-name');
   setTimeout(() => { try { nameEl.focus(); nameEl.select(); } catch {} }, 0);
@@ -3727,9 +3999,9 @@ function closeEditor() {
 function addCustomFieldRow(k = '', v = '') {
   const row = document.createElement('div');
   row.className = 'custom-field-row';
-  const keyEl = document.createElement('input'); keyEl.placeholder = 'Key'; keyEl.value = k;
-  const valEl = document.createElement('input'); valEl.placeholder = 'Value'; valEl.value = v;
-  const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Remove'; del.addEventListener('click', () => row.remove());
+  const keyEl = document.createElement('input'); keyEl.placeholder = __('Key'); keyEl.value = k;
+  const valEl = document.createElement('input'); valEl.placeholder = __('Value'); valEl.value = v;
+  const del = document.createElement('button'); del.type = 'button'; del.textContent = __('Remove'); del.addEventListener('click', () => row.remove());
   row.appendChild(keyEl); row.appendChild(valEl); row.appendChild(del);
   document.getElementById('custom-fields-container').appendChild(row);
 }
@@ -3751,7 +4023,7 @@ function createProduct(folderId) {
 
 function deleteFolder(folderId, options = {}) {
   const nested = !!options.nested;
-  if (folderId === 'root') return showToast('Cannot delete root');
+  if (folderId === 'root') return showToast(__('Cannot delete root'));
   const f = appState.folders[folderId];
   if (!f) return;
   const folderName = f.name || 'Folder';
@@ -3875,9 +4147,9 @@ function openAddMenu(targetFolderId) {
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
-      { label: 'New Folder', onClick: () => createFolder(targetFolderId) },
-      { label: 'New Product', onClick: () => openProductCreateModal(targetFolderId) },
-      { label: 'Cancel' }
+      { label: __('New Folder'), onClick: () => createFolder(targetFolderId) },
+      { label: __('New Product'), onClick: () => openProductCreateModal(targetFolderId) },
+      { label: __('Cancel') }
     ]
   });
 }
@@ -3890,11 +4162,11 @@ function openFolderMenu(folderId) {
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
-      { label: 'Edit', onClick: () => openFolderEditModal(folderId) },
+      { label: __('Edit'), onClick: () => openFolderEditModal(folderId) },
       { label: 'New Subfolder', onClick: () => createFolder(folderId) },
-      { label: 'New Product', onClick: () => openProductCreateModal(folderId) },
-      { label: 'Move to…', onClick: () => openMoveDialog('folder', folderId) },
-      { label: 'Delete', onClick: () => confirmDeleteFolder(folderId) }
+      { label: __('New Product'), onClick: () => openProductCreateModal(folderId) },
+      { label: __('Move to...'), onClick: () => openMoveDialog('folder', folderId) },
+      { label: __('Delete'), onClick: () => confirmDeleteFolder(folderId) }
     ]
   });
 }
@@ -3907,13 +4179,13 @@ function openProductMenu(productId) {
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
-      { label: 'Edit', onClick: () => openProductEditModal(productId) },
+      { label: __('Edit'), onClick: () => openProductEditModal(productId) },
       { label: 'Duplicate', onClick: () => duplicateProduct(productId) },
-      { label: 'Move to…', onClick: () => openMoveDialog('product', productId) },
+      { label: __('Move to...'), onClick: () => openMoveDialog('product', productId) },
       { label: (() => { const p = appState.products[productId]; return p?.priority ? 'Unmark priority' : 'Mark as priority'; })(), onClick: () => {
           const p = appState.products[productId]; if (!p) return; p.priority = !p.priority; saveStateDebounced(); renderAll();
         } },
-      { label: 'Delete', onClick: () => confirmDeleteProduct(productId) }
+      { label: __('Delete'), onClick: () => confirmDeleteProduct(productId) }
     ]
   });
 }
@@ -3984,17 +4256,17 @@ function openMoveDialog(type, id) {
   build('root', '');
   wrapper.appendChild(list);
   openModal({
-    title: 'Move to\u2026',
+    title: __('Move to...'),
     headerIcon: { symbol: '\u27A1', color: 'blue' },
     body: wrapper,
     actions: [
-      { label: 'Confirm', onClick: () => {
+      { label: __('Confirm'), onClick: () => {
           const r = radios.find(x => x.checked);
           if (!r) return;
           const target = r.value;
           if (type === 'product') moveProductTo(id, target); else moveFolderTo(id, target);
         } },
-      { label: 'Cancel', tone: 'secondary' }
+      { label: __('Cancel'), tone: 'secondary' }
     ]
   });
 }
@@ -4147,11 +4419,11 @@ function importState(file) {
       });
       appState.lastModified = Date.now();
       await writeState(appState);
-      showToast('Import complete');
+      showToast(__('Import complete'));
       renderAll();
     } catch (e) {
       console.error(e);
-      showToast('Import failed: invalid JSON');
+      showToast(__('Import failed: invalid JSON'));
       openModal({ title: 'Import failed', headerIcon: { symbol: '\u2716', color: 'red' }, size: 'small', body: 'Invalid JSON format.' });
     }
   };
@@ -4309,10 +4581,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveBtn = document.getElementById('save-btn');
   if (saveBtn) saveBtn.addEventListener('click', async () => { 
     if (modified) {
-      showToast('Saving...');
+      showToast(__('Saving...'));
       processSaveQueue();
     } else {
-      showToast('No changes to save');
+      showToast(__('No changes to save'));
     }
   });
   const actionsBtn = document.getElementById('actions-btn');
@@ -4457,6 +4729,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Latest cloud backup already loaded above
   ensureDailyProgress();
   renderAll();
+  translateStaticUI();
 
   // initial cloud
   // If we already loaded a backup successfully, skip legacy single-file sync to avoid confusing statuses
@@ -4517,7 +4790,7 @@ function openProductPage(productId) {
     warningThresholdRowNew.className = 'pp-row';
     const warningThresholdLabel = document.createElement('div');
     warningThresholdLabel.className = 'pp-label';
-    warningThresholdLabel.textContent = 'Warning threshold';
+    warningThresholdLabel.textContent = __('Warning threshold');
     const warningThresholdValue = document.createElement('div');
     warningThresholdValue.className = 'pp-value';
     warningThresholdValue.id = 'pp-warning-threshold-value';
@@ -4569,7 +4842,7 @@ function openProductPage(productId) {
         
         const title = document.createElement('div');
         title.className = 'pp-card-title';
-        title.textContent = 'Used In';
+        title.textContent = __('Used In');
         
         const usedInGrid = document.createElement('div');
         usedInGrid.id = 'pp-used-in-grid';
@@ -4603,7 +4876,7 @@ function openProductPage(productId) {
         emptyRow.style.justifyContent = 'center';
         emptyRow.style.padding = '10px';
         emptyRow.style.color = '#6b7280';
-        emptyRow.textContent = 'Not used in any products';
+        emptyRow.textContent = __('Not used in any products');
         usedInGrid.appendChild(emptyRow);
       } else {
         // Create a compact single-line display with scrollable container
@@ -4675,7 +4948,7 @@ function openProductPage(productId) {
               size: 'small',
               body: 'Unlink will break quantity sync. OK?',
               actions: [
-                { label: 'Remove', tone: 'danger', onClick: () => {
+                { label: __('Remove'), tone: 'danger', onClick: () => {
                   const component = appState.products[productId];
                   if (component && component.dynamicLinks) {
                     component.dynamicLinks = component.dynamicLinks.filter(link => 
@@ -4685,7 +4958,7 @@ function openProductPage(productId) {
                   saveStateDebounced();
                   openProductPage(productId);
                 } },
-                { label: 'Cancel', tone: 'secondary' }
+                { label: __('Cancel'), tone: 'secondary' }
               ]
             });
           });
@@ -4721,7 +4994,7 @@ function openProductPage(productId) {
       fab.id = 'pp-back-fab';
       fab.className = 'pp-fab-back';
       fab.type = 'button';
-      fab.textContent = 'Back';
+      fab.textContent = __('Back');
       fab.addEventListener('click', () => { closeProductPage(); });
       page.appendChild(fab);
     }
@@ -4744,7 +5017,7 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
   if (!p) return;
   const inputEl = document.getElementById('pp-adjust-input');
   const delta = Math.max(0, Number(inputEl.value || 0));
-  if (delta === 0) { inputEl.focus(); showToast('Enter quantity'); return; }
+  if (delta === 0) { inputEl.focus(); showToast(__('Enter quantity')); return; }
   let qty = Number(p.quantity || 0);
   const newQty = direction > 0 ? qty + delta : Math.max(0, qty - delta);
   openModal({
@@ -4753,7 +5026,7 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
     size: 'small',
     body: `Change quantity from ${qty} to ${newQty}?`,
     actions: [
-      { label: 'Confirm', onClick: () => {
+      { label: __('Confirm'), onClick: () => {
           p.quantity = newQty;
           const signed = direction > 0 ? delta : -delta;
           recordInventoryEvent({
@@ -4784,7 +5057,7 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
           try { const adjEl = document.getElementById('pp-adjust-input'); adjEl && adjEl.blur(); } catch {}
           try { const pp = document.getElementById('product-page'); if (pp) pp.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
         } },
-      { label: 'Cancel' }
+      { label: __('Cancel') }
     ]
   });
 }
@@ -4795,9 +5068,9 @@ function correctProductQuantity() {
   if (!p) return;
   const inputEl = document.getElementById('pp-adjust-input');
   const raw = String(inputEl.value || '').trim();
-  if (raw === '') { inputEl.focus(); showToast('Enter quantity'); return; }
+  if (raw === '') { inputEl.focus(); showToast(__('Enter quantity')); return; }
   const v = Number(raw);
-  if (!Number.isFinite(v) || v < 0) { inputEl.focus(); showToast('Enter valid quantity'); return; }
+  if (!Number.isFinite(v) || v < 0) { inputEl.focus(); showToast(__('Enter valid quantity')); return; }
   const newQty = Math.max(0, Math.floor(v));
   p.quantity = newQty;
   // IMPORTANT: do NOT record this as an inventory event. This is an invisible correction.
@@ -4809,7 +5082,7 @@ function correctProductQuantity() {
   inputEl.value = '';
   renderFolderList();
   try { inputEl.blur(); } catch {}
-  showToast('Quantity corrected (no history recorded)');
+  showToast(__('Quantity corrected (no history recorded)'));
 }
 
 async function onProductImageSelected(e) {
