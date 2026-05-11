@@ -2491,6 +2491,29 @@ function openSettings() {
   langGroup.appendChild(langLabel);
   wrap.appendChild(langGroup);
 
+  // Company Info section
+  const coInfo = appState.companyInfo || {};
+  const coGroup = document.createElement('div'); coGroup.className = 'set-row';
+  coGroup.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+  const coFields = [
+    { key: 'name', hr: 'Naziv tvrtke' },
+    { key: 'address', hr: 'Adresa' },
+    { key: 'oib', hr: 'OIB' },
+    { key: 'phone', hr: 'Telefon' },
+    { key: 'email', hr: 'Email' },
+  ];
+  const coInputs = {};
+  for (const f of coFields) {
+    const lbl = document.createElement('label'); lbl.className = 'set-col';
+    lbl.innerHTML = `<div class="set-k">${f.hr}</div>`;
+    const inp = document.createElement('input'); inp.type = 'text'; inp.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:13px;box-sizing:border-box;';
+    inp.value = coInfo[f.key] || '';
+    coInputs[f.key] = inp;
+    lbl.appendChild(inp);
+    coGroup.appendChild(lbl);
+  }
+  wrap.appendChild(coGroup);
+
   openModal({
     title: __('Settings'),
     headerIcon: { symbol: '\u2699', color: 'slate' },
@@ -2504,6 +2527,11 @@ function openSettings() {
           appState.settings.plannedValue = Number(plannedInput.value || 0);
           if (appState.settings) appState.settings.language = langSelect.value;
           setLang(langSelect.value);
+          // Save company info
+          appState.companyInfo = appState.companyInfo || {};
+          for (const key of ['name', 'address', 'oib', 'phone', 'email']) {
+            appState.companyInfo[key] = (coInputs[key]?.value || '').trim();
+          }
           if (dateInput.value) {
             const endLocal = new Date(`${dateInput.value}T23:59:59`);
             appState.settings.endDate = endLocal.toISOString();
