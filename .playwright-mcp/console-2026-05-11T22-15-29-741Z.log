@@ -1,0 +1,6 @@
+[    4218ms] [WARNING] TypeError: Failed to fetch
+    at uploadBackupToCloud (http://localhost:8080/app.js:1461:23)
+    at processSaveQueue (http://localhost:8080/app.js:1183:11) @ http://localhost:8080/app.js:1476
+[    4219ms] [WARNING] Save attempt failed, will retry: TypeError: Failed to fetch
+    at uploadBackupToCloud (http://localhost:8080/app.js:1461:23)
+    at processSaveQueue (http://localhost:8080/app.js:1183:11) @ http://localhost:8080/app.js:1201
