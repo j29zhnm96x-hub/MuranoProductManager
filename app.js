@@ -2514,6 +2514,38 @@ function openSettings() {
   }
   wrap.appendChild(coGroup);
 
+  // Season management section
+  const seasonGroup = document.createElement('div');
+  seasonGroup.style.cssText = 'display:grid;gap:8px;padding:8px 0;';
+  seasonGroup.innerHTML = `<div style="font-weight:700;font-size:14px;">Sezona</div>`;
+  const seasonBtns = document.createElement('div');
+  seasonBtns.style.cssText = 'display:flex;gap:8px;';
+  const seasonStartBtn = document.createElement('button');
+  seasonStartBtn.id = 'season-start-btn';
+  seasonStartBtn.className = 'shop-action-btn primary';
+  seasonStartBtn.textContent = 'Postavi početak sezone';
+  seasonStartBtn.addEventListener('click', setSeasonStart);
+  const seasonReportBtn = document.createElement('button');
+  seasonReportBtn.id = 'season-report-btn';
+  seasonReportBtn.className = 'shop-action-btn';
+  seasonReportBtn.textContent = 'Izvještaj sezone';
+  seasonReportBtn.addEventListener('click', showEndSeasonReport);
+  seasonBtns.appendChild(seasonStartBtn);
+  seasonBtns.appendChild(seasonReportBtn);
+  seasonGroup.appendChild(seasonBtns);
+  wrap.appendChild(seasonGroup);
+
+  // Test data section
+  const testGroup = document.createElement('div');
+  testGroup.style.cssText = 'display:grid;gap:8px;padding:4px 0;';
+  const testDataBtn = document.createElement('button');
+  testDataBtn.id = 'test-data-btn';
+  testDataBtn.className = 'shop-action-btn danger';
+  testDataBtn.textContent = 'Izbriši testne podatke';
+  testDataBtn.addEventListener('click', deleteTestData);
+  testGroup.appendChild(testDataBtn);
+  wrap.appendChild(testGroup);
+
   openModal({
     title: __('Settings'),
     headerIcon: { symbol: '\u2699', color: 'slate' },
@@ -4754,6 +4786,1058 @@ async function initialCloudSync() {
   }
 }
 
+// ── Shop Page ──────────────────────────────────────────────────
+
+function openShopPage() {
+  const page = document.getElementById('shop-page');
+  const backBtn = document.getElementById('shop-back');
+  if (!page) return;
+  page.classList.remove('hidden');
+  renderShopInventory();
+  page.scrollTop = 0;
+}
+
+function closeShopPage() {
+  const page = document.getElementById('shop-page');
+  if (page) page.classList.add('hidden');
+}
+
+function calculateShopInventory() {
+  // Returns { byCategory: { catItemId: { item, qty, totalValue } }, byGroup: { groupId: { name, totalQty, items: [...] } } }
+  const result = { byItem: {}, byGroup: {} };
+  const cats = appState.shopCategories || [];
+  
+  // Build lookup from cat item id to its group
+  const itemToGroup = {};
+  for (const cat of cats) {
+    for (const item of (cat.items || [])) {
+      itemToGroup[item.id] = { groupName: cat.name, groupId: cat.id, item };
+    }
+  }
+  
+  // Calculate what's in the shop (transfers - returns + on-site productions)
+  // Shop qty for each product variant = sum of transfers - sum of returns + sum of on-site additions
+  const variantQtys = {}; // { catItemId: qty }
+  
+  // Transfers (master confirmed only)
+  for (const t of (appState.transferLog || [])) {
+    if (t.masterConfirmDate) {
+      for (const item of (t.items || [])) {
+        const key = item.shopCategory;
+        if (!key) continue;
+        variantQtys[key] = (variantQtys[key] || 0) + item.qty;
+      }
+    }
+  }
+  
+  // Returns
+  for (const r of (appState.returnLog || [])) {
+    for (const item of (r.items || [])) {
+      const key = item.shopCategory;
+      if (!key) continue;
+      variantQtys[key] = (variantQtys[key] || 0) - item.qty;
+    }
+  }
+  
+  // On-site productions added to shop
+  for (const o of (appState.onSiteProduction || [])) {
+    if (o.addedToShop) {
+      for (const item of (o.items || [])) {
+        const key = item.shopCategory;
+        if (!key) continue;
+        variantQtys[key] = (variantQtys[key] || 0) + item.qty;
+      }
+    }
+  }
+  
+  // Build grouped result
+  const groups = {};
+  for (const [itemId, qty] of Object.entries(variantQtys)) {
+    if (qty <= 0) continue;
+    const info = itemToGroup[itemId];
+    if (!info) continue;
+    const gId = info.groupId;
+    if (!groups[gId]) {
+      groups[gId] = { name: info.groupName, items: [] };
+    }
+    groups[gId].items.push({
+      itemId,
+      name: info.item.name,
+      price: info.item.price,
+      qty,
+      value: qty * info.item.price
+    });
+  }
+  
+  return { byGroup: groups, itemToGroup };
+}
+
+function renderShopInventory() {
+  const container = document.getElementById('shop-inventory');
+  const pendingSection = document.getElementById('shop-pending');
+  const pendingList = document.getElementById('shop-pending-list');
+  const pendingCount = document.getElementById('shop-pending-count');
+  if (!container) return;
+  
+  const inventory = calculateShopInventory();
+  const groups = inventory.byGroup;
+  
+  container.innerHTML = '';
+  
+  const groupIds = Object.keys(groups);
+  if (!groupIds.length) {
+    container.innerHTML = '<div class="shop-inv-empty">Prodaja je trenutno prazna. Prenesite proizvode iz skladišta.</div>';
+  } else {
+    for (const gId of groupIds) {
+      const group = groups[gId];
+      const totalQty = group.items.reduce((s, i) => s + i.qty, 0);
+      const totalValue = group.items.reduce((s, i) => s + i.value, 0);
+      
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'shop-inv-group';
+      
+      const header = document.createElement('div');
+      header.className = 'shop-inv-group-header';
+      header.innerHTML = `<span class="shop-inv-group-toggle">\u25BC</span><span class="shop-inv-group-name">${escapeHtml(group.name)}</span><span class="shop-inv-group-total">${totalQty} kom / ${formatCurrency(totalValue)}</span>`;
+      header.addEventListener('click', () => {
+        const itemsDiv = groupDiv.querySelector('.shop-inv-items');
+        if (itemsDiv) {
+          itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'grid' : 'none';
+          const toggle = header.querySelector('.shop-inv-group-toggle');
+          if (toggle) toggle.textContent = itemsDiv.style.display === 'none' ? '\u25B6' : '\u25BC';
+        }
+      });
+      groupDiv.appendChild(header);
+      
+      const itemsDiv = document.createElement('div');
+      itemsDiv.className = 'shop-inv-items';
+      
+      for (const item of group.items) {
+        const row = document.createElement('div');
+        row.className = 'shop-inv-item';
+        row.innerHTML = `<span class="shop-inv-item-name">${escapeHtml(item.name)}</span><span class="shop-inv-item-price">${item.price}\u20AC</span><span class="shop-inv-item-qty">${item.qty} kom</span><span class="shop-inv-item-value">${formatCurrency(item.value)}</span>`;
+        itemsDiv.appendChild(row);
+      }
+      
+      groupDiv.appendChild(itemsDiv);
+      container.appendChild(groupDiv);
+    }
+  }
+  
+  // Pending transfers section
+  const pending = appState.pendingTransfers || [];
+  if (pending.length > 0) {
+    pendingSection.classList.remove('hidden');
+    pendingCount.textContent = pending.length;
+    pendingList.innerHTML = '';
+    // Group pending by category
+    const pendingGroups = {};
+    for (const p of pending) {
+      const prod = appState.products[p.productId];
+      const catInfo = getCategoryItemInfo(p.shopCategory);
+      const key = p.shopCategory || '__unknown';
+      if (!pendingGroups[key]) pendingGroups[key] = { catName: catInfo ? catInfo.item.name : 'Nepoznato', items: [] };
+      pendingGroups[key].items.push({ name: prod?.name || '?', qty: p.qty });
+    }
+    for (const [key, g] of Object.entries(pendingGroups)) {
+      const section = document.createElement('div');
+      section.style.cssText = 'background:#ffffff;padding:6px 10px;font-size:13px;';
+      section.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${escapeHtml(g.catName)}</div>`;
+      for (const item of g.items) {
+        section.innerHTML += `<div style="padding-left:14px;color:#374151;">${escapeHtml(item.name)}: ${item.qty} kom</div>`;
+      }
+      pendingList.appendChild(section);
+    }
+  } else {
+    pendingSection.classList.add('hidden');
+  }
+}
+
+function getCategoryItemInfo(itemId) {
+  if (!itemId) return null;
+  for (const cat of (appState.shopCategories || [])) {
+    for (const item of (cat.items || [])) {
+      if (item.id === itemId) return { group: cat, item };
+    }
+  }
+  return null;
+}
+
+// ── Transfer from Warehouse ────────────────────────────────────
+
+function transferFromWarehouse() {
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  
+  // Folder tree
+  function renderTree(folderId, depth) {
+    const folder = appState.folders[folderId];
+    if (!folder) return '';
+    let html = '';
+    
+    // Products in this folder
+    for (const pid of (folder.products || [])) {
+      const p = appState.products[pid];
+      if (!p || Number(p.quantity || 0) <= 0) continue;
+      const catInfo = getCategoryItemInfo(p.shopCategory);
+      const catName = catInfo ? `${catInfo.group.name} / ${catInfo.item.name}` : '';
+      html += `<div class="transfer-product" data-pid="${pid}" style="padding:6px 8px 6px ${depth * 16 + 16}px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;margin:2px 0;">`;
+      html += `<span style="flex:1;font-size:14px;">${escapeHtml(p.name)}</span>`;
+      html += `<span style="color:#6b7280;font-size:12px;font-weight:600;">${Number(p.quantity || 0)} kom</span>`;
+      if (catName) html += `<span style="color:#0ea5e9;font-size:11px;background:#e0f2fe;padding:2px 6px;border-radius:4px;">${escapeHtml(catName)}</span>`;
+      html += `<span style="color:#9ca3af;font-size:12px;">${formatCurrency(Number(p.price || 0) * Number(p.quantity || 0))}</span>`;
+      html += '</div>';
+    }
+    
+    // Subfolders
+    for (const sfId of (folder.subfolders || [])) {
+      const sf = appState.folders[sfId];
+      if (!sf) continue;
+      const hasContent = (sf.products || []).some(pid => {
+        const p = appState.products[pid];
+        return p && Number(p.quantity || 0) > 0;
+      });
+      if (!hasContent && !(sf.subfolders || []).length) continue;
+      html += `<div class="transfer-folder" data-fid="${sfId}" style="padding:6px 8px 6px ${depth * 16}px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:14px;border-bottom:1px solid #f3f4f6;border-radius:6px;margin:2px 0;">`;
+      html += `<span style="color:#6b7280;">\u25B6</span>`;
+      html += `<span>${escapeHtml(sf.name)}</span>`;
+      html += `</div>`;
+      // Child products
+      html += `<div class="transfer-children" style="display:none;">${renderTree(sfId, depth + 1)}</div>`;
+    }
+    
+    return html;
+  }
+  
+  body.innerHTML = `<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite proizvod za prijenos:</div>` + renderTree(currentFolderId || 'root', 0);
+  
+  // Add click handlers
+  setTimeout(() => {
+    body.querySelectorAll('.transfer-folder').forEach(el => {
+      el.addEventListener('click', () => {
+        const children = el.nextElementSibling;
+        if (children && children.classList.contains('transfer-children')) {
+          const isHidden = children.style.display === 'none';
+          children.style.display = isHidden ? 'block' : 'none';
+          const arrow = el.querySelector('span:first-child');
+          if (arrow) arrow.textContent = isHidden ? '\u25BC' : '\u25B6';
+        }
+      });
+    });
+    
+    body.querySelectorAll('.transfer-product').forEach(el => {
+      el.addEventListener('click', () => {
+        const pid = el.dataset.pid;
+        if (!pid) return;
+        const p = appState.products[pid];
+        if (!p) return;
+        openTransferQtyModal(pid);
+      });
+    });
+  }, 0);
+  
+  openModal({
+    title: __('Transfer from Warehouse') || 'Prijenos iz skladišta',
+    headerIcon: { symbol: '\uD83D\uDCE6', color: 'blue' },
+    body,
+    actions: [
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+function openTransferQtyModal(productId) {
+  const p = appState.products[productId];
+  if (!p) return;
+  const maxQty = Number(p.quantity || 0);
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:12px;max-width:400px;';
+  
+  body.innerHTML = `
+    <div style="font-weight:700;font-size:16px;">${escapeHtml(p.name)}</div>
+    <div style="color:#6b7280;font-size:14px;">Dostupno u skladištu: <strong>${maxQty} kom</strong></div>
+    <label style="display:grid;gap:4px;">
+      <span style="font-weight:600;font-size:13px;">Količina za prijenos</span>
+      <input id="transfer-qty" type="number" min="1" max="${maxQty}" step="1" value="${Math.min(maxQty, 1)}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+    </label>
+    <label style="display:grid;gap:4px;">
+      <span style="font-weight:600;font-size:13px;">Kategorija prodaje</span>
+      <select id="transfer-category" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;"></select>
+    </label>
+    <div style="font-size:12px;color:#9ca3af;">Ako kategorija ne postoji, prvo je kreirajte u Postavke > Kategorije prodaje.</div>
+  `;
+  
+  // Populate categories
+  const select = body.querySelector('#transfer-category');
+  if (select) {
+    // Find current product category assignment
+    const currentCat = p.shopCategory;
+    let foundCurrent = false;
+    for (const cat of (appState.shopCategories || [])) {
+      for (const item of (cat.items || [])) {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
+        if (currentCat === item.id) { opt.selected = true; foundCurrent = true; }
+        select.appendChild(opt);
+      }
+    }
+    // Allow creating new - will be done via Settings
+  }
+  
+  openModal({
+    title: 'Prijenos u prodaju',
+    headerIcon: { symbol: '\uD83D\uDCE6', color: 'blue' },
+    body,
+    actions: [
+      { label: 'Dodaj u prijenos', onClick: () => {
+        const qty = parseInt(body.querySelector('#transfer-qty')?.value || '0', 10);
+        const catId = body.querySelector('#transfer-category')?.value || '';
+        if (qty <= 0 || qty > maxQty) { showToast('Neispravna količina'); return; }
+        if (!catId) { showToast('Odaberite kategoriju prodaje'); return; }
+        
+        // Decrease warehouse immediately
+        p.quantity = maxQty - qty;
+        
+        // Add to pending transfers
+        appState.pendingTransfers = appState.pendingTransfers || [];
+        appState.pendingTransfers.push({
+          productId,
+          qty,
+          shopCategory: catId,
+          addedAt: Date.now()
+        });
+        
+        // Log in history
+        recordInventoryEvent({
+          eventType: 'transfer_to_shop',
+          productId,
+          productName: p.name || 'Product',
+          delta: -qty,
+          price: Number(p.price || 0),
+          value: -qty * Number(p.price || 0),
+          source: 'transfer',
+          note: `Transferred ${qty} pc to shop`
+        });
+        
+        saveStateDebounced();
+        renderAll();
+        renderShopInventory();
+        showToast(`Preneseno ${qty} kom: ${p.name}`);
+        closeModal();
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+// ── Master Confirm / Decline ────────────────────────────────────
+
+function masterConfirm() {
+  const pending = appState.pendingTransfers || [];
+  if (!pending.length) { showToast('Nema transakcija za potvrditi'); return; }
+  
+  // Ask user what to do with document
+  openModal({
+    title: 'Potvrdi sve',
+    headerIcon: { symbol: '\u2705', color: 'green' },
+    size: 'small',
+    body: `Potvrđujete ${pending.length} transakcija. Želite li napraviti novi dokument ili ažurirati zadnji?`,
+    actions: [
+      { label: 'Novi dokument', onClick: () => {
+        executeConfirm('new');
+      }},
+      { label: 'Ažuriraj zadnji', onClick: () => {
+        executeConfirm('update');
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+function executeConfirm(docType) {
+  const pending = appState.pendingTransfers || [];
+  if (!pending.length) return;
+  
+  // Move pending to transferLog with master confirm date
+  const logEntry = {
+    id: uuid(),
+    date: new Date().toISOString(),
+    type: 'transfer',
+    items: pending.map(p => ({ productId: p.productId, qty: p.qty, shopCategory: p.shopCategory })),
+    masterConfirmDate: new Date().toISOString(),
+    documentId: uuid()
+  };
+  
+  appState.transferLog = appState.transferLog || [];
+  appState.transferLog.push(logEntry);
+  
+  // Save document
+  appState.documents = appState.documents || [];
+  const docItems = buildDocumentItems();
+  const doc = {
+    id: logEntry.documentId,
+    date: new Date().toISOString(),
+    type: docType,
+    items: docItems,
+    totalCount: docItems.reduce((s, i) => s + i.qty, 0)
+  };
+  appState.documents.push(doc);
+  
+  // Clear pending
+  appState.pendingTransfers = [];
+  
+  saveStateDebounced();
+  renderAll();
+  renderShopInventory();
+  
+  // Show document preview
+  showDocumentPreview(docItems, docType);
+}
+
+function buildDocumentItems() {
+  // Calculate current full shop inventory for the document
+  const inventory = calculateShopInventory();
+  const items = [];
+  for (const g of Object.values(inventory.byGroup)) {
+    for (const item of g.items) {
+      items.push({
+        name: item.name,
+        price: item.price,
+        qty: item.qty,
+        value: item.value
+      });
+    }
+  }
+  return items;
+}
+
+function declineAll() {
+  const pending = appState.pendingTransfers || [];
+  if (!pending.length) { showToast('Nema transakcija za odustati'); return; }
+  
+  const totalItems = pending.length;
+  
+  openModal({
+    title: 'Odustani od svega',
+    headerIcon: { symbol: '\u26A0', color: 'amber' },
+    size: 'small',
+    body: `Odustajete od ${totalItems} transakcija. Svi proizvodi će se vratiti u skladište. Nastaviti?`,
+    actions: [
+      { label: 'Odustani od svega', tone: 'danger', onClick: () => {
+        // Restore warehouse quantities
+        for (const p of pending) {
+          const prod = appState.products[p.productId];
+          if (prod) {
+            prod.quantity = Number(prod.quantity || 0) + p.qty;
+            // Log reversal in history
+            recordInventoryEvent({
+              eventType: 'transfer_reversal',
+              productId: p.productId,
+              productName: prod.name || 'Product',
+              delta: p.qty,
+              price: Number(prod.price || 0),
+              value: p.qty * Number(prod.price || 0),
+              source: 'transfer_reversal',
+              note: `Transfer of ${p.qty} pc was cancelled`
+            });
+          }
+        }
+        appState.pendingTransfers = [];
+        saveStateDebounced();
+        renderAll();
+        renderShopInventory();
+        showToast('Transakcije poništene, proizvodi vraćeni u skladište');
+        closeModal();
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+// ── In-Season Production ────────────────────────────────────────
+
+function openInSeasonProduction() {
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:10px;max-width:500px;';
+  
+  const today = new Date().toLocaleDateString('hr-HR');
+  body.innerHTML = `<div style="font-weight:700;font-size:15px;">Proizvodnja na licu mjesta - ${today}</div>`;
+  
+  const itemsContainer = document.createElement('div');
+  itemsContainer.style.cssText = 'display:grid;gap:6px;';
+  body.appendChild(itemsContainer);
+  
+  function addProductionRow() {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;padding:6px;background:#f9fafb;border-radius:8px;';
+    
+    const catSelect = document.createElement('select');
+    catSelect.style.cssText = 'flex:1;padding:6px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;';
+    catSelect.innerHTML = '<option value="">-- odaberite --</option>';
+    for (const cat of (appState.shopCategories || [])) {
+      for (const item of (cat.items || [])) {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
+        catSelect.appendChild(opt);
+      }
+    }
+    
+    const qtyInput = document.createElement('input');
+    qtyInput.type = 'number';
+    qtyInput.min = '1';
+    qtyInput.step = '1';
+    qtyInput.value = '1';
+    qtyInput.style.cssText = 'width:60px;padding:6px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;text-align:center;';
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '\u2715';
+    deleteBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:14px;padding:4px;';
+    deleteBtn.addEventListener('click', () => row.remove());
+    
+    row.appendChild(catSelect);
+    row.appendChild(qtyInput);
+    row.appendChild(deleteBtn);
+    itemsContainer.appendChild(row);
+  }
+  
+  // First row
+  addProductionRow();
+  
+  const addRowBtn = document.createElement('button');
+  addRowBtn.textContent = '+ Dodaj red';
+  addRowBtn.style.cssText = 'padding:8px 12px;border-radius:8px;border:1px dashed #0ea5e9;background:transparent;color:#0ea5e9;font-weight:700;font-size:13px;cursor:pointer;';
+  addRowBtn.addEventListener('click', addProductionRow);
+  body.appendChild(addRowBtn);
+  
+  openModal({
+    title: 'Proizvodnja na licu mjesta',
+    headerIcon: { symbol: '\uD83C\uDFF7', color: 'slate' },
+    size: 'large',
+    body,
+    actionsLayout: 'stack',
+    actions: [
+      { label: 'Dodaj u prodaju', onClick: () => {
+        const rows = itemsContainer.querySelectorAll('div[style*="flex"]');
+        const items = [];
+        for (const row of rows) {
+          const select = row.querySelector('select');
+          const qtyInput = row.querySelector('input[type="number"]');
+          if (!select || !qtyInput) continue;
+          const catId = select.value;
+          const qty = parseInt(qtyInput.value || '0', 10);
+          if (!catId || qty <= 0) continue;
+          items.push({ shopCategory: catId, qty });
+        }
+        
+        if (!items.length) { showToast('Dodajte barem jedan proizvod'); return; }
+        
+        // Save to onSiteProduction
+        const entry = {
+          id: uuid(),
+          date: new Date().toISOString(),
+          items,
+          addedToShop: true,
+          documentPrinted: false
+        };
+        appState.onSiteProduction = appState.onSiteProduction || [];
+        appState.onSiteProduction.push(entry);
+        
+        // Log in history
+        for (const item of items) {
+          const catInfo = getCategoryItemInfo(item.shopCategory);
+          const itemName = catInfo ? `${catInfo.group.name} ${catInfo.item.name}` : 'Unknown';
+          recordInventoryEvent({
+            eventType: 'onsite_production',
+            delta: item.qty,
+            price: catInfo ? catInfo.item.price : 0,
+            value: item.qty * (catInfo ? catInfo.item.price : 0),
+            source: 'onsite',
+            note: `On-site production: ${item.qty} x ${itemName}`
+          });
+        }
+        
+        saveStateDebounced();
+        renderShopInventory();
+        showToast('Proizvodi dodani u prodaju');
+        closeModal();
+        
+        // Ask about document
+        openModal({
+          title: 'Dokument',
+          size: 'small',
+          body: 'Želite li ispisati popis proizvodnje na licu mjesta ili ažurirati glavni popis za inspekciju?',
+          actions: [
+            { label: 'Ispišite popis', onClick: () => {
+              const docItems = items.map(item => {
+                const info = getCategoryItemInfo(item.shopCategory);
+                return { name: info ? `${info.group.name} ${info.item.name}` : '?', price: info ? info.item.price : 0, qty: item.qty, value: item.qty * (info ? info.item.price : 0) };
+              });
+              showDocumentPreview(docItems, 'onsite', 'Popis izrađenih proizvoda na prodajnom mjestu');
+              closeModal();
+            }},
+            { label: 'Ažuriraj glavni popis', onClick: () => {
+              const docItems = buildDocumentItems();
+              showDocumentPreview(docItems, 'update');
+              closeModal();
+            }},
+            { label: 'Zatvori', tone: 'secondary' }
+          ]
+        });
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+// ── Return from Shop ────────────────────────────────────────────
+
+function returnFromShop() {
+  const inventory = calculateShopInventory();
+  const groups = inventory.byGroup;
+  const groupIds = Object.keys(groups);
+  
+  if (!groupIds.length) { showToast('Prodaja je prazna, nema proizvoda za povrat'); return; }
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  body.innerHTML = '<div style="font-weight:600;font-size:14px;color:#374151;">Odaberite proizvode za povrat u skladište:</div>';
+  
+  const returnData = {}; // { productName: { itemId, maxQty, input } }
+  
+  for (const gId of groupIds) {
+    const group = groups[gId];
+    const groupDiv = document.createElement('div');
+    groupDiv.style.cssText = 'background:#f9fafb;border-radius:8px;padding:6px;margin-bottom:6px;';
+    groupDiv.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:4px;">${escapeHtml(group.name)}</div>`;
+    
+    for (const item of group.items) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;';
+      row.innerHTML = `
+        <span style="flex:1;font-size:13px;">${escapeHtml(item.name)}</span>
+        <span style="color:#6b7280;font-size:12px;">${item.qty} kom</span>
+        <input class="return-qty" type="number" min="0" max="${item.qty}" step="1" value="${item.qty}" style="width:60px;padding:4px 6px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;text-align:center;" />
+      `;
+      groupDiv.appendChild(row);
+      
+      returnData[item.itemId] = { maxQty: item.qty };
+    }
+    
+    body.appendChild(groupDiv);
+  }
+  
+  openModal({
+    title: 'Povrat iz prodaje',
+    headerIcon: { symbol: '\uD83D\uDD04', color: 'blue' },
+    body,
+    actions: [
+      { label: 'Potvrdi povrat', onClick: () => {
+        const inputs = body.querySelectorAll('.return-qty');
+        const returns = [];
+        let idx = 0;
+        for (const gId of groupIds) {
+          const group = groups[gId];
+          for (const item of group.items) {
+            const input = inputs[idx];
+            const qty = parseInt(input?.value || '0', 10);
+            if (qty > 0 && qty <= item.qty) {
+              returns.push({ itemId: item.itemId, name: item.name, qty, price: item.price });
+            }
+            idx++;
+          }
+        }
+        
+        if (!returns.length) { showToast('Odaberite količinu za povrat'); return; }
+        
+        // Find which productIds map to these categories so we can restore warehouse
+        for (const ret of returns) {
+          // Find products with this shopCategory
+          for (const p of Object.values(appState.products)) {
+            if (!p) continue;
+            if (p.shopCategory === ret.itemId) {
+              // Restore warehouse
+              p.quantity = Number(p.quantity || 0) + ret.qty;
+            }
+          }
+        }
+        
+        // Log the return
+        appState.returnLog = appState.returnLog || [];
+        appState.returnLog.push({
+          id: uuid(),
+          date: new Date().toISOString(),
+          items: returns.map(r => ({ shopCategory: r.itemId, qty: r.qty, name: r.name }))
+        });
+        
+        // Log in history
+        for (const ret of returns) {
+          recordInventoryEvent({
+            eventType: 'return_from_shop',
+            delta: ret.qty,
+            price: ret.price,
+            value: ret.qty * ret.price,
+            source: 'return',
+            note: `Returned ${ret.qty} x ${ret.name} from shop to warehouse`
+          });
+        }
+        
+        saveStateDebounced();
+        renderAll();
+        renderShopInventory();
+        showToast('Povrat završen');
+        closeModal();
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+// ── Document Preview ────────────────────────────────────────────
+
+function showDocumentPreview(items, docType, customTitle) {
+  const preview = document.getElementById('doc-preview');
+  const body = document.getElementById('doc-preview-body');
+  if (!preview || !body) return;
+  
+  const co = appState.companyInfo || {};
+  const date = new Date().toLocaleDateString('hr-HR');
+  const title = customTitle || (docType === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu');
+  
+  let tableRows = '';
+  for (const item of items) {
+    tableRows += `<tr><td>${escapeHtml(item.name)}</td><td style="text-align:right;">${item.price}\u20AC</td><td style="text-align:right;">${item.qty} kom</td></tr>`;
+  }
+  
+  const totalQty = items.reduce((s, i) => s + i.qty, 0);
+  
+  body.innerHTML = `
+    <div class="doc-a4">
+      <div class="doc-header">
+        <div class="doc-company">${escapeHtml(co.name || '')}</div>
+        <div class="doc-info">${escapeHtml(co.address || '')}</div>
+        <div class="doc-info">OIB: ${escapeHtml(co.oib || '')}</div>
+        <div class="doc-info">${escapeHtml(co.phone || '')} ${co.email ? '| ' + escapeHtml(co.email) : ''}</div>
+      </div>
+      <div class="doc-title">${escapeHtml(title)}</div>
+      <div class="doc-date">Datum: ${date}</div>
+      <table class="doc-table">
+        <thead><tr><th>Proizvod</th><th style="text-align:right;">Cijena</th><th style="text-align:right;">Količina</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+        <tfoot><tr class="doc-total"><td>Ukupno</td><td></td><td style="text-align:right;">${totalQty} kom</td></tr></tfoot>
+      </table>
+      <div class="doc-footer">Dokument generiran aplikacijom Murano Product Manager</div>
+    </div>
+  `;
+  
+  preview.classList.remove('hidden');
+  
+  document.getElementById('doc-print-btn').onclick = () => window.print();
+  document.getElementById('doc-preview-back').onclick = () => {
+    preview.classList.add('hidden');
+    // If was master confirm, go back to shop
+    if (docType === 'new' || docType === 'update') {
+      openShopPage();
+    }
+  };
+  document.getElementById('doc-new-btn').onclick = () => {
+    preview.classList.add('hidden');
+    // Generate as new document
+    const newDoc = {
+      id: uuid(),
+      date: new Date().toISOString(),
+      type: 'new',
+      items,
+      totalCount: totalQty
+    };
+    appState.documents = appState.documents || [];
+    appState.documents.push(newDoc);
+    saveStateDebounced();
+    showToast('Novi dokument spremljen');
+  };
+  document.getElementById('doc-update-btn').onclick = () => {
+    preview.classList.add('hidden');
+    // Update last document
+    const docs = appState.documents || [];
+    if (docs.length > 0) {
+      docs[docs.length - 1] = {
+        ...docs[docs.length - 1],
+        date: new Date().toISOString(),
+        items,
+        totalCount: totalQty
+      };
+    } else {
+      docs.push({ id: uuid(), date: new Date().toISOString(), type: 'update', items, totalCount: totalQty });
+    }
+    saveStateDebounced();
+    showToast('Dokument ažuriran');
+  };
+}
+
+// ── Season Management ────────────────────────────────────────────
+
+function setSeasonStart() {
+  const snapshot = {};
+  for (const [id, p] of Object.entries(appState.products || {})) {
+    if (p) snapshot[id] = Number(p.quantity || 0);
+  }
+  appState.season = {
+    startDate: new Date().toISOString(),
+    snapshot
+  };
+  saveStateDebounced();
+  showToast('Početak sezone postavljen');
+}
+
+function showEndSeasonReport() {
+  if (!appState.season?.startDate || !appState.season?.snapshot) {
+    showToast('Prvo postavite početak sezone');
+    return;
+  }
+  
+  const reportDiv = document.createElement('div');
+  reportDiv.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  
+  const startSnapshot = appState.season.snapshot;
+  const startDate = new Date(appState.season.startDate).toLocaleDateString('hr-HR');
+  
+  reportDiv.innerHTML = `<div style="font-weight:700;font-size:15px;padding:4px 0;">Izvještaj sezone</div><div style="color:#6b7280;font-size:13px;">Početak: ${startDate}</div><div style="color:#6b7280;font-size:13px;">Kraj: ${new Date().toLocaleDateString('hr-HR')}</div><hr style="border:none;border-top:1px solid #e5e7eb;">`;
+  
+  for (const [id, p] of Object.entries(appState.products || {})) {
+    if (!p) continue;
+    const startQty = startSnapshot[id] || 0;
+    if (startQty === 0 && Number(p.quantity || 0) === 0) continue;
+    
+    // Calculate produced
+    let produced = 0;
+    for (const entry of (appState.productionLog || [])) {
+      if (entry.productId === id && 
+          (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') &&
+          new Date(entry.ts || entry.date || 0) >= new Date(appState.season.startDate)) {
+        produced += Number(entry.delta > 0 ? entry.delta : 0);
+      }
+    }
+    
+    // Calculate transferred
+    let transferred = 0;
+    for (const t of (appState.transferLog || [])) {
+      if (t.masterConfirmDate) {
+        for (const item of (t.items || [])) {
+          if (item.productId === id) transferred += item.qty;
+        }
+      }
+    }
+    
+    // Calculate returned
+    let returned = 0;
+    for (const r of (appState.returnLog || [])) {
+      for (const item of (r.items || [])) {
+        const catInfo = getCategoryItemInfo(item.shopCategory);
+        if (catInfo) {
+          // Map return by category back to product
+          for (const [pid, prod] of Object.entries(appState.products || {})) {
+            if (prod && prod.shopCategory === item.shopCategory && pid === id) {
+              returned += item.qty;
+            }
+          }
+        }
+      }
+    }
+    
+    const currentQty = Number(p.quantity || 0);
+    const sold = startQty + produced - transferred + returned - currentQty;
+    
+    if (sold === 0 && transferred === 0 && produced === 0) continue;
+    
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#f9fafb;border-radius:8px;padding:8px;font-size:13px;';
+    card.innerHTML = `
+      <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(p.name)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;color:#374151;">
+        <span>Početak sezone:</span><span style="text-align:right;font-weight:600;">${startQty} kom</span>
+        <span>+ Proizvedeno:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${produced} kom</span>
+        <span>- Preneseno u prodaju:</span><span style="text-align:right;font-weight:600;color:#dc2626;">-${transferred} kom</span>
+        <span>+ Vraćeno iz prodaje:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${returned} kom</span>
+        <span style="border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;">= Prodano (izračunato):</span><span style="text-align:right;border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;color:#2563eb;">${sold} kom</span>
+        <span style="padding-top:2px;">Ostalo u skladištu:</span><span style="text-align:right;font-weight:600;padding-top:2px;">${currentQty} kom</span>
+      </div>
+    `;
+    reportDiv.appendChild(card);
+  }
+  
+  // Per-category summary
+  reportDiv.innerHTML += '<hr style="border:none;border-top:1px solid #e5e7eb;"><div style="font-weight:700;font-size:14px;">Po kategorijama:</div>';
+  for (const cat of (appState.shopCategories || [])) {
+    const catItems = cat.items || [];
+    let catSold = 0;
+    for (const item of catItems) {
+      // Calculate sold across all products in this category
+      for (const [id, p] of Object.entries(appState.products || {})) {
+        if (p && p.shopCategory === item.id) {
+          const startQty = startSnapshot[id] || 0;
+          let produced = 0;
+          for (const entry of (appState.productionLog || [])) {
+            if (entry.productId === id && 
+                (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') &&
+                new Date(entry.ts || entry.date || 0) >= new Date(appState.season.startDate)) {
+              produced += Number(entry.delta > 0 ? entry.delta : 0);
+            }
+          }
+          let transferred = 0;
+          for (const t of (appState.transferLog || [])) {
+            if (t.masterConfirmDate) {
+              for (const ti of (t.items || [])) {
+                if (ti.productId === id) transferred += ti.qty;
+              }
+            }
+          }
+          let returned = 0;
+          for (const r of (appState.returnLog || [])) {
+            for (const ri of (r.items || [])) {
+              if (p.shopCategory === ri.shopCategory) returned += ri.qty;
+            }
+          }
+          const currentQty = Number(p.quantity || 0);
+          catSold += startQty + produced - transferred + returned - currentQty;
+        }
+      }
+    }
+    if (catSold === 0) continue;
+    reportDiv.innerHTML += `<div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:13px;background:#ffffff;border-radius:6px;"><span>${escapeHtml(cat.name)}</span><span style="font-weight:700;">Ukupno prodano: ${catSold} kom</span></div>`;
+  }
+  
+  openModal({
+    title: 'Izvještaj sezone',
+    headerIcon: { symbol: '\uD83D\uDCCA', color: 'blue' },
+    size: 'large',
+    body: reportDiv,
+    actions: [
+      { label: __('Close'), tone: 'secondary' }
+    ]
+  });
+}
+
+// ── # Test Data System ──────────────────────────────────────────
+
+function deleteTestData() {
+  // Find all test products (name starts with #)
+  const testProductIds = [];
+  const testFolderIds = [];
+  
+  for (const [id, p] of Object.entries(appState.products || {})) {
+    if (p && p.name && p.name.startsWith('#')) {
+      testProductIds.push(id);
+    }
+  }
+  
+  for (const [id, f] of Object.entries(appState.folders || {})) {
+    if (f && f.name && f.name.startsWith('#')) {
+      testFolderIds.push(id);
+    }
+  }
+  
+  const totalTestProducts = testProductIds.length;
+  const totalTestFolders = testFolderIds.length;
+  
+  if (!totalTestProducts && !totalTestFolders) {
+    showToast('Nema testnih podataka za brisanje');
+    return;
+  }
+  
+  // Count history entries
+  let historyCount = 0;
+  for (const entry of (appState.productionLog || [])) {
+    if (testProductIds.includes(entry.productId)) historyCount++;
+  }
+  
+  // Count transfer entries
+  let transferCount = 0;
+  for (const t of (appState.transferLog || [])) {
+    for (const item of (t.items || [])) {
+      if (testProductIds.includes(item.productId)) { transferCount++; break; }
+    }
+  }
+  
+  openModal({
+    title: 'Izbriši testne podatke',
+    headerIcon: { symbol: '\u26A0', color: 'red' },
+    size: 'small',
+    body: `Pronađeno: ${totalTestProducts} testnih proizvoda, ${totalTestFolders} testnih mapa, ${historyCount} zapisa povijesti, ${transferCount} prijenosa. Izbrisati sve bez traga?`,
+    actions: [
+      { label: 'Izbriši sve', tone: 'danger', onClick: () => {
+        // Delete test products
+        for (const id of testProductIds) {
+          delete appState.products[id];
+          // Remove from folder product lists
+          for (const f of Object.values(appState.folders)) {
+            if (f) f.products = (f.products || []).filter(pid => pid !== id);
+          }
+        }
+        
+        // Delete test folders recursively
+        const allTestFolderIds = new Set(testFolderIds);
+        // Also find subfolders of test folders
+        for (const fid of testFolderIds) {
+          collectSubfolderIds(fid, allTestFolderIds);
+        }
+        
+        for (const fid of allTestFolderIds) {
+          const f = appState.folders[fid];
+          if (f) {
+            // Remove any test products inside
+            for (const pid of (f.products || [])) {
+              delete appState.products[pid];
+            }
+            delete appState.folders[fid];
+            // Remove from parent
+            if (f.parentId && appState.folders[f.parentId]) {
+              appState.folders[f.parentId].subfolders = (appState.folders[f.parentId].subfolders || []).filter(sf => sf !== fid);
+            }
+          }
+        }
+        
+        // Delete history entries for test products
+        appState.productionLog = (appState.productionLog || []).filter(entry => !testProductIds.includes(entry.productId));
+        
+        // Delete transfer log entries for test products
+        appState.transferLog = (appState.transferLog || []).filter(t => {
+          return !(t.items || []).some(item => testProductIds.includes(item.productId));
+        });
+        
+        // Clear pending transfers for test products
+        appState.pendingTransfers = (appState.pendingTransfers || []).filter(p => !testProductIds.includes(p.productId));
+        
+        // Delete on-site production entries referencing test products
+        appState.onSiteProduction = (appState.onSiteProduction || []).filter(o => {
+          return true; // Keep on-site entries, they reference categories not products
+        });
+        
+        saveStateDebounced();
+        renderAll();
+        showToast('Testni podaci izbrisani');
+        closeModal();
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+function collectSubfolderIds(folderId, set) {
+  const f = appState.folders[folderId];
+  if (!f) return;
+  for (const sfId of (f.subfolders || [])) {
+    set.add(sfId);
+    collectSubfolderIds(sfId, set);
+  }
+}
+
+function escapeHtml(str) {
+  if (typeof str !== 'string') return String(str || '');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 // ---------------------------- Event Wiring ----------------------------
 document.addEventListener('DOMContentLoaded', async () => {
   clearAllCookies();
@@ -4803,6 +5887,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (importFileEl) importFileEl.addEventListener('change', (e) => { const f = e.target.files?.[0]; if (f) importState(f); e.target.value = ''; });
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+  
+  // Shop page event wiring
+  const shopBtn = document.getElementById('shop-btn');
+  if (shopBtn) shopBtn.addEventListener('click', openShopPage);
+  const shopBackBtn = document.getElementById('shop-back');
+  if (shopBackBtn) shopBackBtn.addEventListener('click', closeShopPage);
+  const shopTransferBtn = document.getElementById('shop-transfer-btn');
+  if (shopTransferBtn) shopTransferBtn.addEventListener('click', transferFromWarehouse);
+  const shopOnsiteBtn = document.getElementById('shop-onsite-btn');
+  if (shopOnsiteBtn) shopOnsiteBtn.addEventListener('click', openInSeasonProduction);
+  const shopReturnBtn = document.getElementById('shop-return-btn');
+  if (shopReturnBtn) shopReturnBtn.addEventListener('click', returnFromShop);
+  const shopConfirmBtn = document.getElementById('shop-confirm-btn');
+  if (shopConfirmBtn) shopConfirmBtn.addEventListener('click', masterConfirm);
+  const shopDeclineBtn = document.getElementById('shop-decline-btn');
+  if (shopDeclineBtn) shopDeclineBtn.addEventListener('click', declineAll);
+  // Season management buttons (added to Settings)
+  const seasonStartBtn = document.getElementById('season-start-btn');
+  if (seasonStartBtn) seasonStartBtn.addEventListener('click', setSeasonStart);
+  const seasonReportBtn = document.getElementById('season-report-btn');
+  if (seasonReportBtn) seasonReportBtn.addEventListener('click', showEndSeasonReport);
+  const testDataBtn = document.getElementById('test-data-btn');
+  if (testDataBtn) testDataBtn.addEventListener('click', deleteTestData);
+  
   const historyBackBtn = document.getElementById('history-back');
   if (historyBackBtn) historyBackBtn.addEventListener('click', closeHistoryPage);
   const historySearch = document.getElementById('history-search');

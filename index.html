@@ -28,6 +28,7 @@
       </div>
     </div>
     <div class="right">
+      <button id="shop-btn" class="btn-shop" type="button" title="Shop/Prodaja">Prodaja</button>
       <button id="settings-btn" title="Settings" type="button"><img src="./assets/setting.png" alt="Settings" class="icon"/></button>
       <button id="search-toggle" class="btn-search" title="Search" type="button"><img src="./assets/magnifying-glass.png" alt="Search" class="icon"/></button>
     </div>
@@ -200,6 +201,53 @@
         </div>
       </form>
     </div>
+  </div>
+
+  <!-- Shop Page (overlay) -->
+  <div id="shop-page" class="hidden">
+    <div class="shop-header">
+      <div class="shop-left">
+        <button id="shop-back" class="shop-back" type="button">← <span data-i18n="Back">Back</span></button>
+      </div>
+      <div class="shop-title">Prodaja</div>
+      <div class="shop-spacer"></div>
+    </div>
+    <div class="shop-content">
+      <div class="shop-inv-header">
+        <span class="shop-inv-title">Trenutno u prodaji</span>
+      </div>
+      <div id="shop-inventory" class="shop-inventory"></div>
+      <div class="shop-actions">
+        <button id="shop-transfer-btn" class="shop-action-btn primary" type="button">Prijenos iz skladišta</button>
+        <button id="shop-onsite-btn" class="shop-action-btn" type="button">Proizvodnja na licu mjesta</button>
+        <button id="shop-return-btn" class="shop-action-btn" type="button">Povrat iz prodaje</button>
+      </div>
+      <div id="shop-pending" class="shop-pending hidden">
+        <div class="shop-pending-header">
+          <span class="shop-pending-title">Čeka potvrdu</span>
+          <span id="shop-pending-count" class="shop-pending-count">0</span>
+        </div>
+        <div id="shop-pending-list" class="shop-pending-list"></div>
+        <div class="shop-pending-actions">
+          <button id="shop-confirm-btn" class="shop-action-btn primary" type="button">Potvrdi sve</button>
+          <button id="shop-decline-btn" class="shop-action-btn danger" type="button">Odustani od svega</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Preview (PDF overlay) -->
+  <div id="doc-preview" class="hidden">
+    <div class="doc-preview-header">
+      <button id="doc-preview-back" type="button">← <span data-i18n="Back">Back</span></button>
+      <span class="doc-preview-title">Pregled dokumenta</span>
+      <div class="doc-preview-actions">
+        <button id="doc-print-btn" type="button">Ispiš</button>
+        <button id="doc-new-btn" type="button">Novi dokument</button>
+        <button id="doc-update-btn" type="button">Ažuriraj zadnji</button>
+      </div>
+    </div>
+    <div id="doc-preview-body" class="doc-preview-body"></div>
   </div>
 
   <!-- Modal -->
