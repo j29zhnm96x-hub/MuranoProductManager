@@ -36,8 +36,13 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 @keyframes warning-icon-blink-inverse { from { opacity: 1; } to { opacity: 0.1; } }
 @keyframes warning-button-blink { from { opacity: 1; } to { opacity: 0.1; } }
 
-#breadcrumbs { margin: 10px 12px; color: #6b7280; font-size: 14px; font-weight: 700; }
+#breadcrumbs { color: #6b7280; font-size: 14px; font-weight: 700; }
 #breadcrumbs .sep { margin: 0 6px; }
+#breadcrumb-line { display: flex; align-items: center; gap: 8px; margin: 10px 12px; }
+#breadcrumb-line #breadcrumbs { flex: 1; margin: 0; }
+.breadcrumb-search { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.breadcrumb-search .icon { width: 18px; height: 18px; display: block; }
+.breadcrumb-search:hover { background: #f3f4f6; border-radius: 6px; }
 #stats-bar { margin: 0 12px 4px; }
 .stats-bar-inner { display: flex; flex-wrap: nowrap; gap: 4px; align-items: stretch; overflow-x: auto; padding-bottom: 4px; }
 .sb-item { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 56px; text-align: center; white-space: nowrap; flex: 0 0 auto; width: max-content; }
