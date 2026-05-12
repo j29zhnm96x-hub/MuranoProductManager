@@ -3722,23 +3722,13 @@ function renderFolderList(folderId = currentFolderId) {
 
       const itemRemain = document.createElement('div');
       itemRemain.className = 'sb-item sb-daily';
-      const goalReached = addedToday >= fixedDailyGoal;
-      const goalLabel = goalReached ? __('Produced today') : __('Daily goal');
-      const goalValue = goalReached ? formatCurrency(addedToday) : formatCurrency(fixedDailyGoal);
-      itemRemain.innerHTML = `
-        <div class="sb-col">
-          <div class="sb-k">${goalLabel}</div>
-          <div class="sb-v">${goalValue}</div>
-        </div>
-        <div class="sb-col">
-          <div class="sb-k sb-bad">${__('To do')}</div>
-          <div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div>
-        </div>
-        ${extraToday>0?`<div class="sb-col">
-          <div class="sb-k sb-good">${__('Extra')}</div>
-          <div class="sb-v sb-good">+${formatCurrency(extraToday)}</div>
-        </div>`:''}
-      `;
+      if (addedToday === 0) {
+        itemRemain.innerHTML = `<div class="sb-col"><div class="sb-k">${__('Daily goal')}</div><div class="sb-v">${formatCurrency(fixedDailyGoal)}</div></div>`;
+      } else if (addedToday < fixedDailyGoal) {
+        itemRemain.innerHTML = `<div class="sb-col"><div class="sb-k sb-bad">${__('To do')}</div><div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div></div>`;
+      } else {
+        itemRemain.innerHTML = `<div class="sb-col"><div class="sb-v sb-good" style="font-size:16px;">+${formatCurrency(extraToday)}</div></div>`;
+      }
       wrap.appendChild(itemRemain);
     }
 
