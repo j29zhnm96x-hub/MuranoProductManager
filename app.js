@@ -3,7 +3,7 @@ const LANG = {
   hr: {
     'Home': 'Početna', 'Save': 'Spremi', 'Actions': 'Akcije',
     'Settings': 'Postavke', 'Search': 'Traži', 'Back': 'Natrag',
-    'Top': 'Vrh', 'Edit': 'Uredi', 'Delete': 'Izbriši',
+    'Top': 'Na vrh', 'Edit': 'Uredi', 'Delete': 'Izbriši',
     'Cancel': 'Odustani', 'Confirm': 'Potvrdi', 'Close': 'Zatvori',
     'Add': 'Dodaj', 'Remove': 'Ukloni',
     'Daily goal': 'Dnevni cilj', 'To do': 'Preostalo',
@@ -16,8 +16,8 @@ const LANG = {
     'Qty:': 'Kol.:', 'More': 'Više',
     'Dynamic Component': 'Dinamička komp.',
     'Has note': 'Bilješka',
-    'Inventory History': 'Povijest stanja',
-    'Stock History': 'Povijest stanja',
+    'Inventory History': 'Povijest proizvodnje',
+    'Stock History': 'Povijest proizvodnje',
     'Search product, event or note...': 'Traži proizvod, događaj...',
     'Today': 'Danas', 'All dates': 'Svi datumi',
     'Day': 'Dan', 'Week': 'Tjedan', 'Month': 'Mjesec',
@@ -1387,7 +1387,7 @@ function buildModalMenuHeader(iconText, title, subtitle = 'Select an action') {
 function openActionsMenu() {
   openModal({
     title: __('Actions'),
-    body: buildModalMenuHeader('\u2699', __('Actions'), 'Import, export, history and more.'),
+    body: buildModalMenuHeader('\u2699', __('Actions'), ''),
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
@@ -3688,7 +3688,7 @@ function renderBreadcrumbs() {
     const f = appState.folders[fid];
     const span = document.createElement('span');
     span.className = 'crumb';
-    span.textContent = f?.name || __('Unknown');
+    span.textContent = (fid === 'root') ? __('Home') : (f?.name || __('Unknown'));
     span.addEventListener('click', () => {
       currentFolderId = fid;
       renderAll();
@@ -3756,7 +3756,7 @@ function renderFolderList(folderId = currentFolderId) {
     }
 
     // Finally totals: Qty and Value
-    const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">${__('Total Qty')}</div><div class="sb-v">${stats.totalQty} pc</div>`;
+    const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">${__('Total Qty')}</div><div class="sb-v">${stats.totalQty} ${__('pc')}</div>`;
     const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">${__('Total Value')}</div><div class="sb-v">${formatCurrency(stats.totalValue)}</div>`;
     wrap.appendChild(itemQty); wrap.appendChild(itemVal);
 
