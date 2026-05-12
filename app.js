@@ -2609,6 +2609,8 @@ function showToast(message, timeout = 3000) {
 function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout = 'row', bodyClassName = '', headerIcon = null, size = '' } = {}) {
   modalStack++;
   document.body.style.overflow = 'hidden';
+  // Clean up any leftover language select from Settings
+  document.querySelector('.modal-header-lang')?.remove();
   const modal = document.getElementById('modal');
   const titleEl = document.getElementById('modal-title');
   const bodyEl = document.getElementById('modal-body');
@@ -5569,6 +5571,47 @@ function showDocumentPreview(items, docType, customTitle) {
   };
 }
 
+// ── Document List ────────────────────────────────────────────────
+
+function openDocumentList() {
+  const docs = appState.documents || [];
+  
+  if (!docs.length) {
+    showToast('Nema spremljenih dokumenata');
+    return;
+  }
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:6px;max-height:60vh;overflow:auto;';
+  
+  for (let i = docs.length - 1; i >= 0; i--) {
+    const doc = docs[i];
+    const d = new Date(doc.date).toLocaleDateString('hr-HR') + ' ' + new Date(doc.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+    const typeLabel = doc.type === 'onsite' ? 'Proizvodnja na mjestu' : (doc.type === 'new' ? 'Novi dokument' : 'Ažurirani dokument');
+    
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;';
+    card.innerHTML = `
+      <span style="flex:1;font-size:14px;"><strong>${typeLabel}</strong> &mdash; ${d}</span>
+      <span style="color:#6b7280;font-size:13px;">${doc.totalCount} kom</span>
+    `;
+    card.addEventListener('click', () => {
+      const items = (doc.items || []).map(i => ({ name: i.name, price: i.price || 0, qty: i.qty || 0, value: (i.price || 0) * (i.qty || 0) }));
+      showDocumentPreview(items, doc.type);
+    });
+    body.appendChild(card);
+  }
+  
+  openModal({
+    title: 'Spremljeni dokumenti',
+    headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+    body,
+    actions: [
+      { label: __('Close'), tone: 'secondary' }
+    ]
+  });
+}
+
 // ── Season Management ────────────────────────────────────────────
 
 function showEndSeasonReport() {
@@ -5616,15 +5659,12 @@ function showEndSeasonReport() {
       }
     }
     
-    // Calculate transferred during season
+    // Calculate transferred (all time)
     let transferred = 0;
     for (const t of (appState.transferLog || [])) {
       if (t.masterConfirmDate) {
-        const transferDate = new Date(t.date || 0);
-        if (!isNaN(transferDate.getTime()) && transferDate >= seasonStart) {
-          for (const item of (t.items || [])) {
-            if (item.productId === id) transferred += item.qty;
-          }
+        for (const item of (t.items || [])) {
+          if (item.productId === id) transferred += item.qty;
         }
       }
     }
@@ -5853,6 +5893,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (shopOnsiteBtn) shopOnsiteBtn.addEventListener('click', openInSeasonProduction);
   const shopReturnBtn = document.getElementById('shop-return-btn');
   if (shopReturnBtn) shopReturnBtn.addEventListener('click', returnFromShop);
+  const shopDocsBtn = document.getElementById('shop-docs-btn');
+  if (shopDocsBtn) shopDocsBtn.addEventListener('click', openDocumentList);
   const shopConfirmBtn = document.getElementById('shop-confirm-btn');
   if (shopConfirmBtn) shopConfirmBtn.addEventListener('click', masterConfirm);
   const shopDeclineBtn = document.getElementById('shop-decline-btn');
