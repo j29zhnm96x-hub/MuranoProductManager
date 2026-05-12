@@ -2599,6 +2599,8 @@ function showToast(message, timeout = 3000) {
 }
 
 function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout = 'row', bodyClassName = '', headerIcon = null, size = '' } = {}) {
+  modalStack++;
+  document.body.style.overflow = 'hidden';
   const modal = document.getElementById('modal');
   const titleEl = document.getElementById('modal-title');
   const bodyEl = document.getElementById('modal-body');
@@ -2667,7 +2669,12 @@ function openModal({ title = 'Confirm', body = '', actions = [], actionsLayout =
   });
   modal.classList.remove('hidden');
 }
-function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+let modalStack = 0;
+function closeModal() {
+  modalStack = Math.max(0, modalStack - 1);
+  document.getElementById('modal').classList.add('hidden');
+  if (modalStack === 0) document.body.style.overflow = '';
+}
 
 function setSyncStatus(status) {
   const el = document.getElementById('sync-status');
@@ -5577,7 +5584,7 @@ function setSeasonStart() {
     snapshot
   };
   saveStateDebounced();
-  showToast('Početak sezone postavljen');
+  showToast('Početak sezone postavljen', 5000);
 }
 
 function showEndSeasonReport() {
