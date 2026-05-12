@@ -1390,14 +1390,6 @@ function openActionsMenu() {
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
-      { label: '\uD83D\uDCBE  ' + __('Save (snapshot + cloud)'), onClick: async () => {
-          if (modified) {
-            showToast(__('Saving...'));
-            processSaveQueue();
-          } else {
-            showToast(__('No changes to save'));
-          }
-        } },
       { label: '\uD83D\uDCCA  ' + __('Stock History'), onClick: () => openHistoryPage() },
       { label: '\u2B07  ' + __('Import JSON'), onClick: () => { document.getElementById('import-file').click(); } },
       { label: '\u2B06  ' + __('Export JSON'), onClick: () => { exportState(); } },
