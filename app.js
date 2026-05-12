@@ -2550,6 +2550,9 @@ function openSettings() {
   
   // ── Inject language select into modal header ───────────────
   const headerEl = document.querySelector('.modal-header');
+  // Remove any existing language select first
+  const oldLangSel = headerEl?.querySelector('.modal-header-lang');
+  if (oldLangSel) oldLangSel.remove();
   const closeBtn = document.getElementById('modal-close');
   if (headerEl && closeBtn) {
     const langSel = document.createElement('select');

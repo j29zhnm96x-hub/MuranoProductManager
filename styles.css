@@ -227,7 +227,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 /* ── Modal Action Buttons ────────────────────────────────────── */
 .modal-actions { display: flex; gap: 10px; padding: 14px 18px 18px; border-top: 1px solid #edf2f7; justify-content: flex-end; flex-wrap: wrap; background: #ffffff; }
 .modal-actions:empty { display: none; padding: 0; border-top: 0; }
-.modal-actions button { min-height: 48px; padding: 12px 20px; border-radius: 12px; border: 1px solid #0ea5e9; background: #0ea5e9; color: #ffffff; font-weight: 700; font-size: 15px; letter-spacing: 0.01em; transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease; box-shadow: 0 8px 18px rgba(14, 165, 233, 0.18); touch-action: manipulation; }
+.modal-actions button { min-height: 38px; padding: 8px 16px; border-radius: 10px; border: 1px solid #0ea5e9; background: #0ea5e9; color: #ffffff; font-weight: 700; font-size: 13px; letter-spacing: 0.01em; transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease; box-shadow: 0 6px 12px rgba(14, 165, 233, 0.15); touch-action: manipulation; }
 .modal-actions button:hover { transform: translateY(-1px); box-shadow: 0 12px 22px rgba(14, 165, 233, 0.22); }
 .modal-actions button:active { transform: translateY(0); }
 .modal-actions button.secondary { background: #ffffff; border-color: #cbd5e1; color: #334155; box-shadow: none; }
@@ -241,8 +241,8 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 .modal-actions.stacked button.danger { background: #fff5f5; border-color: #fecaca; color: #b91c1c; box-shadow: 0 8px 18px rgba(239, 68, 68, 0.08); }
 
 @media (max-width: 768px) {
-  .modal-actions { display: grid; }
-  .modal-actions button { min-height: 52px; padding: 14px 20px; width: 100%; justify-content: center; font-size: 16px; }
+  .modal-actions { display: flex; gap: 6px; }
+  .modal-actions button { min-height: 40px; padding: 8px 12px; font-size: 13px; flex: 1; }
   .modal-actions.stacked button { padding: 14px 18px; }
 }
 
