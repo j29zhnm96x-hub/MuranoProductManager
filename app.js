@@ -44,7 +44,7 @@ const LANG = {
     'Not used in any products': 'Ne koristi se ni u jednom proizvodu',
     'Product Information': 'Info o proizvodu',
     'Editor': 'Uređivač', 'Save': 'Spremi',
-    'New Product': 'Novi proizvod', 'New Folder': 'Novi proizvod',
+    'New Product': 'Novi proizvod', 'New Folder': 'Nova mapa',
     'Edit Product': 'Uredi proizvod', 'Edit Folder': 'Uredi mapu',
     'Choose Image': 'Odaberi sliku',
     'Priority product': 'Prioritetni',
@@ -4384,8 +4384,8 @@ function onFolderImageSelected(e) {
 // ---------------------------- Menus ----------------------------
 function openAddMenu(targetFolderId) {
   openModal({
-    title: 'Choose item to create',
-    body: buildModalMenuHeader('＋', 'Create Something', 'Add a folder or product in the current location.'),
+    title: __('New Folder') + ' / ' + __('New Product'),
+    body: buildModalMenuHeader('＋', __('New Folder') + ' / ' + __('New Product'), ''),
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
