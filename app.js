@@ -830,7 +830,7 @@ function ensureStateFields() {
     }
   }
   appState.companyInfo = appState.companyInfo || { name: '', address: '', oib: '', phone: '', email: '' };
-  appState.season = appState.season || { startDate: null, snapshot: null };
+  appState.settings.seasonEndDate = appState.settings.seasonEndDate || null;
   appState.pendingTransfers = appState.pendingTransfers || [];
   appState.transferLog = appState.transferLog || [];
   appState.onSiteProduction = appState.onSiteProduction || [];
@@ -2432,6 +2432,7 @@ function openEditInfoModal() {
   
   const pInput = document.createElement('input'); pInput.type = 'number'; pInput.min = '0'; pInput.step = '1'; pInput.inputMode = 'numeric'; pInput.placeholder = '30000'; pInput.value = set.plannedValue ?? ''; pInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
   const dInput = document.createElement('input'); dInput.type = 'date'; dInput.value = set.endDate ? new Date(set.endDate).toISOString().slice(0,10) : ''; dInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+  const sdInput = document.createElement('input'); sdInput.type = 'date'; sdInput.value = set.seasonEndDate ? new Date(set.seasonEndDate).toISOString().slice(0,10) : ''; sdInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
   
   const fields = [
     { key: 'name', label: 'Naziv tvrtke', val: co.name || '' },
@@ -2440,10 +2441,11 @@ function openEditInfoModal() {
     { key: 'phone', label: 'Telefon', val: co.phone || '' },
     { key: 'email', label: 'Email', val: co.email || '' },
   ];
-  const inputs = { planned: pInput, date: dInput };
+  const inputs = { planned: pInput, date: dInput, seasonEndDate: sdInput };
   
   body.appendChild(makeFld('Planirani iznos', pInput));
-  body.appendChild(makeFld('Datum završetka', dInput));
+  body.appendChild(makeFld('Početak sezone', dInput));
+  body.appendChild(makeFld('Kraj sezone', sdInput));
   for (const f of fields) {
     const inp = document.createElement('input'); inp.type = 'text'; inp.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
     inp.value = f.val; inputs[f.key] = inp;
@@ -2461,6 +2463,7 @@ function openEditInfoModal() {
           if (inputs.date.value) {
             appState.settings.endDate = new Date(`${inputs.date.value}T23:59:59`).toISOString();
           } else { appState.settings.endDate = null; }
+          appState.settings.seasonEndDate = inputs.seasonEndDate?.value ? new Date(`${inputs.seasonEndDate.value}T23:59:59`).toISOString() : null;
           appState.companyInfo = appState.companyInfo || {};
           for (const f of fields) {
             appState.companyInfo[f.key] = (inputs[f.key]?.value || '').trim();
@@ -2483,6 +2486,7 @@ function openSettings() {
   const co = appState.companyInfo || {};
   const plannedVal = set.plannedValue ? Number(set.plannedValue).toLocaleString('hr-HR') + ' \u20AC' : '\u2014';
   const endDateStr = set.endDate ? new Date(set.endDate).toLocaleDateString('hr-HR') : '\u2014';
+  const seasonEndStr = set.seasonEndDate ? new Date(set.seasonEndDate).toLocaleDateString('hr-HR') : '\u2014';
   
   // ── Info display card ──────────────────────────────────────
   const infoCard = document.createElement('div');
@@ -2504,7 +2508,8 @@ function openSettings() {
     infoGrid.innerHTML += `<span style="color:#6b7280;">${label}:</span><span style="font-weight:600;">${value}</span>`;
   };
   addRow('Planirani iznos', plannedVal);
-  addRow('Datum završetka', endDateStr);
+  addRow('Početak sezone', endDateStr);
+  addRow('Kraj sezone', seasonEndStr);
   infoGrid.innerHTML += `<span style="color:#6b7280;padding-top:4px;border-top:1px dashed #d1d5db;">Naziv tvrtke:</span><span style="font-weight:600;padding-top:4px;border-top:1px dashed #d1d5db;">${co.name || '\u2014'}</span>`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">Adresa:</span><span style="font-weight:600;">${co.address || '\u2014'}`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">OIB:</span><span style="font-weight:600;">${co.oib || '\u2014'}`;
@@ -2519,8 +2524,7 @@ function openSettings() {
   seasonGroup.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:6px;">Sezona</div>`;
   const seasonBtns = document.createElement('div'); seasonBtns.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
   const makeBtn = (text, cls, cb) => { const b = document.createElement('button'); b.className = 'shop-action-btn' + (cls ? ' ' + cls : ''); b.textContent = text; b.addEventListener('click', cb); return b; };
-  seasonBtns.appendChild(makeBtn('Postavi početak sezone', 'primary', setSeasonStart));
-  seasonBtns.appendChild(makeBtn('Izvještaj sezone', '', showEndSeasonReport));
+  seasonBtns.appendChild(makeBtn('Izvještaj sezone', 'primary', showEndSeasonReport));
   seasonGroup.appendChild(seasonBtns);
   wrap.appendChild(seasonGroup);
   
@@ -5574,54 +5578,60 @@ function showDocumentPreview(items, docType, customTitle) {
 
 // ── Season Management ────────────────────────────────────────────
 
-function setSeasonStart() {
-  const snapshot = {};
-  for (const [id, p] of Object.entries(appState.products || {})) {
-    if (p) snapshot[id] = Number(p.quantity || 0);
-  }
-  appState.season = {
-    startDate: new Date().toISOString(),
-    snapshot
-  };
-  saveStateDebounced();
-  showToast('Početak sezone postavljen', 5000);
-}
-
 function showEndSeasonReport() {
-  if (!appState.season?.startDate || !appState.season?.snapshot) {
-    showToast('Prvo postavite početak sezone');
+  const set = appState.settings || {};
+  const seasonStart = set.endDate ? new Date(set.endDate) : null;
+  const seasonEnd = set.seasonEndDate ? new Date(set.seasonEndDate) : null;
+  
+  if (!seasonStart) {
+    showToast('Prvo postavite datum početka sezone u Postavke');
     return;
   }
   
   const reportDiv = document.createElement('div');
   reportDiv.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
   
-  const startSnapshot = appState.season.snapshot;
-  const startDate = new Date(appState.season.startDate).toLocaleDateString('hr-HR');
+  const startStr = seasonStart.toLocaleDateString('hr-HR');
+  const endStr = seasonEnd ? seasonEnd.toLocaleDateString('hr-HR') : 'još traje';
   
-  reportDiv.innerHTML = `<div style="font-weight:700;font-size:15px;padding:4px 0;">Izvještaj sezone</div><div style="color:#6b7280;font-size:13px;">Početak: ${startDate}</div><div style="color:#6b7280;font-size:13px;">Kraj: ${new Date().toLocaleDateString('hr-HR')}</div><hr style="border:none;border-top:1px solid #e5e7eb;">`;
+  reportDiv.innerHTML = `<div style="font-weight:700;font-size:15px;padding:4px 0;">Izvještaj sezone</div><div style="color:#6b7280;font-size:13px;">Početak: ${startStr}</div><div style="color:#6b7280;font-size:13px;">Kraj: ${endStr}</div><hr style="border:none;border-top:1px solid #e5e7eb;">`;
   
   for (const [id, p] of Object.entries(appState.products || {})) {
     if (!p) continue;
-    const startQty = startSnapshot[id] || 0;
-    if (startQty === 0 && Number(p.quantity || 0) === 0) continue;
     
-    // Calculate produced
-    let produced = 0;
+    // Calculate produced before season
+    let producedBefore = 0;
     for (const entry of (appState.productionLog || [])) {
-      if (entry.productId === id && 
-          (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') &&
-          new Date(entry.ts || entry.date || 0) >= new Date(appState.season.startDate)) {
-        produced += Number(entry.delta > 0 ? entry.delta : 0);
+      if (entry.productId === id && Number(entry.delta) > 0 &&
+          (entry.eventType === 'manual_add')) {
+        const entryDate = new Date(entry.ts || entry.date || 0);
+        if (!isNaN(entryDate.getTime()) && entryDate < seasonStart) {
+          producedBefore += Number(entry.delta);
+        }
       }
     }
     
-    // Calculate transferred
+    // Calculate produced during season
+    let producedDuring = 0;
+    for (const entry of (appState.productionLog || [])) {
+      if (entry.productId === id && Number(entry.delta) > 0 &&
+          (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production')) {
+        const entryDate = new Date(entry.ts || entry.date || 0);
+        if (!isNaN(entryDate.getTime()) && entryDate >= seasonStart) {
+          producedDuring += Number(entry.delta);
+        }
+      }
+    }
+    
+    // Calculate transferred during season
     let transferred = 0;
     for (const t of (appState.transferLog || [])) {
       if (t.masterConfirmDate) {
-        for (const item of (t.items || [])) {
-          if (item.productId === id) transferred += item.qty;
+        const transferDate = new Date(t.date || 0);
+        if (!isNaN(transferDate.getTime()) && transferDate >= seasonStart) {
+          for (const item of (t.items || [])) {
+            if (item.productId === id) transferred += item.qty;
+          }
         }
       }
     }
@@ -5630,78 +5640,33 @@ function showEndSeasonReport() {
     let returned = 0;
     for (const r of (appState.returnLog || [])) {
       for (const item of (r.items || [])) {
-        const catInfo = getCategoryItemInfo(item.shopCategory);
-        if (catInfo) {
-          // Map return by category back to product
-          for (const [pid, prod] of Object.entries(appState.products || {})) {
-            if (prod && prod.shopCategory === item.shopCategory && pid === id) {
-              returned += item.qty;
-            }
+        for (const [pid, prod] of Object.entries(appState.products || {})) {
+          if (prod && prod.shopCategory === item.shopCategory && pid === id) {
+            returned += item.qty;
           }
         }
       }
     }
     
     const currentQty = Number(p.quantity || 0);
-    const sold = startQty + produced - transferred + returned - currentQty;
+    const sold = transferred - returned;
     
-    if (sold === 0 && transferred === 0 && produced === 0) continue;
+    if (sold === 0 && transferred === 0 && producedBefore === 0 && producedDuring === 0) continue;
     
     const card = document.createElement('div');
     card.style.cssText = 'background:#f9fafb;border-radius:8px;padding:8px;font-size:13px;';
     card.innerHTML = `
       <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(p.name)}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;color:#374151;">
-        <span>Početak sezone:</span><span style="text-align:right;font-weight:600;">${startQty} kom</span>
-        <span>+ Proizvedeno:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${produced} kom</span>
+        <span>Proizvedeno prije sezone:</span><span style="text-align:right;font-weight:600;">${producedBefore} kom</span>
+        <span>+ Proizvedeno u sezoni:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${producedDuring} kom</span>
         <span>- Preneseno u prodaju:</span><span style="text-align:right;font-weight:600;color:#dc2626;">-${transferred} kom</span>
         <span>+ Vraćeno iz prodaje:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${returned} kom</span>
         <span style="border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;">= Prodano (izračunato):</span><span style="text-align:right;border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;color:#2563eb;">${sold} kom</span>
-        <span style="padding-top:2px;">Ostalo u skladištu:</span><span style="text-align:right;font-weight:600;padding-top:2px;">${currentQty} kom</span>
+        <span style="padding-top:2px;">Trenutno u skladištu:</span><span style="text-align:right;font-weight:600;padding-top:2px;">${currentQty} kom</span>
       </div>
     `;
     reportDiv.appendChild(card);
-  }
-  
-  // Per-category summary
-  reportDiv.innerHTML += '<hr style="border:none;border-top:1px solid #e5e7eb;"><div style="font-weight:700;font-size:14px;">Po kategorijama:</div>';
-  for (const cat of (appState.shopCategories || [])) {
-    const catItems = cat.items || [];
-    let catSold = 0;
-    for (const item of catItems) {
-      // Calculate sold across all products in this category
-      for (const [id, p] of Object.entries(appState.products || {})) {
-        if (p && p.shopCategory === item.id) {
-          const startQty = startSnapshot[id] || 0;
-          let produced = 0;
-          for (const entry of (appState.productionLog || [])) {
-            if (entry.productId === id && 
-                (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') &&
-                new Date(entry.ts || entry.date || 0) >= new Date(appState.season.startDate)) {
-              produced += Number(entry.delta > 0 ? entry.delta : 0);
-            }
-          }
-          let transferred = 0;
-          for (const t of (appState.transferLog || [])) {
-            if (t.masterConfirmDate) {
-              for (const ti of (t.items || [])) {
-                if (ti.productId === id) transferred += ti.qty;
-              }
-            }
-          }
-          let returned = 0;
-          for (const r of (appState.returnLog || [])) {
-            for (const ri of (r.items || [])) {
-              if (p.shopCategory === ri.shopCategory) returned += ri.qty;
-            }
-          }
-          const currentQty = Number(p.quantity || 0);
-          catSold += startQty + produced - transferred + returned - currentQty;
-        }
-      }
-    }
-    if (catSold === 0) continue;
-    reportDiv.innerHTML += `<div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:13px;background:#ffffff;border-radius:6px;"><span>${escapeHtml(cat.name)}</span><span style="font-weight:700;">Ukupno prodano: ${catSold} kom</span></div>`;
   }
   
   openModal({
@@ -5900,8 +5865,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const shopDeclineBtn = document.getElementById('shop-decline-btn');
   if (shopDeclineBtn) shopDeclineBtn.addEventListener('click', declineAll);
   // Season management buttons (added to Settings)
-  const seasonStartBtn = document.getElementById('season-start-btn');
-  if (seasonStartBtn) seasonStartBtn.addEventListener('click', setSeasonStart);
   const seasonReportBtn = document.getElementById('season-report-btn');
   if (seasonReportBtn) seasonReportBtn.addEventListener('click', showEndSeasonReport);
   const testDataBtn = document.getElementById('test-data-btn');
