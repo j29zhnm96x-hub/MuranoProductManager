@@ -397,7 +397,8 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .pp-adjust-label { font-weight: 600; color: #374151; flex-shrink: 0; margin-right: 4px; }
 .pp-adjust input { width: 55px; padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; text-align: center; margin-right: 8px; }
 .pp-adjust button { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #0ea5e9; color: white; flex-shrink: 0; }
-.pp-adjust .danger { background: #ef4444; border-color: #ef4444; }
+.pp-adjust .danger { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
+.pp-adjust .danger:hover { background: #fecaca; }
 .pp-image { display: flex; gap: 8px; align-items: center; }
 .pp-image-preview { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; background: #f1f2f6; }
 

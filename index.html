@@ -64,8 +64,7 @@
           <div class="pp-adjust-label" data-i18n="Adjust Quantity">Adjust Quantity</div>
             <input id="pp-adjust-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="" />
             <button id="pp-add-btn" type="button" data-i18n="Add">Add</button>
-            <button id="pp-remove-btn" class="danger" type="button" data-i18n="Remove">Remove</button>
-            <button id="pp-correct-btn" class="pp-correct" type="button" style="margin-left: auto" data-i18n="Correct">Correct</button>
+            <button id="pp-correct-btn" class="danger" type="button" style="margin-left: auto" data-i18n="Correct">Ispravak</button>
         </div>
       </div>
 
@@ -171,6 +170,10 @@
           <label>
             <span data-i18n="Max Quantity (guideline)">Max Quantity (guideline)</span>
             <input id="editor-maxqty" type="number" min="0" step="1" />
+          </label>
+          <label>
+            <span>Kategorija prodaje</span>
+            <select id="editor-shopcategory"><option value="">--</option></select>
           </label>
 
           <div class="custom-fields">

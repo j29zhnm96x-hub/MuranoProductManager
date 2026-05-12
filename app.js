@@ -4163,13 +4163,27 @@ function openEditor(type, id) {
     }
   } else {
     title.textContent = id ? __('Edit Product') : __('New Product');
-    const p = id ? appState.products[id] : { name: '', price: 0, quantity: 0, note: '', targetQuantity: 0, priority: false };
+    const p = id ? appState.products[id] : { name: '', price: 0, quantity: 0, note: '', targetQuantity: 0, priority: false, shopCategory: '' };
     document.getElementById('editor-name').value = p.name || '';
     document.getElementById('editor-price').value = p.price ?? 0;
     document.getElementById('editor-quantity').value = p.quantity ?? 0;
     document.getElementById('editor-target').value = p.targetQuantity ?? 0;
     const prio = document.getElementById('editor-priority'); if (prio) prio.checked = !!p.priority;
     document.getElementById('product-fields').classList.remove('hidden');
+    // Populate shop category dropdown
+    const scSelect = document.getElementById('editor-shopcategory');
+    if (scSelect) {
+      scSelect.innerHTML = '<option value="">--</option>';
+      for (const cat of (appState.shopCategories || [])) {
+        for (const item of (cat.items || [])) {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = `${item.name} (${item.price}\u20AC) \u2014 ${cat.name}`;
+          if (p.shopCategory === item.id) opt.selected = true;
+          scSelect.appendChild(opt);
+        }
+      }
+    }
     // Note is edited on product page; no custom fields UI
   }
 
@@ -4297,6 +4311,8 @@ function saveEditorForm(e) {
     p.quantity = Number(document.getElementById('editor-quantity').value || 0);
     p.targetQuantity = Number(document.getElementById('editor-target').value || 0);
     p.priority = !!document.getElementById('editor-priority').checked;
+    const scSelect = document.getElementById('editor-shopcategory');
+    if (scSelect) p.shopCategory = scSelect.value || '';
     if (p.quantity !== oldQty) {
       recordInventoryEvent({
         eventType: 'editor_adjustment',
@@ -4945,7 +4961,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Product page events
   document.getElementById('pp-back').addEventListener('click', () => { closeProductPage(); });
   document.getElementById('pp-add-btn').addEventListener('click', () => adjustProductQuantity(+1));
-  document.getElementById('pp-remove-btn').addEventListener('click', () => adjustProductQuantity(-1));
   document.getElementById('pp-correct-btn').addEventListener('click', () => correctProductQuantity());
   document.getElementById('pp-upload-btn').addEventListener('click', () => document.getElementById('pp-image-file').click());
   document.getElementById('pp-image-file').addEventListener('change', onProductImageSelected);
