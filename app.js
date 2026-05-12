@@ -1387,7 +1387,6 @@ function buildModalMenuHeader(iconText, title, subtitle = 'Select an action') {
 function openActionsMenu() {
   openModal({
     title: __('Actions'),
-    body: buildModalMenuHeader('\u2699', __('Actions'), ''),
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
@@ -4384,8 +4383,7 @@ function onFolderImageSelected(e) {
 // ---------------------------- Menus ----------------------------
 function openAddMenu(targetFolderId) {
   openModal({
-    title: __('New Folder') + ' / ' + __('New Product'),
-    body: buildModalMenuHeader('＋', __('New Folder') + ' / ' + __('New Product'), ''),
+    title: 'Dodaj mapu ili proizvod',
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions: [
