@@ -7,7 +7,7 @@ const LANG = {
     'Cancel': 'Odustani', 'Confirm': 'Potvrdi', 'Close': 'Zatvori',
     'Add': 'Dodaj', 'Remove': 'Ukloni',
     'Daily goal': 'Dnevni cilj', 'To do': 'Preostalo',
-    'Extra': 'Višak', 'Days left': 'Preostalo dana',
+    'Extra': 'Višak',     'Days left': 'Preostalo',
     'Total Qty': 'Uk. količina', 'Total Value': 'Uk. vrijednost',
     'Produced today': 'Danas proizvedeno',
     'Priority Progress': 'Prioritetno',
@@ -2597,6 +2597,15 @@ function onSaveProductNote() {
   }
 }
 
+function dayLabel(n) {
+  const num = Math.abs(n);
+  if (currentLang === 'hr') {
+    if (num % 10 === 1 && num % 100 !== 11) return `${num} dan`;
+    return `${num} dana`;
+  }
+  return num === 1 ? `${num} day` : `${num} days`;
+}
+
 function showToast(message, timeout = 3000) {
   const c = document.getElementById('toast-container');
   const el = document.createElement('div');
@@ -3742,7 +3751,7 @@ function renderFolderList(folderId = currentFolderId) {
       const today = new Date(); today.setHours(0,0,0,0);
       const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
       const daysLeft = Math.max(0, rawDays);
-      const itemDays = document.createElement('div'); itemDays.className = 'sb-item'; itemDays.innerHTML = `<div class="sb-k">${__('Days left')}</div><div class="sb-v">${daysLeft}</div>`;
+      const itemDays = document.createElement('div'); itemDays.className = 'sb-item'; itemDays.innerHTML = `<div class="sb-k">${__('Days left')}</div><div class="sb-v">${dayLabel(daysLeft)}</div>`;
       wrap.appendChild(itemDays);
     }
 
