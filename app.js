@@ -2548,6 +2548,11 @@ function openSettings() {
     actions: [
       { label: __('Reset Stats'), tone: 'danger', onClick: () => showResetStatsConfirm() },
       { label: __('Show Report'), onClick: () => { setTimeout(() => openReportModal(), 0); } },
+      { label: __('Save'), onClick: () => {
+          const langSel = document.querySelector('.modal-header-lang');
+          if (langSel) { setLang(langSel.value); }
+          showToast(__('Settings saved'));
+        } },
       { label: __('Close'), tone: 'secondary' }
     ]
   });
@@ -2567,8 +2572,7 @@ function openSettings() {
     langSel.value = currentLang;
     langSel.addEventListener('change', () => {
       setLang(langSel.value);
-      closeModal();
-      openSettings();
+      showToast('Jezik promijenjen');
     });
     headerEl.insertBefore(langSel, closeBtn);
   }
