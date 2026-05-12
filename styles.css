@@ -212,7 +212,9 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 .modal-header-icon.amber { background: #fef3c7; color: #b45309; }
 .modal-header-icon.slate { background: #e2e8f0; color: #334155; }
 
-/* Modal close button (×) */
+.modal-header-lang { padding: 4px 8px; border-radius: 6px; border: 1px solid #d1d5db; background: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+.modal-header-lang:hover { background: #f3f4f6; }
+
 #modal-close { width: 28px; height: 28px; padding: 0; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff; cursor: pointer; font-size: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; color: #64748b; flex-shrink: 0; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; }
 #modal-close:hover { background: #f1f5f9; border-color: #cbd5e1; color: #0f172a; }
 #modal-close:active { background: #e2e8f0; }

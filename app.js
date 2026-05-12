@@ -2420,132 +2420,123 @@ function openShopCategories() {
   });
 }
 
+function openEditInfoModal() {
+  const set = appState.settings || {};
+  const co = appState.companyInfo || {};
+  
+  const body = document.createElement('div'); body.className = 'settings-wrap';
+  const makeFld = (label, html) => {
+    const l = document.createElement('label'); l.className = 'set-col';
+    l.innerHTML = `<div class="set-k">${label}</div>`; l.appendChild(html); return l;
+  };
+  
+  const pInput = document.createElement('input'); pInput.type = 'number'; pInput.min = '0'; pInput.step = '1'; pInput.inputMode = 'numeric'; pInput.placeholder = '30000'; pInput.value = set.plannedValue ?? ''; pInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+  const dInput = document.createElement('input'); dInput.type = 'date'; dInput.value = set.endDate ? new Date(set.endDate).toISOString().slice(0,10) : ''; dInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+  
+  const fields = [
+    { key: 'name', label: 'Naziv tvrtke', val: co.name || '' },
+    { key: 'address', label: 'Adresa', val: co.address || '' },
+    { key: 'oib', label: 'OIB', val: co.oib || '' },
+    { key: 'phone', label: 'Telefon', val: co.phone || '' },
+    { key: 'email', label: 'Email', val: co.email || '' },
+  ];
+  const inputs = { planned: pInput, date: dInput };
+  
+  body.appendChild(makeFld('Planirani iznos', pInput));
+  body.appendChild(makeFld('Datum završetka', dInput));
+  for (const f of fields) {
+    const inp = document.createElement('input'); inp.type = 'text'; inp.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+    inp.value = f.val; inputs[f.key] = inp;
+    body.appendChild(makeFld(f.label, inp));
+  }
+  
+  openModal({
+    title: 'Uredi podatke',
+    headerIcon: { symbol: '\u270F', color: 'blue' },
+    body, actionsLayout: 'stack',
+    actions: [
+      { label: 'Spremi', onClick: () => {
+          appState.settings = appState.settings || {};
+          appState.settings.plannedValue = Number(inputs.planned.value || 0);
+          if (inputs.date.value) {
+            appState.settings.endDate = new Date(`${inputs.date.value}T23:59:59`).toISOString();
+          } else { appState.settings.endDate = null; }
+          appState.companyInfo = appState.companyInfo || {};
+          for (const f of fields) {
+            appState.companyInfo[f.key] = (inputs[f.key]?.value || '').trim();
+          }
+          recomputeDailyGoalNow(); saveStateDebounced(); renderAll();
+          showToast('Podaci spremljeni');
+          closeModal(); closeModal(); // close edit + refresh settings
+          openSettings();
+      }},
+      { label: 'Odustani', tone: 'secondary' }
+    ]
+  });
+}
+
 function openSettings() {
   const wrap = document.createElement('div');
   wrap.className = 'settings-wrap';
-  const plannedGroup = document.createElement('div'); plannedGroup.className = 'set-row';
-  const plannedLabel = document.createElement('label'); plannedLabel.className = 'set-col'; plannedLabel.innerHTML = `<div class="set-k">${__('Planned total')}</div>`;
-  const plannedInput = document.createElement('input'); plannedInput.type = 'number'; plannedInput.min = '0'; plannedInput.step = '1'; plannedInput.inputMode = 'numeric'; plannedInput.placeholder = __('e.g. 30000'); plannedInput.value = appState.settings?.plannedValue ?? '';
-  plannedLabel.appendChild(plannedInput);
-  const dateLabel = document.createElement('label'); dateLabel.className = 'set-col'; dateLabel.innerHTML = `<div class="set-k">${__('End date')}</div>`;
-  const dateInput = document.createElement('input'); dateInput.type = 'date'; dateInput.value = appState.settings?.endDate ? new Date(appState.settings.endDate).toISOString().slice(0,10) : '';
-  dateLabel.appendChild(dateInput);
-  plannedGroup.appendChild(plannedLabel); plannedGroup.appendChild(dateLabel);
-  wrap.appendChild(plannedGroup);
-  // Autosize inputs to their display length using the size attribute
-  const autosizeInput = (el, extra = 4, min = 8) => {
-    try {
-      let len = 0;
-      if (el.type === 'number') {
-        const n = Number(el.value || 0);
-        const formatted = new Intl.NumberFormat().format(isFinite(n) ? n : 0);
-        len = formatted.length;
-      } else if (el.type === 'date') {
-        const s = String(el.value || el.placeholder || 'YYYY-MM-DD');
-        len = s.length;
-      } else {
-        len = String(el.value || el.placeholder || '').length;
-      }
-      el.size = Math.max(min, len + extra);
-      el.style.width = 'auto';
-    } catch {}
+  
+  const set = appState.settings || {};
+  const co = appState.companyInfo || {};
+  const plannedVal = set.plannedValue ? Number(set.plannedValue).toLocaleString('hr-HR') + ' \u20AC' : '\u2014';
+  const endDateStr = set.endDate ? new Date(set.endDate).toLocaleDateString('hr-HR') : '\u2014';
+  
+  // ── Info display card ──────────────────────────────────────
+  const infoCard = document.createElement('div');
+  infoCard.style.cssText = 'background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:10px;';
+  
+  const infoHeader = document.createElement('div');
+  infoHeader.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+  infoHeader.innerHTML = `<span style="font-weight:700;font-size:14px;flex:1;">Podaci o poslovanju</span>`;
+  const editBtn = document.createElement('button');
+  editBtn.textContent = '\u270F Uredi podatke';
+  editBtn.style.cssText = 'padding:4px 10px;border-radius:6px;border:1px solid #0ea5e9;background:#e0f2fe;color:#0369a1;font-weight:700;font-size:12px;cursor:pointer;';
+  editBtn.addEventListener('click', () => { closeModal(); openEditInfoModal(); });
+  infoHeader.appendChild(editBtn);
+  infoCard.appendChild(infoHeader);
+  
+  const infoGrid = document.createElement('div');
+  infoGrid.style.cssText = 'display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;';
+  const addRow = (label, value) => {
+    infoGrid.innerHTML += `<span style="color:#6b7280;">${label}:</span><span style="font-weight:600;">${value}</span>`;
   };
-  autosizeInput(plannedInput, 4, 10);
-  autosizeInput(dateInput, 2, 10);
-  plannedInput.addEventListener('input', () => autosizeInput(plannedInput, 4, 10));
-  plannedInput.addEventListener('change', () => autosizeInput(plannedInput, 4, 10));
-  dateInput.addEventListener('input', () => autosizeInput(dateInput, 2, 10));
-  dateInput.addEventListener('change', () => autosizeInput(dateInput, 2, 10));
-  // Make both inputs the same width (use the date input's rendered width)
-  const syncWidths = () => {
-    try {
-      // Temporarily reset widths to measure natural date width
-      plannedInput.style.width = 'auto';
-      dateInput.style.width = 'auto';
-      plannedInput.style.minWidth = '0';
-      dateInput.style.minWidth = '0';
-      const w = Math.ceil(dateInput.getBoundingClientRect().width);
-      if (w && isFinite(w)) {
-        plannedInput.style.width = `${w}px`;
-        dateInput.style.width = `${w}px`;
-      }
-    } catch {}
-  };
-  // Initial and reactive sync
-  setTimeout(syncWidths, 0);
-  window.addEventListener('resize', syncWidths, { once: true });
-  dateInput.addEventListener('input', syncWidths);
-  dateInput.addEventListener('change', syncWidths);
-  plannedInput.addEventListener('input', syncWidths);
-  plannedInput.addEventListener('change', syncWidths);
-  // Language toggle
-  const langGroup = document.createElement('div'); langGroup.className = 'set-row';
-  const langLabel = document.createElement('label'); langLabel.className = 'set-col';
-  langLabel.innerHTML = `<div class="set-k">${__('Language')}</div>`;
-  const langSelect = document.createElement('select'); langSelect.style.cssText = 'padding:6px 10px;border-radius:10px;border:1px solid #d1d5db;font-size:14px;';
-  const optHr = document.createElement('option'); optHr.value = 'hr'; optHr.textContent = 'Hrvatski';
-  const optEn = document.createElement('option'); optEn.value = 'en'; optEn.textContent = 'English';
-  langSelect.appendChild(optHr); langSelect.appendChild(optEn);
-  langSelect.value = currentLang;
-  langLabel.appendChild(langSelect);
-  langGroup.appendChild(langLabel);
-  wrap.appendChild(langGroup);
-
-  // Company Info section
-  const coInfo = appState.companyInfo || {};
-  const coGroup = document.createElement('div'); coGroup.className = 'set-row';
-  coGroup.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
-  const coFields = [
-    { key: 'name', hr: 'Naziv tvrtke' },
-    { key: 'address', hr: 'Adresa' },
-    { key: 'oib', hr: 'OIB' },
-    { key: 'phone', hr: 'Telefon' },
-    { key: 'email', hr: 'Email' },
-  ];
-  const coInputs = {};
-  for (const f of coFields) {
-    const lbl = document.createElement('label'); lbl.className = 'set-col';
-    lbl.innerHTML = `<div class="set-k">${f.hr}</div>`;
-    const inp = document.createElement('input'); inp.type = 'text'; inp.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:13px;box-sizing:border-box;';
-    inp.value = coInfo[f.key] || '';
-    coInputs[f.key] = inp;
-    lbl.appendChild(inp);
-    coGroup.appendChild(lbl);
-  }
-  wrap.appendChild(coGroup);
-
-  // Season management section
+  addRow('Planirani iznos', plannedVal);
+  addRow('Datum završetka', endDateStr);
+  infoGrid.innerHTML += `<span style="color:#6b7280;padding-top:4px;border-top:1px dashed #d1d5db;">Naziv tvrtke:</span><span style="font-weight:600;padding-top:4px;border-top:1px dashed #d1d5db;">${co.name || '\u2014'}</span>`;
+  infoGrid.innerHTML += `<span style="color:#6b7280;">Adresa:</span><span style="font-weight:600;">${co.address || '\u2014'}`;
+  infoGrid.innerHTML += `<span style="color:#6b7280;">OIB:</span><span style="font-weight:600;">${co.oib || '\u2014'}`;
+  infoGrid.innerHTML += `<span style="color:#6b7280;">Telefon:</span><span style="font-weight:600;">${co.phone || '\u2014'}`;
+  infoGrid.innerHTML += `<span style="color:#6b7280;">Email:</span><span style="font-weight:600;">${co.email || '\u2014'}`;
+  infoCard.appendChild(infoGrid);
+  wrap.appendChild(infoCard);
+  
+  // ── Season section ─────────────────────────────────────────
   const seasonGroup = document.createElement('div');
-  seasonGroup.style.cssText = 'display:grid;gap:8px;padding:8px 0;';
-  seasonGroup.innerHTML = `<div style="font-weight:700;font-size:14px;">Sezona</div>`;
-  const seasonBtns = document.createElement('div');
-  seasonBtns.style.cssText = 'display:flex;gap:8px;';
-  const seasonStartBtn = document.createElement('button');
-  seasonStartBtn.id = 'season-start-btn';
-  seasonStartBtn.className = 'shop-action-btn primary';
-  seasonStartBtn.textContent = 'Postavi početak sezone';
-  seasonStartBtn.addEventListener('click', setSeasonStart);
-  const seasonReportBtn = document.createElement('button');
-  seasonReportBtn.id = 'season-report-btn';
-  seasonReportBtn.className = 'shop-action-btn';
-  seasonReportBtn.textContent = 'Izvještaj sezone';
-  seasonReportBtn.addEventListener('click', showEndSeasonReport);
-  seasonBtns.appendChild(seasonStartBtn);
-  seasonBtns.appendChild(seasonReportBtn);
+  seasonGroup.style.cssText = 'padding:8px 0;';
+  seasonGroup.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:6px;">Sezona</div>`;
+  const seasonBtns = document.createElement('div'); seasonBtns.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+  const makeBtn = (text, cls, cb) => { const b = document.createElement('button'); b.className = 'shop-action-btn' + (cls ? ' ' + cls : ''); b.textContent = text; b.addEventListener('click', cb); return b; };
+  seasonBtns.appendChild(makeBtn('Postavi početak sezone', 'primary', setSeasonStart));
+  seasonBtns.appendChild(makeBtn('Izvještaj sezone', '', showEndSeasonReport));
   seasonGroup.appendChild(seasonBtns);
   wrap.appendChild(seasonGroup);
-
-  // Test data section
+  
+  // ── Shop Categories ────────────────────────────────────────
+  const catGroup = document.createElement('div');
+  catGroup.style.cssText = 'padding:4px 0;';
+  catGroup.appendChild(makeBtn('Kategorije prodaje', '', () => { closeModal(); openShopCategories(); }));
+  wrap.appendChild(catGroup);
+  
+  // ── Test data ──────────────────────────────────────────────
   const testGroup = document.createElement('div');
-  testGroup.style.cssText = 'display:grid;gap:8px;padding:4px 0;';
-  const testDataBtn = document.createElement('button');
-  testDataBtn.id = 'test-data-btn';
-  testDataBtn.className = 'shop-action-btn danger';
-  testDataBtn.textContent = 'Izbriši testne podatke';
-  testDataBtn.addEventListener('click', deleteTestData);
-  testGroup.appendChild(testDataBtn);
+  testGroup.style.cssText = 'padding:4px 0;';
+  testGroup.appendChild(makeBtn('Izbriši testne podatke', 'danger', deleteTestData));
   wrap.appendChild(testGroup);
-
+  
+  // ── Open modal ─────────────────────────────────────────────
   openModal({
     title: __('Settings'),
     headerIcon: { symbol: '\u2699', color: 'slate' },
@@ -2553,32 +2544,27 @@ function openSettings() {
     actions: [
       { label: __('Reset Stats'), tone: 'danger', onClick: () => showResetStatsConfirm() },
       { label: __('Show Report'), onClick: () => { setTimeout(() => openReportModal(), 0); } },
-      { label: __('Shop Categories'), tone: 'secondary', onClick: () => { openShopCategories(); } },
-      { label: __('Save'), onClick: () => {
-          appState.settings = appState.settings || {};
-          appState.settings.plannedValue = Number(plannedInput.value || 0);
-          if (appState.settings) appState.settings.language = langSelect.value;
-          setLang(langSelect.value);
-          // Save company info
-          appState.companyInfo = appState.companyInfo || {};
-          for (const key of ['name', 'address', 'oib', 'phone', 'email']) {
-            appState.companyInfo[key] = (coInputs[key]?.value || '').trim();
-          }
-          if (dateInput.value) {
-            const endLocal = new Date(`${dateInput.value}T23:59:59`);
-            appState.settings.endDate = endLocal.toISOString();
-          } else {
-            appState.settings.endDate = null;
-          }
-          // Recompute today's goal immediately to reflect changes
-          recomputeDailyGoalNow();
-          saveStateDebounced();
-          renderAll();
-          showToast(__('Settings saved'));
-        } },
       { label: __('Close'), tone: 'secondary' }
     ]
   });
+  
+  // ── Inject language select into modal header ───────────────
+  const headerEl = document.querySelector('.modal-header');
+  const closeBtn = document.getElementById('modal-close');
+  if (headerEl && closeBtn) {
+    const langSel = document.createElement('select');
+    langSel.className = 'modal-header-lang';
+    const oHr = document.createElement('option'); oHr.value = 'hr'; oHr.textContent = 'HR';
+    const oEn = document.createElement('option'); oEn.value = 'en'; oEn.textContent = 'EN';
+    langSel.appendChild(oHr); langSel.appendChild(oEn);
+    langSel.value = currentLang;
+    langSel.addEventListener('change', () => {
+      setLang(langSel.value);
+      closeModal();
+      openSettings();
+    });
+    headerEl.insertBefore(langSel, closeBtn);
+  }
 }
 
 function onSaveProductNote() {
