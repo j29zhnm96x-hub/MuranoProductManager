@@ -5492,12 +5492,12 @@ function declineOnSiteAll() {
   if (!items.length) { showToast('Nema proizvoda za odustati'); return; }
   
   openModal({
-    title: 'Odustani od svega',
+    title: 'Odustani od unosa',
     headerIcon: { symbol: '\u26A0', color: 'amber' },
     size: 'small',
     body: `Odbacujete ${items.reduce((s, i) => s + i.qty, 0)} proizvoda. Ništa se ne dodaje u prodaju. Nastaviti?`,
     actions: [
-      { label: 'Odustani od svega', tone: 'danger', onClick: () => {
+      { label: 'Odustani od unosa', tone: 'danger', onClick: () => {
           appState.pendingOnSite = [];
           saveStateDebounced();
           renderOnSiteItems();
