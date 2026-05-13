@@ -5513,6 +5513,8 @@ function showDocumentPreview(items, docType, customTitle) {
   const title = customTitle || (docType === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu');
   
   const docFilename = `${title}_${now.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
+  // Set page title immediately so iOS picks it up for PDF filename
+  document.title = docFilename;
   
   let tableRows = '';
   for (const item of items) {
@@ -5541,7 +5543,7 @@ function showDocumentPreview(items, docType, customTitle) {
   
   preview.classList.remove('hidden');
   
-  // Back button
+  // Back button (restore original title)
   document.getElementById('doc-preview-back').onclick = () => {
     preview.classList.add('hidden');
     document.title = 'Murano Product Manager';
@@ -5557,7 +5559,7 @@ function showDocumentPreview(items, docType, customTitle) {
       headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
       actionsLayout: 'stack',
       actions: [
-        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); document.title = docFilename; window.print(); document.title = 'Murano Product Manager'; } },
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
         { label: '\uD83D\uDCCB  Novi dokument', onClick: () => {
           closeModal();
           const newDoc = { id: uuid(), date: now.toISOString(), type: 'new', items, totalCount: totalQty };
