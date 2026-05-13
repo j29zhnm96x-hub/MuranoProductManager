@@ -5557,7 +5557,7 @@ function showDocumentPreview(items, docType, customTitle) {
       headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
       actionsLayout: 'stack',
       actions: [
-        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); document.title = docFilename; setTimeout(() => { window.print(); document.title = 'Murano Product Manager'; }, 100); } },
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); document.title = docFilename; window.print(); document.title = 'Murano Product Manager'; } },
         { label: '\uD83D\uDCCB  Novi dokument', onClick: () => {
           closeModal();
           const newDoc = { id: uuid(), date: now.toISOString(), type: 'new', items, totalCount: totalQty };
