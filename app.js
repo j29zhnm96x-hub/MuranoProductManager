@@ -5375,15 +5375,72 @@ function openOnsiteProductPicker() {
         if (!pid) return;
         const p = appState.products[pid];
         if (!p) return;
-        const catInfo = getCategoryItemInfo(p.shopCategory);
-        _onsitePick = {
-          productId: pid,
-          productName: p.name,
-          shopCategory: p.shopCategory || '',
-          price: catInfo ? catInfo.item.price : Number(p.price || 0)
-        };
-        closeModal();
-        updateOnsitePickDisplay();
+        
+        // Find best matching category
+        let targetCat = p.shopCategory;
+        if (!targetCat) {
+          // Auto-match by price
+          const prodPrice = Number(p.price || 0);
+          for (const cat of (appState.shopCategories || [])) {
+            for (const item of (cat.items || [])) {
+              if (item.price === prodPrice) {
+                targetCat = item.id;
+                break;
+              }
+            }
+            if (targetCat) break;
+          }
+        }
+        
+        if (targetCat) {
+          const catInfo = getCategoryItemInfo(targetCat);
+          _onsitePick = {
+            productId: pid,
+            productName: p.name,
+            shopCategory: targetCat,
+            price: catInfo ? catInfo.item.price : Number(p.price || 0)
+          };
+          closeModal();
+          updateOnsitePickDisplay();
+        } else {
+          // No matching category found - let user pick
+          closeModal();
+          const pickBody = document.createElement('div');
+          pickBody.style.cssText = 'display:grid;gap:10px;';
+          pickBody.innerHTML = `<div style="font-size:14px;">Proizvod <strong>${escapeHtml(p.name)}</strong> (${Number(p.price || 0)}\u20AC) nema kategoriju prodaje. Odaberite:</div>`;
+          const catSelect = document.createElement('select');
+          catSelect.style.cssText = 'padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;';
+          catSelect.innerHTML = '<option value="">-- odaberite --</option>';
+          for (const cat of (appState.shopCategories || [])) {
+            for (const item of (cat.items || [])) {
+              const opt = document.createElement('option');
+              opt.value = item.id;
+              opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
+              catSelect.appendChild(opt);
+            }
+          }
+          pickBody.appendChild(catSelect);
+          openModal({
+            title: 'Odaberi kategoriju',
+            headerIcon: { symbol: '\uD83C\uDFEA', color: 'slate' },
+            body: pickBody,
+            actions: [
+              { label: 'Potvrdi', onClick: () => {
+                  if (!catSelect.value) { showToast('Odaberite kategoriju'); return; }
+                  const ci = getCategoryItemInfo(catSelect.value);
+                  _onsitePick = {
+                    productId: pid,
+                    productName: p.name,
+                    shopCategory: catSelect.value,
+                    price: ci ? ci.item.price : Number(p.price || 0)
+                  };
+                  closeModal();
+                  updateOnsitePickDisplay();
+              }},
+              { label: __('Cancel'), tone: 'secondary' }
+            ]
+          });
+        }
       });
     });
   }, 0);
