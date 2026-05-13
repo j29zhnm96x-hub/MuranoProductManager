@@ -5507,8 +5507,13 @@ function showDocumentPreview(items, docType, customTitle) {
   if (!preview || !body) return;
   
   const co = appState.companyInfo || {};
-  const date = new Date().toLocaleDateString('hr-HR');
+  const now = new Date();
+  const date = now.toLocaleDateString('hr-HR');
+  const timeStr = now.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
   const title = customTitle || (docType === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu');
+  
+  // Set page title for printing
+  document.title = `${title}_${now.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
   
   let tableRows = '';
   for (const item of items) {
@@ -5526,57 +5531,65 @@ function showDocumentPreview(items, docType, customTitle) {
         <div class="doc-info">${escapeHtml(co.phone || '')} ${co.email ? '| ' + escapeHtml(co.email) : ''}</div>
       </div>
       <div class="doc-title">${escapeHtml(title)}</div>
-      <div class="doc-date">Datum: ${date}</div>
+      <div class="doc-date">Datum: ${date} ${timeStr}</div>
       <table class="doc-table">
         <thead><tr><th>Proizvod</th><th style="text-align:right;">Cijena</th><th style="text-align:right;">Količina</th></tr></thead>
         <tbody>${tableRows}</tbody>
         <tfoot><tr class="doc-total"><td>Ukupno</td><td></td><td style="text-align:right;">${totalQty} kom</td></tr></tfoot>
       </table>
-      <div class="doc-footer">Dokument generiran aplikacijom Murano Product Manager</div>
     </div>
   `;
   
   preview.classList.remove('hidden');
   
-  document.getElementById('doc-print-btn').onclick = () => window.print();
+  // Back button
   document.getElementById('doc-preview-back').onclick = () => {
     preview.classList.add('hidden');
-    // If was master confirm, go back to shop
+    document.title = 'Murano Product Manager';
     if (docType === 'new' || docType === 'update') {
       openShopPage();
     }
   };
-  document.getElementById('doc-new-btn').onclick = () => {
-    preview.classList.add('hidden');
-    // Generate as new document
-    const newDoc = {
-      id: uuid(),
-      date: new Date().toISOString(),
-      type: 'new',
-      items,
-      totalCount: totalQty
-    };
-    appState.documents = appState.documents || [];
-    appState.documents.push(newDoc);
-    saveStateDebounced();
-    showToast('Novi dokument spremljen');
-  };
-  document.getElementById('doc-update-btn').onclick = () => {
-    preview.classList.add('hidden');
-    // Update last document
-    const docs = appState.documents || [];
-    if (docs.length > 0) {
-      docs[docs.length - 1] = {
-        ...docs[docs.length - 1],
-        date: new Date().toISOString(),
-        items,
-        totalCount: totalQty
-      };
-    } else {
-      docs.push({ id: uuid(), date: new Date().toISOString(), type: 'update', items, totalCount: totalQty });
-    }
-    saveStateDebounced();
-    showToast('Dokument ažuriran');
+  
+  // Single Akcije button → opens small modal
+  document.getElementById('doc-actions-btn').onclick = () => {
+    openModal({
+      title: 'Akcije',
+      headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+      actionsLayout: 'stack',
+      actions: [
+        { label: '\uD83D\uDDB1\uFE0F  Ispiš', onClick: () => { closeModal(); window.print(); } },
+        { label: '\uD83D\uDCE4  Podijeli', onClick: () => {
+          closeModal();
+          const filename = `${title}_${now.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
+          if (navigator.share) {
+            navigator.share({ title: filename, text: `${title} - ${date}` }).catch(() => {});
+          } else {
+            showToast('Podijeli: ' + filename);
+          }
+        }},
+        { label: '\uD83D\uDCCB  Novi dokument', onClick: () => {
+          closeModal();
+          const newDoc = { id: uuid(), date: now.toISOString(), type: 'new', items, totalCount: totalQty };
+          appState.documents = appState.documents || [];
+          appState.documents.push(newDoc);
+          saveStateDebounced();
+          showToast('Novi dokument spremljen');
+        }},
+        { label: '\uD83D\uDD04  A\u017euriraj zadnji', onClick: () => {
+          closeModal();
+          const docs = appState.documents || [];
+          if (docs.length > 0) {
+            docs[docs.length - 1] = { ...docs[docs.length - 1], date: now.toISOString(), items, totalCount: totalQty };
+          } else {
+            docs.push({ id: uuid(), date: now.toISOString(), type: 'update', items, totalCount: totalQty });
+          }
+          saveStateDebounced();
+          showToast('Dokument ažuriran');
+        }},
+        { label: 'Zatvori', tone: 'secondary' }
+      ]
+    });
   };
 }
 
@@ -5596,18 +5609,55 @@ function openDocumentList() {
   for (let i = docs.length - 1; i >= 0; i--) {
     const doc = docs[i];
     const d = new Date(doc.date).toLocaleDateString('hr-HR') + ' ' + new Date(doc.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
-    const typeLabel = doc.type === 'onsite' ? 'Proizvodnja na mjestu' : (doc.type === 'new' ? 'Novi dokument' : 'Ažurirani dokument');
+    const docTitle = doc.type === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu';
     
     const card = document.createElement('div');
-    card.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;';
-    card.innerHTML = `
-      <span style="flex:1;font-size:14px;"><strong>${typeLabel}</strong> &mdash; ${d}</span>
-      <span style="color:#6b7280;font-size:13px;">${doc.totalCount} kom</span>
+    card.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;';
+    
+    const mainRow = document.createElement('div');
+    mainRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;';
+    mainRow.innerHTML = `
+      <span style="flex:1;font-size:13px;line-height:1.4;">
+        <strong>${escapeHtml(docTitle)}</strong><br>
+        <span style="color:#6b7280;font-size:12px;">${d}</span>
+      </span>
+      <span style="color:#374151;font-size:13px;font-weight:600;">${doc.totalCount} kom</span>
     `;
-    card.addEventListener('click', () => {
+    mainRow.addEventListener('click', () => {
       const items = (doc.items || []).map(i => ({ name: i.name, price: i.price || 0, qty: i.qty || 0, value: (i.price || 0) * (i.qty || 0) }));
-      showDocumentPreview(items, doc.type);
+      closeModal();
+      showDocumentPreview(items, doc.type, docTitle);
     });
+    card.appendChild(mainRow);
+    
+    // Delete button
+    const delRow = document.createElement('div');
+    delRow.style.cssText = 'border-top:1px solid #f3f4f6;padding:4px 10px;text-align:right;';
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Izbri\u0161i';
+    delBtn.style.cssText = 'padding:2px 10px;border-radius:4px;border:none;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openModal({
+        title: 'Izbri\u0161i dokument',
+        headerIcon: { symbol: '\u26A0', color: 'red' },
+        size: 'small',
+        body: `Jeste li sigurni da \u017eelite izbrisati dokument "${docTitle}" od ${d}?`,
+        actions: [
+          { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
+            appState.documents = (appState.documents || []).filter(d => d.id !== doc.id);
+            saveStateDebounced();
+            closeModal();
+            openDocumentList();
+            showToast('Dokument izbrisan');
+          }},
+          { label: 'Odustani', tone: 'secondary' }
+        ]
+      });
+    });
+    delRow.appendChild(delBtn);
+    card.appendChild(delRow);
+    
     body.appendChild(card);
   }
   
