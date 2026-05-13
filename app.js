@@ -865,21 +865,21 @@ function ensureDailyProgress() {
     }
     try { saveStateDebounced(); } catch {}
   } else {
-    // Same day: if current total is less than start value, reset start and recalc goal
-    // This handles deletions, corrections, and test data removal
+    // Same day: recalc goal from current total (handles any change: adds, deletes, transfers)
+    const settings = appState.settings || {};
+    if (settings.plannedValue && settings.endDate) {
+      const end = new Date(settings.endDate);
+      const today = new Date(); today.setHours(0,0,0,0);
+      const remainingOverall = Math.max(0, Number(settings.plannedValue || 0) - Number(stats.totalValue || 0));
+      const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
+      const daysLeft = rawDays > 0 ? rawDays : 1;
+      appState.dailyProgress.fixedGoal = remainingOverall / daysLeft;
+    }
+    // If total dropped below start, reset start so addedToday doesn't go negative
     if (stats.totalValue < appState.dailyProgress.startValue) {
       appState.dailyProgress.startValue = stats.totalValue || 0;
-      const settings = appState.settings || {};
-      if (settings.plannedValue && settings.endDate) {
-        const end = new Date(settings.endDate);
-        const today = new Date(); today.setHours(0,0,0,0);
-        const remainingOverall = Math.max(0, Number(settings.plannedValue || 0) - Number(stats.totalValue || 0));
-        const rawDays = Math.ceil((end.getTime() - today.getTime())/(1000*60*60*24));
-        const daysLeft = rawDays > 0 ? rawDays : 1;
-        appState.dailyProgress.fixedGoal = remainingOverall / daysLeft;
-      }
-      try { saveStateDebounced(); } catch {}
     }
+    try { saveStateDebounced(); } catch {}
   }
 }
 
