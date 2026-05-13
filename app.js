@@ -5111,7 +5111,8 @@ function openTransferQtyModal(productId) {
         p.quantity = maxQty - qty;
         
         // Add to pending transfers
-        appState.pendingTransfers = appState.pendingTransfers || [];
+  appState.pendingTransfers = appState.pendingTransfers || [];
+  appState.pendingOnSite = appState.pendingOnSite || [];
         appState.pendingTransfers.push({
           productId,
           qty,
@@ -5283,137 +5284,226 @@ function openShopActionsMenu() {
   });
 }
 
-// ── In-Season Production ────────────────────────────────────────
+// ── On-Site Production Page ─────────────────────────────────────
 
 function openInSeasonProduction() {
-  const body = document.createElement('div');
-  body.style.cssText = 'display:grid;gap:10px;max-width:500px;';
-  
-  const today = new Date().toLocaleDateString('hr-HR');
-  body.innerHTML = `<div style="font-weight:700;font-size:15px;">Proizvodnja na licu mjesta - ${today}</div>`;
-  
-  const itemsContainer = document.createElement('div');
-  itemsContainer.style.cssText = 'display:grid;gap:6px;';
-  body.appendChild(itemsContainer);
-  
-  function addProductionRow() {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:6px;align-items:center;padding:6px;background:#f9fafb;border-radius:8px;';
-    
-    const catSelect = document.createElement('select');
-    catSelect.style.cssText = 'flex:1;padding:6px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;';
-    catSelect.innerHTML = '<option value="">-- odaberite --</option>';
-    for (const cat of (appState.shopCategories || [])) {
-      for (const item of (cat.items || [])) {
-        const opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
-        catSelect.appendChild(opt);
-      }
+  const page = document.getElementById('onsite-page');
+  if (!page) return;
+  page.classList.remove('hidden');
+  renderOnSiteItems();
+  page.scrollTop = 0;
+  populateOnSiteSelect();
+}
+
+function closeOnSitePage() {
+  const page = document.getElementById('onsite-page');
+  if (page) { page.classList.add('hidden'); openShopPage(); }
+}
+
+function populateOnSiteSelect() {
+  const sel = document.getElementById('onsite-category');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- odaberite --</option>';
+  for (const cat of (appState.shopCategories || [])) {
+    for (const item of (cat.items || [])) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
+      sel.appendChild(opt);
     }
-    
-    const qtyInput = document.createElement('input');
-    qtyInput.type = 'number';
-    qtyInput.min = '1';
-    qtyInput.step = '1';
-    qtyInput.value = '1';
-    qtyInput.style.cssText = 'width:60px;padding:6px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;text-align:center;';
-    
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '\u2715';
-    deleteBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:14px;padding:4px;';
-    deleteBtn.addEventListener('click', () => row.remove());
-    
-    row.appendChild(catSelect);
-    row.appendChild(qtyInput);
-    row.appendChild(deleteBtn);
-    itemsContainer.appendChild(row);
+  }
+}
+
+function renderOnSiteItems() {
+  const list = document.getElementById('onsite-list');
+  if (!list) return;
+  const items = appState.pendingOnSite || [];
+  
+  if (!items.length) {
+    list.innerHTML = '<div class="onsite-empty">Jo\u0161 nema dodanih proizvoda. Dodajte prvi iznad.</div>';
+    return;
   }
   
-  // First row
-  addProductionRow();
+  list.innerHTML = '';
+  for (const item of items) {
+    const catInfo = getCategoryItemInfo(item.shopCategory);
+    const displayName = catInfo ? `${catInfo.group.name} ${catInfo.item.name} (${catInfo.item.price}\u20AC)` : item.name || 'Nepoznato';
+    
+    const row = document.createElement('div');
+    row.className = 'onsite-item';
+    row.innerHTML = `
+      <span class="onsite-item-name">${escapeHtml(displayName)}</span>
+      <button class="onsite-item-adj" data-adj="-1">\u2212</button>
+      <span class="onsite-item-qty">${item.qty} kom</span>
+      <button class="onsite-item-adj" data-adj="+1">+</button>
+      <button class="onsite-item-del">\u2715</button>
+    `;
+    
+    row.querySelectorAll('.onsite-item-adj').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const delta = parseInt(btn.dataset.adj, 10);
+        item.qty = Math.max(1, item.qty + delta);
+        saveStateDebounced();
+        renderOnSiteItems();
+      });
+    });
+    
+    row.querySelector('.onsite-item-del').addEventListener('click', () => {
+      appState.pendingOnSite = (appState.pendingOnSite || []).filter(i => i.id !== item.id);
+      saveStateDebounced();
+      renderOnSiteItems();
+    });
+    
+    list.appendChild(row);
+  }
   
-  const addRowBtn = document.createElement('button');
-  addRowBtn.textContent = '+ Dodaj red';
-  addRowBtn.style.cssText = 'padding:8px 12px;border-radius:8px;border:1px dashed #0ea5e9;background:transparent;color:#0ea5e9;font-weight:700;font-size:13px;cursor:pointer;';
-  addRowBtn.addEventListener('click', addProductionRow);
-  body.appendChild(addRowBtn);
+  const total = items.reduce((s, i) => s + i.qty, 0);
+  const totalEl = document.createElement('div');
+  totalEl.style.cssText = 'text-align:right;font-size:13px;color:#6b7280;padding:2px 4px 0;';
+  totalEl.textContent = `Ukupno: ${total} kom`;
+  list.appendChild(totalEl);
+}
+
+function addOnSiteItem() {
+  const sel = document.getElementById('onsite-category');
+  const qtyInput = document.getElementById('onsite-qty');
+  if (!sel || !qtyInput) return;
+  
+  const catId = sel.value;
+  const qty = parseInt(qtyInput.value || '0', 10);
+  
+  if (!catId) { showToast('Odaberite kategoriju'); return; }
+  if (qty <= 0) { showToast('Unesite ispravnu koli\u010dinu'); return; }
+  
+  const catInfo = getCategoryItemInfo(catId);
+  const displayName = catInfo ? `${catInfo.group.name} ${catInfo.item.name}` : 'Nepoznato';
+  
+  appState.pendingOnSite = appState.pendingOnSite || [];
+  
+  // If same category already exists, increment qty
+  const existing = appState.pendingOnSite.find(i => i.shopCategory === catId);
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    appState.pendingOnSite.push({
+      id: uuid(),
+      shopCategory: catId,
+      name: displayName,
+      qty,
+      price: catInfo ? catInfo.item.price : 0
+    });
+  }
+  
+  qtyInput.value = '1';
+  saveStateDebounced();
+  renderOnSiteItems();
+  showToast(`Dodano: ${qty} x ${displayName}`);
+}
+
+function confirmOnSiteItems() {
+  const items = appState.pendingOnSite || [];
+  if (!items.length) { showToast('Nema proizvoda za potvrditi'); return; }
+  
+  // Only option: update last document
+  openModal({
+    title: 'Potvrdi proizvodnju',
+    headerIcon: { symbol: '\u2705', color: 'green' },
+    size: 'small',
+    body: `${items.reduce((s, i) => s + i.qty, 0)} proizvoda ide u prodaju. A\u017eurirati zadnji dokument?`,
+    actions: [
+      { label: '\uD83D\uDCC4  A\u017euriraj zadnji dokument', onClick: () => {
+          executeOnSiteConfirm();
+          closeModal();
+        }},
+      { label: 'Odustani', tone: 'secondary' }
+    ]
+  });
+}
+
+function executeOnSiteConfirm() {
+  const items = appState.pendingOnSite || [];
+  if (!items.length) return;
+  
+  // Log each item in productionLog and add to onSiteProduction
+  const logItems = [];
+  for (const item of items) {
+    const catInfo = getCategoryItemInfo(item.shopCategory);
+    const itemName = catInfo ? `${catInfo.group.name} ${catInfo.item.name}` : 'Nepoznato';
+    
+    recordInventoryEvent({
+      eventType: 'onsite_production',
+      delta: item.qty,
+      price: catInfo ? catInfo.item.price : 0,
+      value: item.qty * (catInfo ? catInfo.item.price : 0),
+      source: 'onsite',
+      note: `On-site production: ${item.qty} x ${itemName}`
+    });
+    
+    logItems.push({
+      shopCategory: item.shopCategory,
+      qty: item.qty,
+      name: itemName,
+      price: catInfo ? catInfo.item.price : 0
+    });
+  }
+  
+  // Save to onSiteProduction archive
+  appState.onSiteProduction = appState.onSiteProduction || [];
+  appState.onSiteProduction.push({
+    id: uuid(),
+    date: new Date().toISOString(),
+    items: logItems,
+    addedToShop: true
+  });
+  
+  // Update last document
+  const docs = appState.documents || [];
+  const totalQty = items.reduce((s, i) => s + i.qty, 0);
+  const shopItems = buildDocumentItems();
+  
+  if (docs.length > 0) {
+    docs[docs.length - 1] = {
+      ...docs[docs.length - 1],
+      items: shopItems,
+      totalCount: shopItems.reduce((s, i) => s + i.qty, 0)
+      // Keep old date - don't update
+    };
+  } else {
+    docs.push({
+      id: uuid(),
+      date: new Date().toISOString(),
+      type: 'update',
+      items: shopItems,
+      totalCount: shopItems.reduce((s, i) => s + i.qty, 0)
+    });
+  }
+  
+  // Clear pending
+  appState.pendingOnSite = [];
+  
+  saveStateDebounced();
+  renderShopInventory();
+  closeOnSitePage();
+  showToast('Proizvodi dodani u prodaju, dokument ažuriran');
+}
+
+function declineOnSiteAll() {
+  const items = appState.pendingOnSite || [];
+  if (!items.length) { showToast('Nema proizvoda za odustati'); return; }
   
   openModal({
-    title: 'Proizvodnja na licu mjesta',
-    headerIcon: { symbol: '\uD83C\uDFF7', color: 'slate' },
-    size: 'large',
-    body,
-    actionsLayout: 'stack',
+    title: 'Odustani od svega',
+    headerIcon: { symbol: '\u26A0', color: 'amber' },
+    size: 'small',
+    body: `Odbacujete ${items.reduce((s, i) => s + i.qty, 0)} proizvoda. Ništa se ne dodaje u prodaju. Nastaviti?`,
     actions: [
-      { label: 'Dodaj u prodaju', onClick: () => {
-        const rows = itemsContainer.querySelectorAll('div[style*="flex"]');
-        const items = [];
-        for (const row of rows) {
-          const select = row.querySelector('select');
-          const qtyInput = row.querySelector('input[type="number"]');
-          if (!select || !qtyInput) continue;
-          const catId = select.value;
-          const qty = parseInt(qtyInput.value || '0', 10);
-          if (!catId || qty <= 0) continue;
-          items.push({ shopCategory: catId, qty });
-        }
-        
-        if (!items.length) { showToast('Dodajte barem jedan proizvod'); return; }
-        
-        // Save to onSiteProduction
-        const entry = {
-          id: uuid(),
-          date: new Date().toISOString(),
-          items,
-          addedToShop: true,
-          documentPrinted: false
-        };
-        appState.onSiteProduction = appState.onSiteProduction || [];
-        appState.onSiteProduction.push(entry);
-        
-        // Log in history
-        for (const item of items) {
-          const catInfo = getCategoryItemInfo(item.shopCategory);
-          const itemName = catInfo ? `${catInfo.group.name} ${catInfo.item.name}` : 'Unknown';
-          recordInventoryEvent({
-            eventType: 'onsite_production',
-            delta: item.qty,
-            price: catInfo ? catInfo.item.price : 0,
-            value: item.qty * (catInfo ? catInfo.item.price : 0),
-            source: 'onsite',
-            note: `On-site production: ${item.qty} x ${itemName}`
-          });
-        }
-        
-        saveStateDebounced();
-        renderShopInventory();
-        showToast('Proizvodi dodani u prodaju');
-        closeModal();
-        
-        // Ask about document
-        openModal({
-          title: 'Dokument',
-          size: 'small',
-          body: 'Želite li ispisati popis proizvodnje na licu mjesta ili ažurirati glavni popis za inspekciju?',
-          actions: [
-            { label: 'Ispišite popis', onClick: () => {
-              const docItems = items.map(item => {
-                const info = getCategoryItemInfo(item.shopCategory);
-                return { name: info ? `${info.group.name} ${info.item.name}` : '?', price: info ? info.item.price : 0, qty: item.qty, value: item.qty * (info ? info.item.price : 0) };
-              });
-              showDocumentPreview(docItems, 'onsite', 'Popis izrađenih proizvoda na prodajnom mjestu');
-              closeModal();
-            }},
-            { label: 'Ažuriraj glavni popis', onClick: () => {
-              const docItems = buildDocumentItems();
-              showDocumentPreview(docItems, 'update');
-              closeModal();
-            }},
-            { label: 'Zatvori', tone: 'secondary' }
-          ]
-        });
-      }},
+      { label: 'Odustani od svega', tone: 'danger', onClick: () => {
+          appState.pendingOnSite = [];
+          saveStateDebounced();
+          renderOnSiteItems();
+          showToast('Popis očišćen');
+          closeModal();
+        }},
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
@@ -5963,6 +6053,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (shopBackBtn) shopBackBtn.addEventListener('click', closeShopPage);
   const shopAkcijeBtn = document.getElementById('shop-akcije-btn');
   if (shopAkcijeBtn) shopAkcijeBtn.addEventListener('click', openShopActionsMenu);
+  
+  // On-site page event wiring
+  const onsiteBack = document.getElementById('onsite-back');
+  if (onsiteBack) onsiteBack.addEventListener('click', closeOnSitePage);
+  const onsiteAdd = document.getElementById('onsite-add-btn');
+  if (onsiteAdd) onsiteAdd.addEventListener('click', addOnSiteItem);
+  const onsiteCat = document.getElementById('onsite-category');
+  if (onsiteCat) onsiteCat.addEventListener('keydown', (e) => { if (e.key === 'Enter') addOnSiteItem(); });
+  const onsiteQty = document.getElementById('onsite-qty');
+  if (onsiteQty) onsiteQty.addEventListener('keydown', (e) => { if (e.key === 'Enter') addOnSiteItem(); });
+  const onsiteConfirm = document.getElementById('onsite-confirm-btn');
+  if (onsiteConfirm) onsiteConfirm.addEventListener('click', confirmOnSiteItems);
+  const onsiteDecline = document.getElementById('onsite-decline-btn');
+  if (onsiteDecline) onsiteDecline.addEventListener('click', declineOnSiteAll);
+  
   const shopConfirmBtn = document.getElementById('shop-confirm-btn');
   if (shopConfirmBtn) shopConfirmBtn.addEventListener('click', masterConfirm);
   const shopDeclineBtn = document.getElementById('shop-decline-btn');

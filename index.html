@@ -233,6 +233,29 @@
     </div>
   </div>
 
+  <!-- On-Site Production Page (overlay) -->
+  <div id="onsite-page" class="hidden">
+    <div class="onsite-header">
+      <div class="onsite-left">
+        <button id="onsite-back" class="onsite-back" type="button">← <span data-i18n="Back">Back</span></button>
+      </div>
+      <div class="onsite-title">Proizvodnja na licu mjesta</div>
+      <div class="onsite-actions-placeholder"></div>
+    </div>
+    <div class="onsite-content">
+      <div id="onsite-list" class="onsite-list"></div>
+      <div class="onsite-add-row">
+        <select id="onsite-category" class="onsite-select"><option value="">-- odaberite --</option></select>
+        <input id="onsite-qty" class="onsite-qty" type="number" min="1" step="1" value="1" />
+        <button id="onsite-add-btn" class="onsite-add-btn" type="button">Dodaj</button>
+      </div>
+      <div class="onsite-actions">
+        <button id="onsite-confirm-btn" class="shop-action-btn primary" type="button">Potvrdi sve</button>
+        <button id="onsite-decline-btn" class="shop-action-btn danger" type="button">Odustani od svega</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Document Preview (PDF overlay) -->
   <div id="doc-preview" class="hidden">
     <div class="doc-preview-header">
