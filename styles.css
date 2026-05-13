@@ -417,7 +417,8 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .shop-left { display: inline-flex; align-items: center; gap: 8px; }
 .shop-back { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-size: 14px; cursor: pointer; }
 .shop-title { font-weight: 800; font-size: 19px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; justify-self: center; }
-.shop-spacer { width: 60px; }
+.shop-akcije-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.shop-akcije-btn:hover { background: #f3f4f6; }
 .shop-content { padding: 10px; display: grid; gap: 10px; max-width: 960px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 .shop-inv-header { padding: 4px 0; }
 .shop-inv-title { font-weight: 700; font-size: 15px; color: #374151; }

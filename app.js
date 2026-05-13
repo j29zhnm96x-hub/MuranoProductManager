@@ -5266,6 +5266,23 @@ function declineAll() {
   });
 }
 
+// ── Shop Actions Menu ──────────────────────────────────────────
+
+function openShopActionsMenu() {
+  openModal({
+    title: 'Akcije',
+    headerIcon: { symbol: '\uD83D\uDCCB', color: 'slate' },
+    actionsLayout: 'stack',
+    actions: [
+      { label: '\uD83D\uDCE6  Prijenos iz skladi\u0161ta', onClick: () => { closeModal(); transferFromWarehouse(); } },
+      { label: '\uD83C\uDFF7  Proizvodnja na licu mjesta', onClick: () => { closeModal(); openInSeasonProduction(); } },
+      { label: '\uD83D\uDCC4  Dokumenti', onClick: () => { closeModal(); openDocumentList(); } },
+      { label: '\uD83D\uDD04  Povrat iz prodaje', onClick: () => { closeModal(); returnFromShop(); } },
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
 // ── In-Season Production ────────────────────────────────────────
 
 function openInSeasonProduction() {
@@ -5944,14 +5961,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (shopBtn) shopBtn.addEventListener('click', openShopPage);
   const shopBackBtn = document.getElementById('shop-back');
   if (shopBackBtn) shopBackBtn.addEventListener('click', closeShopPage);
-  const shopTransferBtn = document.getElementById('shop-transfer-btn');
-  if (shopTransferBtn) shopTransferBtn.addEventListener('click', transferFromWarehouse);
-  const shopOnsiteBtn = document.getElementById('shop-onsite-btn');
-  if (shopOnsiteBtn) shopOnsiteBtn.addEventListener('click', openInSeasonProduction);
-  const shopReturnBtn = document.getElementById('shop-return-btn');
-  if (shopReturnBtn) shopReturnBtn.addEventListener('click', returnFromShop);
-  const shopDocsBtn = document.getElementById('shop-docs-btn');
-  if (shopDocsBtn) shopDocsBtn.addEventListener('click', openDocumentList);
+  const shopAkcijeBtn = document.getElementById('shop-akcije-btn');
+  if (shopAkcijeBtn) shopAkcijeBtn.addEventListener('click', openShopActionsMenu);
   const shopConfirmBtn = document.getElementById('shop-confirm-btn');
   if (shopConfirmBtn) shopConfirmBtn.addEventListener('click', masterConfirm);
   const shopDeclineBtn = document.getElementById('shop-decline-btn');
