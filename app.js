@@ -2597,6 +2597,12 @@ function onSaveProductNote() {
   }
 }
 
+function formatDateHR(date) {
+  const d = date || new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getYear() < 0 ? '' : d.getFullYear()}.`;
+}
+
 function dayLabel(n) {
   const num = Math.abs(n);
   if (currentLang === 'hr') {
@@ -5508,7 +5514,7 @@ function showDocumentPreview(items, docType, customTitle) {
   
   const co = appState.companyInfo || {};
   const now = new Date();
-  const date = now.toLocaleDateString('hr-HR');
+  const date = formatDateHR(now);
   const timeStr = now.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
   const title = customTitle || (docType === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu');
   
@@ -5534,7 +5540,7 @@ function showDocumentPreview(items, docType, customTitle) {
       <div class="doc-title">${escapeHtml(title)}</div>
       <div class="doc-date">Nadnevak: ${date}</div>
       <table class="doc-table">
-        <thead><tr><th>Proizvod</th><th style="text-align:right;">Cijena</th><th style="text-align:right;">Količina</th></tr></thead>
+        <thead><tr><th>Proizvod</th><th style="text-align:right;">Pojed. cijena</th><th style="text-align:right;">Količina</th></tr></thead>
         <tbody>${tableRows}</tbody>
         <tfoot><tr class="doc-total"><td>Ukupno</td><td></td><td style="text-align:right;">${totalQty} kom</td></tr></tfoot>
       </table>
@@ -5600,7 +5606,7 @@ function openDocumentList() {
   
   for (let i = docs.length - 1; i >= 0; i--) {
     const doc = docs[i];
-    const d = new Date(doc.date).toLocaleDateString('hr-HR') + ' ' + new Date(doc.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+    const d = formatDateHR(new Date(doc.date)) + ' ' + new Date(doc.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
     const docTitle = doc.type === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu';
     
     const card = document.createElement('div');
