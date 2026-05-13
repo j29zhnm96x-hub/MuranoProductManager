@@ -5286,13 +5286,16 @@ function openShopActionsMenu() {
 
 // ── On-Site Production Page ─────────────────────────────────────
 
+let _onsitePick = null; // { productId, productName, shopCategory, price }
+
 function openInSeasonProduction() {
   const page = document.getElementById('onsite-page');
   if (!page) return;
+  _onsitePick = null;
+  updateOnsitePickDisplay();
   page.classList.remove('hidden');
   renderOnSiteItems();
   page.scrollTop = 0;
-  populateOnSiteSelect();
 }
 
 function closeOnSitePage() {
@@ -5300,18 +5303,99 @@ function closeOnSitePage() {
   if (page) { page.classList.add('hidden'); openShopPage(); }
 }
 
-function populateOnSiteSelect() {
-  const sel = document.getElementById('onsite-category');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">-- odaberite --</option>';
-  for (const cat of (appState.shopCategories || [])) {
-    for (const item of (cat.items || [])) {
-      const opt = document.createElement('option');
-      opt.value = item.id;
-      opt.textContent = `${item.name} (${item.price}\u20AC)`;
-      sel.appendChild(opt);
-    }
+function updateOnsitePickDisplay() {
+  const el = document.getElementById('onsite-selected-name');
+  if (!el) return;
+  if (_onsitePick) {
+    const p = appState.products[_onsitePick.productId];
+    el.textContent = p ? p.name : _onsitePick.productName;
+    el.style.color = '#111827';
+  } else {
+    el.textContent = 'nije odabrano';
+    el.style.color = '#9ca3af';
   }
+}
+
+function openOnsiteProductPicker() {
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  
+  function renderTree(folderId, depth) {
+    const folder = appState.folders[folderId];
+    if (!folder) return '';
+    let html = '';
+    
+    for (const pid of (folder.products || [])) {
+      const p = appState.products[pid];
+      if (!p || Number(p.quantity || 0) <= 0) continue;
+      const catInfo = getCategoryItemInfo(p.shopCategory);
+      const catTag = catInfo ? `${catInfo.item.name} (${catInfo.item.price}\u20AC)` : '';
+      html += `<div class="onsite-pick-product" data-pid="${pid}" style="padding:6px 8px 6px ${depth * 16 + 16}px;display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;margin:2px 0;border-bottom:1px solid #f3f4f6;">`;
+      html += `<span style="flex:1;font-size:14px;font-weight:600;">${escapeHtml(p.name)}</span>`;
+      html += `<span style="color:#6b7280;font-size:12px;">${Number(p.quantity || 0)} kom</span>`;
+      if (catTag) html += `<span style="color:#6366f1;font-size:11px;background:#eef2ff;padding:2px 6px;border-radius:4px;">${escapeHtml(catTag)}</span>`;
+      html += `</div>`;
+    }
+    
+    for (const sfId of (folder.subfolders || [])) {
+      const sf = appState.folders[sfId];
+      if (!sf) continue;
+      const hasContent = (sf.products || []).some(pid => {
+        const p = appState.products[pid];
+        return p && Number(p.quantity || 0) > 0;
+      });
+      if (!hasContent && !(sf.subfolders || []).length) continue;
+      html += `<div class="onsite-pick-folder" data-fid="${sfId}" style="padding:6px 8px 6px ${depth * 16}px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;font-size:14px;border-bottom:1px solid #f3f4f6;border-radius:6px;margin:2px 0;">`;
+      html += `<span style="color:#6b7280;">\u25B6</span>`;
+      html += `<span>${escapeHtml(sf.name)}</span>`;
+      html += `</div>`;
+      html += `<div class="onsite-pick-children" style="display:none;">${renderTree(sfId, depth + 1)}</div>`;
+    }
+    return html;
+  }
+  
+  body.innerHTML = `<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite proizvod za unos:</div>`;
+  body.innerHTML += renderTree(currentFolderId || 'root', 0);
+  
+  setTimeout(() => {
+    body.querySelectorAll('.onsite-pick-folder').forEach(el => {
+      el.addEventListener('click', () => {
+        const children = el.nextElementSibling;
+        if (children && children.classList.contains('onsite-pick-children')) {
+          const hidden = children.style.display === 'none';
+          children.style.display = hidden ? 'block' : 'none';
+          const arrow = el.querySelector('span:first-child');
+          if (arrow) arrow.textContent = hidden ? '\u25BC' : '\u25B6';
+        }
+      });
+    });
+    body.querySelectorAll('.onsite-pick-product').forEach(el => {
+      el.addEventListener('click', () => {
+        const pid = el.dataset.pid;
+        if (!pid) return;
+        const p = appState.products[pid];
+        if (!p) return;
+        const catInfo = getCategoryItemInfo(p.shopCategory);
+        _onsitePick = {
+          productId: pid,
+          productName: p.name,
+          shopCategory: p.shopCategory || '',
+          price: catInfo ? catInfo.item.price : Number(p.price || 0)
+        };
+        closeModal();
+        updateOnsitePickDisplay();
+      });
+    });
+  }, 0);
+  
+  openModal({
+    title: 'Odaberi proizvod',
+    headerIcon: { symbol: '\uD83D\uDCCB', color: 'indigo' },
+    body,
+    actions: [
+      { label: __('Cancel'), tone: 'secondary', onClick: () => { closeModal(); } }
+    ]
+  });
 }
 
 function renderOnSiteItems() {
@@ -5365,39 +5449,40 @@ function renderOnSiteItems() {
 }
 
 function addOnSiteItem() {
-  const sel = document.getElementById('onsite-category');
   const qtyInput = document.getElementById('onsite-qty');
-  if (!sel || !qtyInput) return;
+  if (!qtyInput) return;
   
-  const catId = sel.value;
+  if (!_onsitePick) { showToast('Prvo odaberite proizvod'); return; }
   const qty = parseInt(qtyInput.value || '0', 10);
-  
-  if (!catId) { showToast('Odaberite kategoriju'); return; }
   if (qty <= 0) { showToast('Unesite ispravnu koli\u010dinu'); return; }
   
-  const catInfo = getCategoryItemInfo(catId);
-  const displayName = catInfo ? catInfo.item.name : 'Nepoznato';
+  const catInfo = getCategoryItemInfo(_onsitePick.shopCategory);
+  const catName = catInfo ? catInfo.item.name : 'Nepoznato';
   
   appState.pendingOnSite = appState.pendingOnSite || [];
   
-  // If same category already exists, increment qty
-  const existing = appState.pendingOnSite.find(i => i.shopCategory === catId);
+  // If same product category already exists, increment qty
+  const existing = appState.pendingOnSite.find(i => i.shopCategory === _onsitePick.shopCategory);
   if (existing) {
     existing.qty += qty;
   } else {
     appState.pendingOnSite.push({
       id: uuid(),
-      shopCategory: catId,
-      name: displayName,
+      productId: _onsitePick.productId,
+      productName: _onsitePick.productName,
+      shopCategory: _onsitePick.shopCategory,
+      name: catName,
       qty,
-      price: catInfo ? catInfo.item.price : 0
+      price: _onsitePick.price
     });
   }
   
+  _onsitePick = null;
+  updateOnsitePickDisplay();
   qtyInput.value = '1';
   saveStateDebounced();
   renderOnSiteItems();
-  showToast(`Dodano: ${qty} x ${displayName}`);
+  showToast(`Dodano: ${qty} x ${catName}`);
 }
 
 function confirmOnSiteItems() {
@@ -6057,10 +6142,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // On-site page event wiring
   const onsiteBack = document.getElementById('onsite-back');
   if (onsiteBack) onsiteBack.addEventListener('click', closeOnSitePage);
+  const onsiteSelect = document.getElementById('onsite-select-btn');
+  if (onsiteSelect) onsiteSelect.addEventListener('click', openOnsiteProductPicker);
   const onsiteAdd = document.getElementById('onsite-add-btn');
   if (onsiteAdd) onsiteAdd.addEventListener('click', addOnSiteItem);
-  const onsiteCat = document.getElementById('onsite-category');
-  if (onsiteCat) onsiteCat.addEventListener('keydown', (e) => { if (e.key === 'Enter') addOnSiteItem(); });
   const onsiteQty = document.getElementById('onsite-qty');
   if (onsiteQty) onsiteQty.addEventListener('keydown', (e) => { if (e.key === 'Enter') addOnSiteItem(); });
   const onsiteConfirm = document.getElementById('onsite-confirm-btn');
