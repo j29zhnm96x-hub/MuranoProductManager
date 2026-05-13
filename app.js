@@ -5559,16 +5559,7 @@ function showDocumentPreview(items, docType, customTitle) {
       actions: [
         { label: '\uD83D\uDDB1\uFE0F  Ispiš', onClick: () => { closeModal(); document.title = docFilename; setTimeout(() => { window.print(); document.title = 'Murano Product Manager'; }, 100); } },
         { label: '\uD83D\uDCE4  Podijeli', onClick: () => {
-          closeModal();
-          if (navigator.share) {
-            const style = document.querySelector('link[rel="stylesheet"]') ? `<link rel="stylesheet" href="${document.querySelector('link[rel="stylesheet"]').href}">` : '';
-            const docHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${docFilename}</title>${style}<style>.doc-a4{max-width:800px;margin:0 auto;padding:40px 30px;}.doc-header,.doc-title,.doc-date,.doc-table,.doc-footer{font-family:sans-serif;}table{width:100%;border-collapse:collapse;}th{background:#f3f4f6;text-align:left;padding:8px 10px;}td{padding:6px 10px;border-bottom:1px solid #e5e7eb;}</style></head><body>${document.querySelector('.doc-a4').outerHTML}</body></html>`;
-            const blob = new Blob([docHtml], { type: 'text/html' });
-            const file = new File([blob], docFilename + '.html', { type: 'text/html' });
-            navigator.share({ title: docFilename, files: [file] }).catch(() => {});
-          } else {
-            showToast('Podijeli: ' + docFilename);
-          }
+          closeModal(); document.title = docFilename; setTimeout(() => { window.print(); document.title = 'Murano Product Manager'; }, 100);
         }},
         { label: '\uD83D\uDCCB  Novi dokument', onClick: () => {
           closeModal();
