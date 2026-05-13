@@ -5530,7 +5530,7 @@ function showDocumentPreview(items, docType, customTitle) {
         <div class="doc-info">${escapeHtml(co.phone || '')} ${co.email ? '| ' + escapeHtml(co.email) : ''}</div>
       </div>
       <div class="doc-title">${escapeHtml(title)}</div>
-      <div class="doc-date">Datum: ${date} ${timeStr}</div>
+      <div class="doc-date">Nadnevak: ${date}</div>
       <table class="doc-table">
         <thead><tr><th>Proizvod</th><th style="text-align:right;">Cijena</th><th style="text-align:right;">Količina</th></tr></thead>
         <tbody>${tableRows}</tbody>
@@ -5561,7 +5561,11 @@ function showDocumentPreview(items, docType, customTitle) {
         { label: '\uD83D\uDCE4  Podijeli', onClick: () => {
           closeModal();
           if (navigator.share) {
-            navigator.share({ title: docFilename, text: `${title} - ${date}` }).catch(() => {});
+            const style = document.querySelector('link[rel="stylesheet"]') ? `<link rel="stylesheet" href="${document.querySelector('link[rel="stylesheet"]').href}">` : '';
+            const docHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${docFilename}</title>${style}<style>.doc-a4{max-width:800px;margin:0 auto;padding:40px 30px;}.doc-header,.doc-title,.doc-date,.doc-table,.doc-footer{font-family:sans-serif;}table{width:100%;border-collapse:collapse;}th{background:#f3f4f6;text-align:left;padding:8px 10px;}td{padding:6px 10px;border-bottom:1px solid #e5e7eb;}</style></head><body>${document.querySelector('.doc-a4').outerHTML}</body></html>`;
+            const blob = new Blob([docHtml], { type: 'text/html' });
+            const file = new File([blob], docFilename + '.html', { type: 'text/html' });
+            navigator.share({ title: docFilename, files: [file] }).catch(() => {});
           } else {
             showToast('Podijeli: ' + docFilename);
           }
