@@ -5512,8 +5512,7 @@ function showDocumentPreview(items, docType, customTitle) {
   const timeStr = now.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
   const title = customTitle || (docType === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu');
   
-  // Set page title for printing
-  document.title = `${title}_${now.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
+  const docFilename = `${title}_${now.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
   
   let tableRows = '';
   for (const item of items) {
@@ -5558,14 +5557,13 @@ function showDocumentPreview(items, docType, customTitle) {
       headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
       actionsLayout: 'stack',
       actions: [
-        { label: '\uD83D\uDDB1\uFE0F  Ispiš', onClick: () => { closeModal(); window.print(); } },
+        { label: '\uD83D\uDDB1\uFE0F  Ispiš', onClick: () => { closeModal(); document.title = docFilename; setTimeout(() => { window.print(); document.title = 'Murano Product Manager'; }, 100); } },
         { label: '\uD83D\uDCE4  Podijeli', onClick: () => {
           closeModal();
-          const filename = `${title}_${now.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
           if (navigator.share) {
-            navigator.share({ title: filename, text: `${title} - ${date}` }).catch(() => {});
+            navigator.share({ title: docFilename, text: `${title} - ${date}` }).catch(() => {});
           } else {
-            showToast('Podijeli: ' + filename);
+            showToast('Podijeli: ' + docFilename);
           }
         }},
         { label: '\uD83D\uDCCB  Novi dokument', onClick: () => {

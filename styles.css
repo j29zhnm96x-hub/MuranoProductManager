@@ -474,11 +474,13 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .doc-footer { margin-top: 32px; font-size: 12px; color: #9ca3af; text-align: center; }
 
 @media print {
-  body * { visibility: hidden; }
-  #doc-preview, #doc-preview * { visibility: visible; }
-  #doc-preview { position: absolute; left: 0; top: 0; width: 100%; }
-  .doc-preview-header { display: none !important; }
-  .doc-a4 { box-shadow: none; padding: 20px; page-break-after: avoid; }
+  @page { margin: 0; size: A4; }
+  html, body { height: auto; overflow: visible; }
+  body > *:not(#doc-preview) { display: none !important; }
+  #doc-preview { display: block !important; position: static; width: 100%; }
+  #doc-preview > *:not(.doc-preview-body) { display: none !important; }
+  .doc-preview-body { padding: 0; margin: 0; }
+  .doc-a4 { box-shadow: none; padding: 15px 20px; page-break-after: avoid; }
   .doc-table, .doc-table tr, .doc-table td, .doc-table th { page-break-inside: avoid; }
 }
 
