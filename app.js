@@ -5308,7 +5308,7 @@ function populateOnSiteSelect() {
     for (const item of (cat.items || [])) {
       const opt = document.createElement('option');
       opt.value = item.id;
-      opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
+      opt.textContent = `${item.name} (${item.price}\u20AC)`;
       sel.appendChild(opt);
     }
   }
@@ -5327,7 +5327,7 @@ function renderOnSiteItems() {
   list.innerHTML = '';
   for (const item of items) {
     const catInfo = getCategoryItemInfo(item.shopCategory);
-    const displayName = catInfo ? `${catInfo.group.name} ${catInfo.item.name} (${catInfo.item.price}\u20AC)` : item.name || 'Nepoznato';
+    const displayName = catInfo ? `${catInfo.item.name} (${catInfo.item.price}\u20AC)` : item.name || 'Nepoznato';
     
     const row = document.createElement('div');
     row.className = 'onsite-item';
@@ -5376,7 +5376,7 @@ function addOnSiteItem() {
   if (qty <= 0) { showToast('Unesite ispravnu koli\u010dinu'); return; }
   
   const catInfo = getCategoryItemInfo(catId);
-  const displayName = catInfo ? `${catInfo.group.name} ${catInfo.item.name}` : 'Nepoznato';
+  const displayName = catInfo ? catInfo.item.name : 'Nepoznato';
   
   appState.pendingOnSite = appState.pendingOnSite || [];
   
@@ -5428,7 +5428,7 @@ function executeOnSiteConfirm() {
   const logItems = [];
   for (const item of items) {
     const catInfo = getCategoryItemInfo(item.shopCategory);
-    const itemName = catInfo ? `${catInfo.group.name} ${catInfo.item.name}` : 'Nepoznato';
+    const itemName = catInfo ? catInfo.item.name : 'Nepoznato';
     
     recordInventoryEvent({
       eventType: 'onsite_production',
