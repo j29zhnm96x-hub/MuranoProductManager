@@ -1,0 +1,28 @@
+[    3593ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[   12361ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/Click.mp3?v=1778733693386:0
+[   12377ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click.mp3?v=1778733695736:0
+[   12601ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click-dot.mp3?v=1778733695751:0
+[   14724ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click_dot.mp3?v=1778733695976:0
+[   14725ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/Click.mp3?v=1778733693384:0
+[   14952ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click%20dot.mp3?v=1778733698099:0
+[   17068ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/Click.mp3?v=1778733693384:0
+[   17069ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click.mp3?v=1778733698100:0
+[   19399ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/Click.mp3?v=1778733693384:0
+[   19400ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click.mp3?v=1778733700443:0
+[   19404ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click-dot.mp3?v=1778733700444:0
+[   19647ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/Click.mp3?v=1778733693384:0
+[   21752ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click.mp3?v=1778733702773:0
+[   21753ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click-dot.mp3?v=1778733702775:0
+[   21753ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click_dot.mp3?v=1778733702779:0
+[   21753ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click.mp3?v=1778733703022:0
+[   22007ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click-dot.mp3?v=1778733705126:0
+[   24122ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click_dot.mp3?v=1778733705128:0
+[   24123ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click%20dot.mp3?v=1778733705129:0
+[   24123ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click-dot.mp3?v=1778733705129:0
+[   24123ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click_dot.mp3?v=1778733705382:0
+[   24373ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click%20dot.mp3?v=1778733707496:0
+[   26455ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click_dot.mp3?v=1778733707498:0
+[   26484ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click%20dot.mp3?v=1778733707498:0
+[   26484ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/click%20dot.mp3?v=1778733709830:0
+[   31231ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/assets/Click.mp3?v=1778733714279:0
+[   35367ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
