@@ -756,7 +756,7 @@ function ensureAuthOverlayElements() {
   const message = document.createElement('div'); message.id = 'auth-message'; message.className = 'auth-message';
   
   // Use a proper form for iOS password autofill
-  const form = document.createElement('form'); form.id = 'auth-form'; form.style.cssText = 'width:100%;display:contents;';
+  const form = document.createElement('form'); form.id = 'auth-form'; form.action = '/'; form.style.cssText = 'width:100%;display:contents;';
   
   const inp = document.createElement('input');
   inp.id = 'auth-code'; inp.type = 'password'; inp.name = 'password';
@@ -768,7 +768,7 @@ function ensureAuthOverlayElements() {
   toggleBtn.addEventListener('click', () => { inp.type = inp.type === 'password' ? 'text' : 'password'; });
   
   const submitBtn = document.createElement('button');
-  submitBtn.id = 'auth-submit-btn'; submitBtn.type = 'submit';
+  submitBtn.id = 'auth-submit-btn'; submitBtn.type = 'button';
   submitBtn.textContent = __('Submit'); submitBtn.className = 'auth-submit';
   
   const lockMsg = document.createElement('div'); lockMsg.id = 'auth-lock'; lockMsg.className = 'auth-lock hidden';
@@ -778,7 +778,8 @@ function ensureAuthOverlayElements() {
   box.appendChild(form); box.appendChild(toggleBtn);
   ov.appendChild(box); document.body.appendChild(ov);
   
-  form.addEventListener('submit', (e) => { e.preventDefault(); submitBtn.click(); });
+  form.addEventListener('submit', (e) => { e.preventDefault(); });
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitBtn.click(); } });
   
   // Render function - handles both setup and login
   window.renderAuth = async function(mode) {
