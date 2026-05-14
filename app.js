@@ -484,8 +484,21 @@ async function sha256(text) {
   return arr.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function getAuthHash() { return localStorage.getItem(AUTH_HASH_KEY); }
-function setAuthHash(hash) { localStorage.setItem(AUTH_HASH_KEY, hash); }
+function getAuthHash() {
+  // Check cloud-synced state first, then local fallback
+  if (appState?.settings?.passwordHash) return appState.settings.passwordHash;
+  const local = localStorage.getItem(AUTH_HASH_KEY);
+  if (local) {
+    // Migrate local to state for future cloud sync
+    if (appState) { appState.settings = appState.settings || {}; appState.settings.passwordHash = local; }
+  }
+  return local;
+}
+function setAuthHash(hash) {
+  localStorage.setItem(AUTH_HASH_KEY, hash);
+  if (appState) { appState.settings = appState.settings || {}; appState.settings.passwordHash = hash; }
+  saveStateDebounced();
+}
 
 function getAuthAttempts() { return parseInt(localStorage.getItem(AUTH_ATTEMPT_KEY) || '0', 10); }
 function setAuthAttempts(n) { localStorage.setItem(AUTH_ATTEMPT_KEY, String(n)); }
