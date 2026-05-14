@@ -754,8 +754,12 @@ function ensureAuthOverlayElements() {
   const box = document.createElement('div'); box.className = 'auth-box';
   const title = document.createElement('div'); title.className = 'auth-title';
   const message = document.createElement('div'); message.id = 'auth-message'; message.className = 'auth-message';
+  
+  // Use a proper form for iOS password autofill
+  const form = document.createElement('form'); form.id = 'auth-form'; form.style.cssText = 'width:100%;display:contents;';
+  
   const inp = document.createElement('input');
-  inp.id = 'auth-code'; inp.type = 'password'; inp.autocomplete = 'off';
+  inp.id = 'auth-code'; inp.type = 'password'; inp.name = 'password';
   inp.placeholder = '••••••••'; inp.className = 'auth-input';
   
   const toggleBtn = document.createElement('button');
@@ -764,15 +768,17 @@ function ensureAuthOverlayElements() {
   toggleBtn.addEventListener('click', () => { inp.type = inp.type === 'password' ? 'text' : 'password'; });
   
   const submitBtn = document.createElement('button');
+  submitBtn.id = 'auth-submit-btn'; submitBtn.type = 'submit';
   submitBtn.textContent = __('Submit'); submitBtn.className = 'auth-submit';
   
   const lockMsg = document.createElement('div'); lockMsg.id = 'auth-lock'; lockMsg.className = 'auth-lock hidden';
   
+  form.appendChild(inp); form.appendChild(submitBtn);
   box.appendChild(title); box.appendChild(message); box.appendChild(lockMsg);
-  box.appendChild(inp); box.appendChild(toggleBtn); box.appendChild(submitBtn);
+  box.appendChild(form); box.appendChild(toggleBtn);
   ov.appendChild(box); document.body.appendChild(ov);
   
-  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitBtn.click(); } });
+  form.addEventListener('submit', (e) => { e.preventDefault(); submitBtn.click(); });
   
   // Render function - handles both setup and login
   window.renderAuth = async function(mode) {
@@ -781,6 +787,7 @@ function ensureAuthOverlayElements() {
     
     title.textContent = needsSetup ? 'Postavi lozinku' : __('Enter Password');
     inp.value = ''; inp.type = 'password'; message.textContent = ''; lockMsg.classList.add('hidden');
+    inp.autocomplete = needsSetup ? 'new-password' : 'current-password';
     ov.classList.remove('hidden'); setTimeout(() => inp.focus(), 100);
     
     if (needsSetup) {
