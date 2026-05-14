@@ -63,15 +63,14 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 /* Auth overlay for passcode */
 #auth-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; display: grid; place-items: center; }
 #auth-overlay.hidden { display: none !important; }
-.auth-box { width: min(420px, 92vw); background: #1f2937; border: 1px solid #374151; border-radius: 16px; padding: 20px; box-shadow: 0 10px 24px rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 16px; }
-.auth-title { font-size: 22px; font-weight: 800; color: #ffffff; text-align: center; }
-.auth-message { color: #ef4444; text-align: center; font-size: 14px; min-height: 20px; }
-.auth-input { padding: 12px 14px; border-radius: 12px; border: 1px solid #374151; background: #ffffff; text-align: center; font-size: 18px; letter-spacing: 4px; width: 100%; }
-.auth-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
-.auth-keypad button { padding: 15px; border: 1px solid #4b5563; background: #374151; color: #ffffff; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
-.auth-keypad button:hover { background: #4b5563; }
-.auth-keypad button:active { background: #6b7280; }
-.auth-submit { padding: 12px 20px; border-radius: 12px; border: 1px solid #10b981; background: #10b981; color: #ffffff; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+.auth-box { width: min(420px, 92vw); background: #1f2937; border: 1px solid #374151; border-radius: 16px; padding: 24px 20px; box-shadow: 0 10px 24px rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.auth-title { color: #ffffff; font-size: 18px; font-weight: 700; text-align: center; }
+.auth-message { color: #f87171; font-size: 14px; text-align: center; min-height: 20px; }
+.auth-lock { color: #fbbf24; font-size: 14px; text-align: center; min-height: 20px; font-weight: 600; }
+.auth-lock.hidden { display: none; }
+.auth-input { padding: 12px 14px; border-radius: 12px; border: 1px solid #374151; background: #ffffff; font-size: 16px; width: 100%; box-sizing: border-box; }
+.auth-toggle { background: transparent; border: none; color: #9ca3af; cursor: pointer; font-size: 20px; padding: 4px 8px; position: absolute; right: 28px; margin-top: -40px; }
+.auth-submit { padding: 12px 20px; border-radius: 12px; border: 1px solid #10b981; background: #10b981; color: #ffffff; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; width: 100%; }
 .auth-submit:hover { background: #059669; }
 .auth-submit:active { background: #047857; }
 

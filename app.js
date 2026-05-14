@@ -463,32 +463,45 @@ const LAST_BACKUP_NAME_KEY = 'murano_last_backup_name';
 let lastKnownBackupName = null; // persisted across reloads for accurate detection
 try { lastKnownBackupName = localStorage.getItem(LAST_BACKUP_NAME_KEY) || null; } catch {}
 
-// ---------------------------- Auth ----------------------------
-// Obfuscated password system - password is encoded using Base64
-// 
-// TO CHANGE THE PASSWORD:
-// 1. Open browser console on this page
-// 2. Run: encodePassword('YOUR_NEW_PASSWORD') 
-// 3. Copy the result and replace ENCODED_PASS below
-// 
-const ENCODED_PASS = 'OTI3Nw=='; // Base64 encoded version of '9277'
+// ---------------------------- Auth (Secure) ----------------------------
+// SHA-256 password hash - NO plaintext password is ever stored
+// Brute-force protection: 5 attempts → 60s lockout
 const AUTH_SESSION_KEY = 'murano_auth_ok';
+const AUTH_HASH_KEY = 'murano_auth_hash';
+const AUTH_ATTEMPT_KEY = 'murano_auth_attempts';
+const AUTH_LOCK_KEY = 'murano_auth_locked';
+const AUTH_MAX_ATTEMPTS = 5;
+const AUTH_LOCK_MS = 60000;
 
-// Decode the obfuscated password at runtime (Base64 only)
-function decodePassword(encoded) {
-  try {
-    return atob(encoded);
-  } catch {
-    return '9277'; // Fallback to default if decoding fails
-  }
+// Password must be 8+ characters
+const AUTH_MIN_LENGTH = 8;
+
+async function sha256(text) {
+  const enc = new TextEncoder();
+  const data = enc.encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  const arr = Array.from(new Uint8Array(buf));
+  return arr.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Utility function to encode a new password (for development/updates)
-function encodePassword(plaintext) {
-  return btoa(plaintext);
+function getAuthHash() { return localStorage.getItem(AUTH_HASH_KEY); }
+function setAuthHash(hash) { localStorage.setItem(AUTH_HASH_KEY, hash); }
+
+function getAuthAttempts() { return parseInt(localStorage.getItem(AUTH_ATTEMPT_KEY) || '0', 10); }
+function setAuthAttempts(n) { localStorage.setItem(AUTH_ATTEMPT_KEY, String(n)); }
+
+function getAuthLockRemaining() {
+  const until = parseInt(localStorage.getItem(AUTH_LOCK_KEY) || '0', 10);
+  if (!until) return 0;
+  const rem = until - Date.now();
+  if (rem > 0) return rem;
+  localStorage.removeItem(AUTH_LOCK_KEY);
+  localStorage.removeItem(AUTH_ATTEMPT_KEY);
+  return 0;
 }
 
-const APP_PASSCODE = decodePassword(ENCODED_PASS);
+function isSessionActive() { return sessionStorage.getItem(AUTH_SESSION_KEY) === '1'; }
+function setSessionActive() { sessionStorage.setItem(AUTH_SESSION_KEY, '1'); }
  
 // ---------------------------- UI Sounds ----------------------------
 const CLICK_SOUND_URL = './assets/Click.mp3';
@@ -724,90 +737,100 @@ try {
 function ensureAuthOverlayElements() {
   if (document.getElementById('auth-overlay')) return;
   
-  const ov = document.createElement('div'); ov.id = 'auth-overlay';
+  const ov = document.createElement('div'); ov.id = 'auth-overlay'; ov.className = 'auth-overlay';
   const box = document.createElement('div'); box.className = 'auth-box';
-  const title = document.createElement('div'); title.className = 'auth-title'; title.textContent = __('Enter Password');
+  const title = document.createElement('div'); title.className = 'auth-title';
   const message = document.createElement('div'); message.id = 'auth-message'; message.className = 'auth-message';
-  const inp = document.createElement('input'); 
-  inp.id = 'auth-code'; 
-  inp.type = 'password'; 
-  inp.inputMode = 'numeric'; 
-  inp.maxLength = 4; 
-  inp.autocomplete = 'off'; 
-  inp.placeholder = '• • • •';
-  inp.className = 'auth-input';
+  const inp = document.createElement('input');
+  inp.id = 'auth-code'; inp.type = 'password'; inp.autocomplete = 'off';
+  inp.placeholder = '••••••••'; inp.className = 'auth-input';
   
-  const keypad = document.createElement('div'); keypad.className = 'auth-keypad';
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button'; toggleBtn.className = 'auth-toggle';
+  toggleBtn.textContent = '👁';
+  toggleBtn.addEventListener('click', () => { inp.type = inp.type === 'password' ? 'text' : 'password'; });
   
-  // Create numerical keypad (1-9, 0, Clear)
-  for (let i = 1; i <= 9; i++) {
-    const btn = document.createElement('button');
-    btn.textContent = i;
-    btn.addEventListener('click', () => {
-      if (inp.value.length < 4) inp.value += i;
-    });
-    keypad.appendChild(btn);
-  }
-  
-  // Add 0 button
-  const btn0 = document.createElement('button');
-  btn0.textContent = '0';
-  btn0.addEventListener('click', () => {
-    if (inp.value.length < 4) inp.value += '0';
-  });
-  keypad.appendChild(btn0);
-  
-  // Add Clear button
-  const btnClear = document.createElement('button');
-  btnClear.textContent = __('Clear');
-  btnClear.addEventListener('click', () => {
-    inp.value = '';
-    message.textContent = '';
-  });
-  keypad.appendChild(btnClear);
-  
-  // Add Submit button
   const submitBtn = document.createElement('button');
-  submitBtn.textContent = __('Submit');
-  submitBtn.className = 'auth-submit';
+  submitBtn.textContent = __('Submit'); submitBtn.className = 'auth-submit';
   
-  function tryPasscode() {
-    if (inp.value === APP_PASSCODE) {
-      sessionStorage.setItem(AUTH_SESSION_KEY, '1');
-      ov.classList.add('hidden');
-      message.textContent = '';
+  const lockMsg = document.createElement('div'); lockMsg.id = 'auth-lock'; lockMsg.className = 'auth-lock hidden';
+  
+  box.appendChild(title); box.appendChild(message); box.appendChild(lockMsg);
+  box.appendChild(inp); box.appendChild(toggleBtn); box.appendChild(submitBtn);
+  ov.appendChild(box); document.body.appendChild(ov);
+  
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitBtn.click(); } });
+  
+  // Render function - handles both setup and login
+  window.renderAuth = async function(mode) {
+    const hash = getAuthHash();
+    const needsSetup = mode === 'setup' || !hash;
+    
+    title.textContent = needsSetup ? 'Postavi lozinku' : __('Enter Password');
+    inp.value = ''; inp.type = 'password'; message.textContent = ''; lockMsg.classList.add('hidden');
+    ov.classList.remove('hidden'); setTimeout(() => inp.focus(), 100);
+    
+    if (needsSetup) {
+      inp.placeholder = 'min 8 znakova';
+      submitBtn.onclick = async () => {
+        const pwd = inp.value;
+        if (pwd.length < AUTH_MIN_LENGTH) { message.textContent = 'Lozinka mora imati najmanje 8 znakova'; return; }
+        const h = await sha256(pwd);
+        setAuthHash(h); setAuthAttempts(0); setSessionActive(); ov.classList.add('hidden');
+      };
     } else {
-      message.textContent = __('Incorrect password. Try again.');
-      inp.value = '';
-      setTimeout(() => inp.focus(), 100);
+      inp.placeholder = '••••••••';
+      
+      // Lock countdown ticker
+      if (window._authLockInterval) clearInterval(window._authLockInterval);
+      window._authLockInterval = setInterval(() => {
+        const r = getAuthLockRemaining();
+        if (r > 0) { lockMsg.classList.remove('hidden'); lockMsg.textContent = `Pričekajte ${Math.ceil(r / 1000)} sekundi`; }
+        else { lockMsg.classList.add('hidden'); if (window._authLockInterval) clearInterval(window._authLockInterval); }
+      }, 1000);
+      
+      submitBtn.onclick = async () => {
+        const rem = getAuthLockRemaining();
+        if (rem > 0) {
+          lockMsg.classList.remove('hidden');
+          lockMsg.textContent = `Pričekajte ${Math.ceil(rem / 1000)} sekundi`;
+          return;
+        }
+        const pwd = inp.value; inp.value = '';
+        const h = await sha256(pwd);
+        if (h === getAuthHash()) {
+          setAuthAttempts(0); setSessionActive(); ov.classList.add('hidden'); message.textContent = '';
+        } else {
+          const attempts = getAuthAttempts() + 1;
+          setAuthAttempts(attempts);
+          const remaining = AUTH_MAX_ATTEMPTS - attempts;
+          if (remaining <= 0) {
+            const until = Date.now() + AUTH_LOCK_MS;
+            localStorage.setItem(AUTH_LOCK_KEY, String(until));
+            lockMsg.classList.remove('hidden');
+            lockMsg.textContent = `Previše pogrešnih. Pričekajte ${Math.ceil(AUTH_LOCK_MS / 1000)} sekundi.`;
+          } else {
+            message.textContent = `Netočna lozinka. Preostalo pokušaja: ${remaining}`;
+          }
+          setTimeout(() => inp.focus(), 100);
+        }
+      };
     }
-  }
-  
-  submitBtn.addEventListener('click', tryPasscode);
-  
-  // Handle Enter key
-  inp.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      tryPasscode();
-    }
-    if (e.key === 'Backspace') return;
-    if (!/\d/.test(e.key)) e.preventDefault();
-  });
-  
-  box.appendChild(title);
-  box.appendChild(message);
-  box.appendChild(inp);
-  box.appendChild(keypad);
-  box.appendChild(submitBtn);
-  ov.appendChild(box);
-  document.body.appendChild(ov);
-  
-  setTimeout(() => inp.focus(), 100);
+  };
 }
 
 async function ensureAuthenticated() {
-  return;
+  ensureAuthOverlayElements();
+  if (isSessionActive()) return;
+  const hash = getAuthHash();
+  await window.renderAuth(hash ? 'login' : 'setup');
+  
+  // Wait for auth to complete
+  return new Promise(resolve => {
+    const check = setInterval(() => {
+      if (isSessionActive()) { clearInterval(check); resolve(); }
+    }, 100);
+  });
 }
 
 // ---------------------------- Daily Progress ----------------------------
@@ -2540,6 +2563,40 @@ function openSettings() {
   testGroup.appendChild(makeBtn('Izbriši testne podatke', 'danger', deleteTestData));
   wrap.appendChild(testGroup);
   
+  // ── Password change ─────────────────────────────────────────
+  const pwdGroup = document.createElement('div');
+  pwdGroup.style.cssText = 'padding:4px 0;';
+  pwdGroup.appendChild(makeBtn('Promijeni lozinku', '', async () => {
+    closeModal();
+    const hash = getAuthHash();
+    if (!hash) { showToast('Nema postavljene lozinke'); return; }
+    
+    const body = document.createElement('div'); body.className = 'settings-wrap';
+    const oldInp = document.createElement('input'); oldInp.type = 'password'; oldInp.placeholder = 'Stara lozinka'; oldInp.style.cssText = 'width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+    const newInp = document.createElement('input'); newInp.type = 'password'; newInp.placeholder = 'Nova lozinka (min 8 znakova)'; newInp.style.cssText = 'width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;margin-top:8px;';
+    const conInp = document.createElement('input'); conInp.type = 'password'; conInp.placeholder = 'Ponovi novu lozinku'; conInp.style.cssText = 'width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;margin-top:8px;';
+    body.appendChild(oldInp); body.appendChild(newInp); body.appendChild(conInp);
+    
+    openModal({
+      title: 'Promijeni lozinku', headerIcon: { symbol: '\uD83D\uDD11', color: 'slate' },
+      body, actionsLayout: 'stack',
+      actions: [
+        { label: 'Spremi', onClick: async () => {
+            const oldPwd = oldInp.value; const newPwd = newInp.value; const conPwd = conInp.value;
+            if (!oldPwd || !newPwd || !conPwd) { showToast('Popunite sva polja'); return; }
+            if (newPwd.length < AUTH_MIN_LENGTH) { showToast('Nova lozinka mora imati najmanje 8 znakova'); return; }
+            if (newPwd !== conPwd) { showToast('Nove lozinke se ne podudaraju'); return; }
+            if (await sha256(oldPwd) !== getAuthHash()) { showToast('Stara lozinka nije ispravna'); return; }
+            setAuthHash(await sha256(newPwd));
+            setAuthAttempts(0);
+            closeModal(); showToast('Lozinka promijenjena');
+        }},
+        { label: __('Cancel'), tone: 'secondary' }
+      ]
+    });
+  }));
+  wrap.appendChild(pwdGroup);
+
   // ── Open modal ─────────────────────────────────────────────
   openModal({
     title: __('Settings'),
@@ -6169,6 +6226,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Ensure all state fields exist (for backward compatibility)
   ensureStateFields();
+  
+  // Auth: wait for password before showing anything
+  try { await ensureAuthenticated(); } catch (e) { console.warn('Auth error', e); }
 
   // UI wiring
   document.getElementById('add-btn').addEventListener('click', () => openAddMenu(currentFolderId));
