@@ -5118,11 +5118,7 @@ function transferFromWarehouse() {
     for (const sfId of (folder.subfolders || [])) {
       const sf = appState.folders[sfId];
       if (!sf) continue;
-      const hasContent = (sf.products || []).some(pid => {
-        const p = appState.products[pid];
-        return p && Number(p.quantity || 0) > 0;
-      });
-      if (!hasContent && !(sf.subfolders || []).length) continue;
+      if (!sf.products?.length && !sf.subfolders?.length) continue;
       html += `<div class="transfer-folder" data-fid="${sfId}" style="padding:6px 8px 6px ${depth * 16}px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:14px;border-bottom:1px solid #f3f4f6;border-radius:6px;margin:2px 0;">`;
       html += `<span style="color:#6b7280;">\u25B6</span>`;
       html += `<span>${escapeHtml(sf.name)}</span>`;
@@ -5134,7 +5130,7 @@ function transferFromWarehouse() {
     return html;
   }
   
-  body.innerHTML = `<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite proizvod za prijenos:</div>` + renderTree(currentFolderId || 'root', 0);
+  body.innerHTML = `<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite proizvod za prijenos:</div>` + renderTree('root', 0);
   
   // Add click handlers
   setTimeout(() => {
@@ -5443,7 +5439,7 @@ function openOnsiteProductPicker() {
     
     for (const pid of (folder.products || [])) {
       const p = appState.products[pid];
-      if (!p || Number(p.quantity || 0) <= 0) continue;
+      if (!p) continue;
       const catInfo = getCategoryItemInfo(p.shopCategory);
       const catTag = catInfo ? `${catInfo.item.name} (${catInfo.item.price}\u20AC)` : '';
       html += `<div class="onsite-pick-product" data-pid="${pid}" style="padding:6px 8px 6px ${depth * 16 + 16}px;display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;margin:2px 0;border-bottom:1px solid #f3f4f6;">`;
@@ -5456,11 +5452,7 @@ function openOnsiteProductPicker() {
     for (const sfId of (folder.subfolders || [])) {
       const sf = appState.folders[sfId];
       if (!sf) continue;
-      const hasContent = (sf.products || []).some(pid => {
-        const p = appState.products[pid];
-        return p && Number(p.quantity || 0) > 0;
-      });
-      if (!hasContent && !(sf.subfolders || []).length) continue;
+      if (!sf.products?.length && !sf.subfolders?.length) continue;
       html += `<div class="onsite-pick-folder" data-fid="${sfId}" style="padding:6px 8px 6px ${depth * 16}px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;font-size:14px;border-bottom:1px solid #f3f4f6;border-radius:6px;margin:2px 0;">`;
       html += `<span style="color:#6b7280;">\u25B6</span>`;
       html += `<span>${escapeHtml(sf.name)}</span>`;
@@ -5471,7 +5463,7 @@ function openOnsiteProductPicker() {
   }
   
   body.innerHTML = `<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite proizvod za unos:</div>`;
-  body.innerHTML += renderTree(currentFolderId || 'root', 0);
+  body.innerHTML += renderTree('root', 0);
   
   setTimeout(() => {
     body.querySelectorAll('.onsite-pick-folder').forEach(el => {
