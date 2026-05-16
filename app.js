@@ -3988,8 +3988,8 @@ function updateWarningIcon(show) {
       warningIcon.style.alignItems = 'center';
       warningIcon.style.justifyContent = 'center';
       warningIcon.style.cursor = 'pointer';
-      warningIcon.style.fontSize = '22px';
-      warningIcon.style.fontWeight = '800';
+      warningIcon.style.fontSize = '28px';
+      warningIcon.style.fontWeight = '900';
       warningIcon.style.color = '#ef4444';
       warningIcon.style.lineHeight = '1';
       warningIcon.style.animation = 'warning-blink 1s ease-in-out infinite alternate';
