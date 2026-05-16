@@ -6866,15 +6866,28 @@ function correctProductQuantity() {
   const v = Number(raw);
   if (!Number.isFinite(v) || v < 0) { inputEl.focus(); showToast(__('Enter valid quantity')); return; }
   const newQty = Math.max(0, Math.floor(v));
-  p.quantity = newQty;
-  // IMPORTANT: do NOT record this as an inventory event. This is an invisible correction.
-  try { saveStateDebounced(); } catch {}
-  const qtyEl = document.getElementById('pp-qty'); if (qtyEl) qtyEl.textContent = newQty;
-  if (!isProductInIndependentFolder(productPageProductId)) {
-    const totalEl = document.getElementById('pp-total'); if (totalEl) totalEl.textContent = formatCurrency(Number(p.price || 0) * newQty);
-  }
-  inputEl.value = '';
-  renderFolderList();
+  const currentQty = Number(p.quantity || 0);
+  openModal({
+    title: __('Ispravak'),
+    headerIcon: { symbol: '\u270F', color: 'red' },
+    size: 'small',
+    body: `Promijeni količinu s ${currentQty} na ${newQty}? Ova radnja se ne bilježi u povijesti.`,
+    actions: [
+      { label: __('Confirm'), onClick: () => {
+          p.quantity = newQty;
+          // IMPORTANT: do NOT record this as an inventory event. This is an invisible correction.
+          try { saveStateDebounced(); } catch {}
+          const qtyEl = document.getElementById('pp-qty'); if (qtyEl) qtyEl.textContent = newQty;
+          if (!isProductInIndependentFolder(productPageProductId)) {
+            const totalEl = document.getElementById('pp-total'); if (totalEl) totalEl.textContent = formatCurrency(Number(p.price || 0) * newQty);
+          }
+          inputEl.value = '';
+          renderFolderList();
+          try { closeModal(); } catch {}
+      }},
+      { label: __('Cancel') }
+    ]
+  });
   try { inputEl.blur(); } catch {}
   showToast(__('Quantity corrected (no history recorded)'));
 }
