@@ -3977,8 +3977,8 @@ function updateWarningIcon(show) {
   
   // Create icon if it doesn't exist
   if (!warningIcon) {
-    const rightDiv = document.querySelector('#top-bar .right');
-    if (rightDiv) {
+    const midRightDiv = document.querySelector('#top-bar .mid-right');
+    if (midRightDiv) {
       // Create simple red exclamation mark
       warningIcon = document.createElement('div');
       warningIcon.id = 'warning-icon';
@@ -3994,13 +3994,8 @@ function updateWarningIcon(show) {
       warningIcon.style.color = '#ef4444';
       warningIcon.style.lineHeight = '1';
       warningIcon.style.animation = 'warning-blink 1s ease-in-out infinite alternate';
-      warningIcon.style.padding = '0 6px';
-      const settingsBtn = document.getElementById('settings-btn');
-      if (settingsBtn) {
-        rightDiv.insertBefore(warningIcon, settingsBtn);
-      } else {
-        rightDiv.appendChild(warningIcon);
-      }
+      warningIcon.style.padding = '0 4px';
+      midRightDiv.appendChild(warningIcon);
     }
   }
   
