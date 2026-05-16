@@ -5169,13 +5169,149 @@ function transferFromWarehouse() {
   });
 }
 
+let _transferCatId = ''; // Selected category for current transfer
+
+function openTransferCategoryPicker(productId) {
+  const p = appState.products[productId];
+  if (!p) return;
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:4px;max-height:60vh;overflow:auto;';
+  
+  function renderCatTree() {
+    body.innerHTML = '';
+    const cats = appState.shopCategories || [];
+    
+    for (const cat of cats) {
+      const groupDiv = document.createElement('div');
+      groupDiv.style.cssText = 'background:#f9fafb;border-radius:8px;overflow:hidden;margin-bottom:4px;';
+      
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 10px;cursor:pointer;font-weight:700;font-size:14px;';
+      header.innerHTML = `<span style="color:#6b7280;">\u25BC</span><span>${escapeHtml(cat.name)}</span>`;
+      
+      const itemsDiv = document.createElement('div');
+      itemsDiv.style.cssText = 'display:grid;gap:1px;';
+      
+      for (const item of (cat.items || [])) {
+        const itemRow = document.createElement('div');
+        itemRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px 6px 24px;cursor:pointer;font-size:14px;border-radius:4px;margin:1px 4px;';
+        itemRow.innerHTML = `<span style="flex:1;">${escapeHtml(item.name)}</span><span style="color:#6b7280;font-weight:600;">${item.price}\u20AC</span>`;
+        itemRow.addEventListener('click', () => {
+          _transferCatId = item.id;
+          closeModal();
+          const lbl = document.getElementById('transfer-cat-label');
+          if (lbl) lbl.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
+          const btn = document.getElementById('transfer-cat-btn');
+          if (btn) btn.style.borderColor = '#22c55e';
+        });
+        itemsDiv.appendChild(itemRow);
+      }
+      
+      groupDiv.appendChild(header);
+      groupDiv.appendChild(itemsDiv);
+      body.appendChild(groupDiv);
+      
+      header.addEventListener('click', () => {
+        const visible = itemsDiv.style.display !== 'none';
+        itemsDiv.style.display = visible ? 'none' : 'grid';
+        header.querySelector('span:first-child').textContent = visible ? '\u25B6' : '\u25BC';
+      });
+    }
+    
+    // New category button
+    const newBtn = document.createElement('button');
+    newBtn.style.cssText = 'width:100%;padding:10px;border:1px dashed #0ea5e9;border-radius:8px;background:transparent;color:#0ea5e9;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;';
+    newBtn.textContent = '\u2795  Nova kategorija';
+    newBtn.addEventListener('click', () => {
+      body.innerHTML = '';
+      const form = document.createElement('div');
+      form.style.cssText = 'display:grid;gap:10px;';
+      form.innerHTML = `
+        <div style="font-weight:700;font-size:14px;">Nova kategorija</div>
+        <input id="new-cat-name" placeholder="Naziv (npr. Narukvica 12)" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+        <input id="new-cat-price" placeholder="Cijena (€)" type="number" min="0" step="0.5" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+        <input id="new-cat-group" placeholder="Grupa (npr. Narukvica)" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+      `;
+      // Auto-detect price from name
+      const nameInput = form.querySelector('#new-cat-name');
+      const priceInput = form.querySelector('#new-cat-price');
+      nameInput.addEventListener('input', () => {
+        const nums = nameInput.value.match(/\d+/g);
+        if (nums && !priceInput.value) priceInput.value = nums[nums.length - 1];
+      });
+      body.innerHTML = '';
+      
+      const btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:8px;margin-top:8px;';
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = 'Spremi';
+      saveBtn.style.cssText = 'flex:1;padding:8px;border-radius:8px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-weight:700;font-size:14px;cursor:pointer;';
+      saveBtn.addEventListener('click', () => {
+        const name = form.querySelector('#new-cat-name').value.trim();
+        const price = parseFloat(form.querySelector('#new-cat-price').value);
+        const groupName = form.querySelector('#new-cat-group').value.trim() || name.replace(/[\s]*\d+.*$/, '').trim() || name.replace(/\d+/g, '').trim();
+        
+        if (!name || !price) { showToast('Unesite naziv i cijenu'); return; }
+        
+        // Find or create group
+        let group = (appState.shopCategories || []).find(g => g.name === groupName);
+        if (!group) {
+          group = { id: uuid(), name: groupName, items: [] };
+          appState.shopCategories = appState.shopCategories || [];
+          appState.shopCategories.push(group);
+        }
+        
+        const newItem = { id: uuid(), name, price };
+        group.items.push(newItem);
+        _transferCatId = newItem.id;
+        saveStateDebounced();
+        closeModal();
+        
+        const lbl = document.getElementById('transfer-cat-label');
+        if (lbl) lbl.textContent = `${group.name} / ${name} (${price}\u20AC)`;
+        const btn = document.getElementById('transfer-cat-btn');
+        if (btn) btn.style.borderColor = '#22c55e';
+        showToast('Kategorija kreirana');
+      });
+      btns.appendChild(saveBtn);
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Odustani';
+      cancelBtn.style.cssText = 'flex:1;padding:8px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;font-weight:700;font-size:14px;cursor:pointer;';
+      cancelBtn.addEventListener('click', () => renderCatTree());
+      btns.appendChild(cancelBtn);
+      
+      body.appendChild(form);
+      body.appendChild(btns);
+    });
+    body.appendChild(newBtn);
+  }
+  
+  renderCatTree();
+  
+  openModal({
+    title: 'Odaberi kategoriju',
+    headerIcon: { symbol: '\uD83C\uDFEA', color: 'slate' },
+    body,
+    actions: [{ label: 'Zatvori', tone: 'secondary' }]
+  });
+}
+
 function openTransferQtyModal(productId) {
   const p = appState.products[productId];
   if (!p) return;
   const maxQty = Number(p.quantity || 0);
+  _transferCatId = p.shopCategory || '';
   
   const body = document.createElement('div');
   body.style.cssText = 'display:grid;gap:12px;max-width:400px;';
+  
+  // Find default category name
+  let defaultCatName = '';
+  if (_transferCatId) {
+    const ci = getCategoryItemInfo(_transferCatId);
+    if (ci) defaultCatName = `${ci.group.name} / ${ci.item.name} (${ci.item.price}\u20AC)`;
+  }
   
   body.innerHTML = `
     <div style="font-weight:700;font-size:16px;">${escapeHtml(p.name)}</div>
@@ -5186,28 +5322,16 @@ function openTransferQtyModal(productId) {
     </label>
     <label style="display:grid;gap:4px;">
       <span style="font-weight:600;font-size:13px;">Kategorija prodaje</span>
-      <select id="transfer-category" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;"></select>
+      <button id="transfer-cat-btn" type="button" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;font-size:14px;cursor:pointer;text-align:left;">
+        <span id="transfer-cat-label" style="flex:1;color:${defaultCatName ? '#111827' : '#9ca3af'};">${defaultCatName || 'Odaberi kategoriju'}</span>
+        <span style="color:#6b7280;">\u25BC</span>
+      </button>
     </label>
-    <div style="font-size:12px;color:#9ca3af;">Ako kategorija ne postoji, prvo je kreirajte u Postavke > Kategorije prodaje.</div>
   `;
   
-  // Populate categories
-  const select = body.querySelector('#transfer-category');
-  if (select) {
-    // Find current product category assignment
-    const currentCat = p.shopCategory;
-    let foundCurrent = false;
-    for (const cat of (appState.shopCategories || [])) {
-      for (const item of (cat.items || [])) {
-        const opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
-        if (currentCat === item.id) { opt.selected = true; foundCurrent = true; }
-        select.appendChild(opt);
-      }
-    }
-    // Allow creating new - will be done via Settings
-  }
+  setTimeout(() => {
+    body.querySelector('#transfer-cat-btn')?.addEventListener('click', () => openTransferCategoryPicker(productId));
+  }, 0);
   
   openModal({
     title: 'Prijenos u prodaju',
@@ -5216,7 +5340,7 @@ function openTransferQtyModal(productId) {
     actions: [
       { label: 'Dodaj u prijenos', onClick: () => {
         const qty = parseInt(body.querySelector('#transfer-qty')?.value || '0', 10);
-        const catId = body.querySelector('#transfer-category')?.value || '';
+        const catId = _transferCatId;
         if (qty <= 0 || qty > maxQty) { showToast('Neispravna količina'); return; }
         if (!catId) { showToast('Odaberite kategoriju prodaje'); return; }
         
