@@ -4986,8 +4986,9 @@ function renderShopInventory() {
       
       const header = document.createElement('div');
       header.className = 'shop-inv-group-header';
-      header.innerHTML = `<span class="shop-inv-group-toggle">\u25BC</span><span class="shop-inv-group-name">${escapeHtml(group.name)}</span><span class="shop-inv-group-total">${totalQty} kom / ${formatCurrency(totalValue)}</span>`;
-      header.addEventListener('click', () => {
+      header.innerHTML = `<span class="shop-inv-group-toggle">\u25BC</span><span class="shop-inv-group-name">${escapeHtml(group.name)}</span><span class="shop-inv-group-total">${totalQty} kom / ${formatCurrency(totalValue)}</span> <button class="shop-inv-del" data-gid="${gId}" title="Izbri\u0161i kategoriju" type="button">\u2715</button>`;
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.shop-inv-del')) return; // let the delete button handle it
         const itemsDiv = groupDiv.querySelector('.shop-inv-items');
         if (itemsDiv) {
           itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'grid' : 'none';
@@ -4995,6 +4996,42 @@ function renderShopInventory() {
           if (toggle) toggle.textContent = itemsDiv.style.display === 'none' ? '\u25B6' : '\u25BC';
         }
       });
+      // Delete category button
+      const delCatBtn = header.querySelector('.shop-inv-del');
+      if (delCatBtn) {
+        delCatBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const gId = delCatBtn.dataset.gid;
+          const group = inventory.byGroup[gId];
+          if (!group) return;
+          const catName = group.name;
+          openModal({
+            title: 'Izbri\u0161i kategoriju',
+            headerIcon: { symbol: '\u26A0', color: 'amber' },
+            size: 'small',
+            body: `Jeste li sigurni da želite izbrisati kategoriju "${escapeHtml(catName)}" iz prodaje? Svi proizvodi u ovoj kategoriji bit će uklonjeni.`,
+            actions: [
+              { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
+                  const catItemIds = group.items.map(i => i.itemId);
+                  appState.transferLog = (appState.transferLog || []).filter(t => {
+                    return !(t.items || []).some(ti => catItemIds.includes(ti.shopCategory));
+                  });
+                  appState.onSiteProduction = (appState.onSiteProduction || []).filter(o => {
+                    return !(o.items || []).some(oi => catItemIds.includes(oi.shopCategory));
+                  });
+                  appState.returnLog = (appState.returnLog || []).filter(r => {
+                    return !(r.items || []).some(ri => catItemIds.includes(ri.shopCategory));
+                  });
+                  saveStateDebounced();
+                  renderShopInventory();
+                  showToast(`Kategorija "${escapeHtml(catName)}" izbrisana iz prodaje`);
+                  closeModal();
+              }},
+              { label: 'Odustani', tone: 'secondary' }
+            ]
+          });
+        });
+      }
       groupDiv.appendChild(header);
       
       const itemsDiv = document.createElement('div');
@@ -5357,6 +5394,7 @@ function openShopActionsMenu() {
       { label: '\uD83C\uDFF7  Proizvodnja na licu mjesta', onClick: () => { closeModal(); openInSeasonProduction(); } },
       { label: '\uD83D\uDCC4  Dokumenti', onClick: () => { closeModal(); openDocumentList(); } },
       { label: '\uD83D\uDD04  Povrat iz prodaje', onClick: () => { closeModal(); returnFromShop(); } },
+      { label: '\uD83D\uDDD1\uFE0F  Isprazni prodaju', tone: 'danger', onClick: () => { closeModal(); clearShopAll(); } },
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
@@ -5725,6 +5763,34 @@ function declineOnSiteAll() {
           closeModal();
         }},
       { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+// ── Clear Shop ──────────────────────────────────────────────────
+
+function clearShopAll() {
+  openModal({
+    title: 'Isprazni prodaju',
+    headerIcon: { symbol: '\u26A0', color: 'red' },
+    size: 'small',
+    body: 'Jeste li sigurni da želite izbrisati SVE podatke iz prodaje? Svi transferi, proizvodnja na licu mjesta i povrati bit će obrisani. Ova radnja je nepovratna!',
+    actions: [
+      { label: 'Isprazni prodaju', tone: 'danger', onClick: () => {
+          const total = (appState.transferLog || []).length + (appState.pendingTransfers || []).length + (appState.onSiteProduction || []).length + (appState.returnLog || []).length;
+          appState.transferLog = [];
+          appState.pendingTransfers = [];
+          appState.onSiteProduction = [];
+          appState.returnLog = [];
+          appState.pendingOnSite = [];
+          appState.documents = [];
+          saveStateDebounced();
+          renderShopInventory();
+          renderAll();
+          showToast('Prodaja ispražnjena');
+          closeModal();
+      }},
+      { label: 'Odustani', tone: 'secondary' }
     ]
   });
 }
@@ -6187,9 +6253,21 @@ function deleteTestData() {
         // Clear pending transfers for test products
         appState.pendingTransfers = (appState.pendingTransfers || []).filter(p => !testProductIds.includes(p.productId));
         
-        // Delete on-site production entries referencing test products
+        // Delete on-site production entries
         appState.onSiteProduction = (appState.onSiteProduction || []).filter(o => {
-          return true; // Keep on-site entries, they reference categories not products
+          const hasTestItem = (o.items || []).some(i => {
+            const p = Object.values(appState.products || {}).find(pr => pr && pr.shopCategory === i.shopCategory);
+            return testProductIds.includes(p?.id);
+          });
+          return !hasTestItem;
+        });
+        
+        // Delete return log entries for test products
+        appState.returnLog = (appState.returnLog || []).filter(r => {
+          return !(r.items || []).some(i => {
+            const p = Object.values(appState.products || {}).find(pr => pr && pr.shopCategory === i.shopCategory);
+            return testProductIds.includes(p?.id);
+          });
         });
         
         saveStateDebounced();
