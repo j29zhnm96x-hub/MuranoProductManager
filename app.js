@@ -5041,6 +5041,14 @@ function renderShopInventory() {
       groupDiv.appendChild(itemsDiv);
       container.appendChild(groupDiv);
     }
+    
+    // Total summary at bottom
+    const allQty = groupIds.reduce((s, gId) => s + groups[gId].items.reduce((si, i) => si + i.qty, 0), 0);
+    const allVal = groupIds.reduce((s, gId) => s + groups[gId].items.reduce((si, i) => si + i.value, 0), 0);
+    const totalRow = document.createElement('div');
+    totalRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px;background:#f9fafb;font-size:14px;font-weight:700;border-top:2px solid #d1d5db;';
+    totalRow.innerHTML = `<span style="flex:1;">Ukupno</span><span style="width:80px;text-align:right;color:#6b7280;">-</span><span style="width:80px;text-align:right;">${allQty} kom</span><span style="width:80px;text-align:right;">${formatCurrency(allVal)}</span>`;
+    container.appendChild(totalRow);
   }
   
   // Pending transfers section
