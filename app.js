@@ -6462,6 +6462,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pp-correct-btn').addEventListener('click', () => correctProductQuantity());
   document.getElementById('pp-upload-btn').addEventListener('click', () => document.getElementById('pp-image-file').click());
   document.getElementById('pp-image-file').addEventListener('change', onProductImageSelected);
+  // Image preview on click
+  document.getElementById('pp-image-preview').addEventListener('click', function() {
+    if (this.src && !this.classList.contains('hidden')) {
+      let overlay = document.getElementById('img-preview-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div'); overlay.id = 'img-preview-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+        const img = document.createElement('img'); img.id = 'img-preview-full';
+        img.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 24px rgba(0,0,0,0.4);';
+        overlay.appendChild(img);
+        overlay.addEventListener('click', () => overlay.classList.add('hidden'));
+        document.body.appendChild(overlay);
+      }
+      document.getElementById('img-preview-full').src = this.src;
+      overlay.classList.remove('hidden');
+    }
+  });
   document.getElementById('pp-edit').addEventListener('click', () => { if (productPageProductId) openProductEditModal(productPageProductId); });
   // Note autosaves on exit; no explicit Save button binding
   const adj = document.getElementById('pp-adjust-input');
