@@ -6233,6 +6233,30 @@ function openDocumentList() {
   });
 }
 
+function getProductPath(productId) {
+  if (!productId || !appState.products?.[productId]) return '';
+  const parts = [];
+  const p = appState.products[productId];
+  const catInfo = getCategoryItemInfo(p.shopCategory);
+  const catStr = catInfo ? `${catInfo.group.name} / ${catInfo.item.name}` : '';
+  
+  // Folder hierarchy
+  for (const f of Object.values(appState.folders || {})) {
+    if (f && (f.products || []).includes(productId)) {
+      let cur = f;
+      parts.unshift(cur.name);
+      while (cur.parentId && appState.folders[cur.parentId]) {
+        cur = appState.folders[cur.parentId];
+        if (cur.name !== 'Home' && cur.name !== 'Početna') parts.unshift(cur.name);
+      }
+      break;
+    }
+  }
+  const folderStr = parts.join(' / ');
+  if (catStr) return folderStr ? `${folderStr} / ${catStr}` : catStr;
+  return folderStr;
+}
+
 // ── Season Management ────────────────────────────────────────────
 
 function showEndSeasonReport() {
@@ -6290,14 +6314,24 @@ function showEndSeasonReport() {
       }
     }
     
-    // Calculate returned
+    // Find which shop categories this product was transferred under
+    const productCatIds = new Set();
+    for (const t of (appState.transferLog || [])) {
+      if (t.masterConfirmDate) {
+        for (const item of (t.items || [])) {
+          if (item.productId === id && item.shopCategory) {
+            productCatIds.add(item.shopCategory);
+          }
+        }
+      }
+    }
+    
+    // Calculate returned: sum returns for any category this product was transferred under
     let returned = 0;
     for (const r of (appState.returnLog || [])) {
       for (const item of (r.items || [])) {
-        for (const [pid, prod] of Object.entries(appState.products || {})) {
-          if (prod && prod.shopCategory === item.shopCategory && pid === id) {
-            returned += item.qty;
-          }
+        if (item.shopCategory && productCatIds.has(item.shopCategory)) {
+          returned += item.qty;
         }
       }
     }
@@ -6307,10 +6341,12 @@ function showEndSeasonReport() {
     
     if (sold === 0 && transferred === 0 && producedBefore === 0 && producedDuring === 0) continue;
     
+    const prodPath = getProductPath(id);
     const card = document.createElement('div');
     card.style.cssText = 'background:#f9fafb;border-radius:8px;padding:8px;font-size:13px;';
     card.innerHTML = `
-      <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(p.name)}</div>
+      <div style="font-weight:700;margin-bottom:2px;">${escapeHtml(p.name)}</div>
+      ${prodPath ? `<div style="color:#9ca3af;font-size:12px;margin-bottom:6px;">${escapeHtml(prodPath)}</div>` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;color:#374151;">
         <span>Proizvedeno prije sezone:</span><span style="text-align:right;font-weight:600;">${producedBefore} kom</span>
         <span>+ Proizvedeno u sezoni:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${producedDuring} kom</span>
