@@ -6309,7 +6309,7 @@ function buildSeasonData(startDate, endDate) {
     if (sold === 0 && transferred === 0 && producedBefore === 0 && producedDuring === 0) continue;
     
     data.push({
-      productId: id, productName: p.name, productPath: getProductPath(id),
+      productId: id, productName: p.name, productPath: getProductPath(id), price: Number(p.price || 0),
       producedBefore, producedDuring, transferred, returned, sold, currentQty
     });
   }
@@ -6319,6 +6319,20 @@ function buildSeasonData(startDate, endDate) {
 function renderSeasonReport(title, data, isArchived) {
   const body = document.createElement('div');
   body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  
+  // Summary at top
+  const totalSoldQty = data.reduce((s, d) => s + d.sold, 0);
+  const totalSoldVal = data.reduce((s, d) => s + d.sold * d.price, 0);
+  const summaryDiv = document.createElement('div');
+  summaryDiv.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;display:flex;gap:16px;align-items:center;';
+  summaryDiv.innerHTML = `
+    <span style="font-weight:700;font-size:15px;color:#166534;">Ukupno prodano:</span>
+    <span style="font-weight:700;font-size:15px;color:#111827;">${totalSoldQty} kom</span>
+    <span style="color:#9ca3af;">|</span>
+    <span style="font-weight:700;font-size:15px;color:#166534;">Ukupna vrijednost:</span>
+    <span style="font-weight:700;font-size:15px;color:#111827;">${formatCurrency(totalSoldVal)}</span>
+  `;
+  body.appendChild(summaryDiv);
   
   // Search
   const searchInput = document.createElement('input');
