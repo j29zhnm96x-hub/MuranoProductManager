@@ -504,7 +504,6 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 
 @media print {
   @page { margin: 8mm 12mm; size: A4; }
-  @page :first { @bottom-center { content: none; } }
   @page { @bottom-center { content: counter(page); font-family: sans-serif; font-size: 10px; color: #9ca3af; } }
   html, body { height: auto; overflow: visible; }
   body > *:not(#doc-preview) { display: none !important; }

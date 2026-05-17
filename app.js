@@ -6098,6 +6098,21 @@ function showDocumentPreview(items, docType, customTitle) {
   
   preview.classList.remove('hidden');
   
+  // Conditional page numbers: show only if content > 1 A4 page
+  setTimeout(() => {
+    const content = body.querySelector('.doc-a4');
+    if (content) {
+      const style = document.getElementById('page-number-style') || document.createElement('style');
+      style.id = 'page-number-style';
+      const h = content.scrollHeight;
+      const a4Height = 1123; // approx A4 at 96dpi
+      style.textContent = h > a4Height
+        ? '@page { @bottom-center { content: counter(page); font-family: sans-serif; font-size: 10px; color: #9ca3af; } }'
+        : '@page { @bottom-center { content: none; } }';
+      document.head.appendChild(style);
+    }
+  }, 50);
+  
   // Back button (restore original title)
   document.getElementById('doc-preview-back').onclick = () => {
     preview.classList.add('hidden');
