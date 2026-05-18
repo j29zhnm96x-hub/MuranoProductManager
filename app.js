@@ -6753,7 +6753,7 @@ function generateEvidencijaPrigovora(year) {
   }
   
   const content = `
-    <div style="width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:20mm 15mm;box-sizing:border-box;font-family:Times New Roman,serif;font-size:12px;color:#000;">
+    <div class="evidencija-a4" style="font-family:Times New Roman,serif;font-size:12px;color:#000;">
       <table style="width:100%;border-collapse:collapse;">
         <tr><td colspan="5" style="border:none;padding:0;">
           <table style="width:100%;border-collapse:collapse;">
