@@ -2482,6 +2482,7 @@ function openEditInfoModal() {
   
   const fields = [
     { key: 'name', label: 'Naziv tvrtke', val: co.name || '' },
+    { key: 'owner', label: 'Vlasnik obrta', val: co.owner || '' },
     { key: 'address', label: 'Adresa', val: co.address || '' },
     { key: 'oib', label: 'OIB', val: co.oib || '' },
     { key: 'phone', label: 'Telefon', val: co.phone || '' },
@@ -2560,6 +2561,7 @@ function openSettings() {
   addRow('Kraj sezone', seasonEndStr);
   addRow('Datum dokumenata', set.docDate ? new Date(set.docDate + 'T12:00:00').toLocaleDateString('hr-HR') : '\u2014');
   infoGrid.innerHTML += `<span style="color:#6b7280;padding-top:4px;border-top:1px dashed #d1d5db;">Naziv tvrtke:</span><span style="font-weight:600;padding-top:4px;border-top:1px dashed #d1d5db;">${co.name || '\u2014'}</span>`;
+  infoGrid.innerHTML += `<span style="color:#6b7280;">Vlasnik obrta:</span><span style="font-weight:600;">${co.owner || '\u2014'}`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">Adresa:</span><span style="font-weight:600;">${co.address || '\u2014'}`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">OIB:</span><span style="font-weight:600;">${co.oib || '\u2014'}`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">Telefon:</span><span style="font-weight:600;">${co.phone || '\u2014'}`;
