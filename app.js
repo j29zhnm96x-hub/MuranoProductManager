@@ -6659,54 +6659,50 @@ function generateInterniAkt(year) {
   
   const content = `
     <div class="doc-a4" style="padding:40px 40px;font-size:13px;line-height:1.7;">
-      <div style="text-align:center;margin-bottom:30px;">
-        <div style="font-weight:800;font-size:15px;">ODLUKA</div>
-      </div>
-      
-      <div style="text-align:justify;margin-bottom:24px;">
+      <div style="text-align:center;margin-bottom:24px;">
         U skladu sa \u010Dlankom 11. stavkom 2. zakona o fiskalizaciji u prometu gotovinom (NN 133/12)
         <strong>${escapeHtml(co.name || '')}</strong>, ${co.owner ? `${escapeHtml(co.owner)}, ` : ''}
         ${escapeHtml(co.address || '')}, OIB: ${escapeHtml(co.oib || '')}, dana ${docDateStr}. godine donosi
       </div>
       
-      <div style="text-align:center;font-weight:800;font-size:14px;margin:30px 0;">ODLUKU</div>
+      <div style="text-align:center;font-weight:800;font-size:15px;margin:24px 0;">ODLUKU</div>
       
-      <div style="text-align:center;margin-bottom:20px;font-size:12px;">
+      <div style="text-align:center;margin-bottom:24px;font-size:12px;">
         kojom se ure\u0111uju pravila slijednosti numeri\u010Dkih brojeva ra\u010Duna, radnog vremena, popisa prodajnih mjesta te dodjeljivanje oznake istima.
       </div>
       
-      <div style="margin:16px 0;">
+      <div style="text-align:center;margin:16px 40px;">
         <strong>I.</strong><br>
         Obrt ${escapeHtml(co.name || '')} djelatnost izrade i prodaje vlastitog proizvoda od stakla
         obavlja na ku\u0107noj adresi (sjedi\u0161tu) te na otvorenom prostoru na ljetnim sajmovima.
       </div>
       
-      <div style="margin:16px 0;">
+      <div style="text-align:center;margin:16px 40px;">
         <strong>II.</strong><br>
         Za potrebe fiskalizacije, oznaka pokretnog poslovnog prostora  &bdquo;1&ldquo; dodaje se prodajnom mjestu &bdquo;Pokretna trgovina&rdquo; na otvorenom pod opisom &bdquo;LJETNI SAJMOVI&rdquo;.
       </div>
       
-      <div style="margin:16px 0;">
+      <div style="text-align:center;margin:16px 40px;">
         <strong>III.</strong><br>
         Ra\u010Duni se izdaju pokretnom blagajnom putem aplikacije &bdquo;Neosalon&rdquo; tvrtke Superius d.o.o. na mobilnom ure\u0111aju. Oznaka &bdquo;1&rdquo; dodijeljena je pokretnoj blagajni koja se nalazi u pokretnom poslovnom prostoru &bdquo;Pokretna trgovina&rdquo; pod opisom &bdquo;LJETNI SAJMOVI&rdquo;.
       </div>
       
-      <div style="margin:16px 0;">
+      <div style="text-align:center;margin:16px 40px;">
         <strong>IV.</strong><br>
         Numeri\u010Dki broj ra\u010Duna po svakom naplatnom ure\u0111aju po\u010Dinje s po\u010Detkom kalendarske godine, na dan 1. sije\u010Dnja, od rednog broja 1 do broja &bdquo;n&rdquo; na dan 31. prosinca teku\u0107e godine po\u0161tuju\u0107i pravilo slijednosti numeri\u010Dkih brojeva ra\u010Duna. Oznaka ra\u010Duna sastoji se od rednog broja ra\u010Duna, oznake poslovnog prostora i oznake naplatnog ure\u0111aja.
       </div>
       
-      <div style="margin:16px 0;">
+      <div style="text-align:center;margin:16px 40px;">
         <strong>V.</strong><br>
         Radno vrijeme obavljanja djelatnosti obrta je: pon-ned od 0 do 24 sati.
       </div>
       
-      <div style="margin:16px 0;">
+      <div style="text-align:center;margin:16px 40px;">
         <strong>VI.</strong><br>
         Ra\u010Dune izdaju: Emina Miani OIB: 14638217565 pod oznakom &bdquo;EM&rdquo;, Alen Miani OIB: 13264858727 pod oznakom &bdquo;AM&rdquo;, Nila Miani OIB: 81376377171 pod oznakom &bdquo;NM&rdquo;
       </div>
       
-      <div style="margin:16px 0;">
+      <div style="text-align:center;margin:16px 40px;">
         <strong>VII.</strong><br>
         Ova odluka stupa na snagu ${docDateStr}. godine.
       </div>
