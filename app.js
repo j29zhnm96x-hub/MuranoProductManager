@@ -6505,6 +6505,7 @@ function openLegalDocuments() {
   addDocBtn(`Blagajni\u010Dki maksimum ${year}`, () => generateBlagajnickiMaksimum(year, dateStr));
   addDocBtn(`Blagajni\u010Dki minimum ${year}`, () => generateBlagajnickiMinimum(year));
   addDocBtn(`Interni akt ${year}`, () => generateInterniAkt(year));
+  addDocBtn(`Evidencija prigovora potro\u0161a\u010Da ${year}`, () => generateEvidencijaPrigovora(year));
   
   openModal({
     title: 'Zakonski dokumenti',
