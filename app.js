@@ -6811,9 +6811,10 @@ function generateEvidencijaPrigovora(year) {
   `;
   
   body.innerHTML = content;
-  // Remove fixed height constraint so full document is scrollable
+  // Full scrollable preview (both axes)
   preview.style.height = 'auto';
   preview.style.overflow = 'visible';
+  preview.style.overflowX = 'auto';
   body.style.cssText = 'padding:0;margin:0;max-width:none;width:auto;height:auto;overflow:visible;';
   // Add landscape print style
   let ls = document.getElementById('evidencija-print-style');
