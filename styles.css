@@ -502,8 +502,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .doc-table .doc-total td { font-weight: 700; border-top: 2px solid #d1d5db; font-size: 14px; }
 .doc-footer { margin-top: 32px; font-size: 12px; color: #9ca3af; text-align: center; }
 
-.evidencija-a4 { width: 100%; min-height: 297mm; margin: 0 auto; background: #fff; padding: 15mm 15mm; box-sizing: border-box; page: evidencija; }
-@page evidencija { size: A4 landscape; margin: 12mm; }
+.evidencija-a4 { width: 277mm; min-height: 190mm; margin: 0 auto; background: #fff; padding: 10mm 12mm; box-sizing: border-box; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
 @media print {
   @page { margin: 8mm 12mm; size: A4; }

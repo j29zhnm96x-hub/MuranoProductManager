@@ -6811,10 +6811,19 @@ function generateEvidencijaPrigovora(year) {
   `;
   
   body.innerHTML = content;
-  body.style.cssText = 'padding:0;margin:0;max-width:none;';
+  body.style.cssText = 'padding:0;margin:0;max-width:none;width:auto;';
+  // Add landscape-specific print style
+  let ls = document.getElementById('evidencija-print-style');
+  if (!ls) { ls = document.createElement('style'); ls.id = 'evidencija-print-style'; document.head.appendChild(ls); }
+  ls.textContent = `@media print { @page { size: A4 landscape; margin: 10mm; } .doc-preview-body { padding:0 !important; margin:0 !important; max-width:none !important; } .evidencija-a4 { box-shadow:none; padding:8mm 10mm; } }`;
   preview.classList.remove('hidden');
   
-  document.getElementById('doc-preview-back').onclick = () => { preview.classList.add('hidden'); document.title = 'Murano Product Manager'; };
+  document.getElementById('doc-preview-back').onclick = () => {
+    const ps = document.getElementById('evidencija-print-style');
+    if (ps) ps.remove();
+    preview.classList.add('hidden');
+    document.title = 'Murano Product Manager';
+  };
   document.getElementById('doc-actions-btn').onclick = () => {
     openModal({
       title: 'Akcije',
