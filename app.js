@@ -876,6 +876,7 @@ function ensureStateFields() {
   appState.companyInfo = appState.companyInfo || { name: '', address: '', oib: '', phone: '', email: '' };
   appState.settings.seasonEndDate = appState.settings.seasonEndDate || null;
   appState.settings.docDate = appState.settings.docDate || '';
+  appState.settings.blagajnickiMin = appState.settings.blagajnickiMin || '';
   appState.pendingTransfers = appState.pendingTransfers || [];
   appState.transferLog = appState.transferLog || [];
   appState.onSiteProduction = appState.onSiteProduction || [];
@@ -2494,6 +2495,10 @@ function openEditInfoModal() {
   body.appendChild(makeFld('Početak sezone', dInput));
   body.appendChild(makeFld('Kraj sezone', sdInput));
   body.appendChild(makeFld('Datum izdavanja dokumenata', docDateInput));
+  
+  const minInput = document.createElement('input'); minInput.type = 'number'; minInput.min = '0'; minInput.step = '0.01'; minInput.value = set.blagajnickiMin ?? ''; minInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+  body.appendChild(makeFld('Blagajni\u010Dki minimum (\u20AC)', minInput));
+  inputs.blagajnickiMin = minInput;
   for (const f of fields) {
     const inp = document.createElement('input'); inp.type = 'text'; inp.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
     inp.value = f.val; inputs[f.key] = inp;
@@ -2513,6 +2518,7 @@ function openEditInfoModal() {
           } else { appState.settings.endDate = null; }
           appState.settings.seasonEndDate = inputs.seasonEndDate?.value ? new Date(`${inputs.seasonEndDate.value}T23:59:59`).toISOString() : null;
           appState.settings.docDate = inputs.docDate?.value || '';
+          appState.settings.blagajnickiMin = inputs.blagajnickiMin?.value || '';
           appState.companyInfo = appState.companyInfo || {};
           for (const f of fields) {
             appState.companyInfo[f.key] = (inputs[f.key]?.value || '').trim();
@@ -2560,6 +2566,7 @@ function openSettings() {
   addRow('Početak sezone', endDateStr);
   addRow('Kraj sezone', seasonEndStr);
   addRow('Datum dokumenata', set.docDate ? new Date(set.docDate + 'T12:00:00').toLocaleDateString('hr-HR') : '\u2014');
+  addRow('Blagajni\u010Dki minimum', set.blagajnickiMin ? `${Number(set.blagajnickiMin).toFixed(2)}\u20AC` : '\u2014');
   infoGrid.innerHTML += `<span style="color:#6b7280;padding-top:4px;border-top:1px dashed #d1d5db;">Naziv tvrtke:</span><span style="font-weight:600;padding-top:4px;border-top:1px dashed #d1d5db;">${co.name || '\u2014'}</span>`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">Vlasnik obrta:</span><span style="font-weight:600;">${co.owner || '\u2014'}`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">Adresa:</span><span style="font-weight:600;">${co.address || '\u2014'}`;
@@ -6487,11 +6494,16 @@ function openLegalDocuments() {
   const year = seasonStart ? seasonStart.getFullYear() : new Date().getFullYear();
   const dateStr = seasonStart ? seasonStart.toLocaleDateString('hr-HR') : new Date().toLocaleDateString('hr-HR');
   
-  const docBtn = document.createElement('button');
-  docBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-weight:600;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;';
-  docBtn.innerHTML = `\uD83D\uDCC4  Blagajni\u010Dki maksimum ${year}`;
-  docBtn.addEventListener('click', () => generateBlagajnickiMaksimum(year, dateStr));
-  body.appendChild(docBtn);
+  const addDocBtn = (label, fn) => {
+    const b = document.createElement('button');
+    b.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-weight:600;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;';
+    b.innerHTML = `\uD83D\uDCC4  ${escapeHtml(label)}`;
+    b.addEventListener('click', fn);
+    body.appendChild(b);
+  };
+  
+  addDocBtn(`Blagajni\u010Dki maksimum ${year}`, () => generateBlagajnickiMaksimum(year, dateStr));
+  addDocBtn(`Blagajni\u010Dki minimum ${year}`, () => generateBlagajnickiMinimum(year));
   
   openModal({
     title: 'Zakonski dokumenti',
@@ -6564,6 +6576,60 @@ function generateBlagajnickiMaksimum(year, dateStr) {
     preview.classList.add('hidden');
     document.title = 'Murano Product Manager';
   };
+  document.getElementById('doc-actions-btn').onclick = () => {
+    openModal({
+      title: 'Akcije',
+      headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+      actionsLayout: 'stack',
+      actions: [
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
+        { label: 'Zatvori', tone: 'secondary' }
+      ]
+    });
+  };
+}
+
+function generateBlagajnickiMinimum(year) {
+  const co = appState.companyInfo || {};
+  const set = appState.settings || {};
+  const preview = document.getElementById('doc-preview');
+  const body = document.getElementById('doc-preview-body');
+  if (!preview || !body) return;
+  
+  let docDateStr = new Date().toLocaleDateString('hr-HR');
+  if (set.docDate) docDateStr = new Date(set.docDate + 'T12:00:00').toLocaleDateString('hr-HR');
+  const minAmount = set.blagajnickiMin ? Number(set.blagajnickiMin).toFixed(2) : '100.00';
+  
+  const docFilename = `Blagajnicki_minimum_${year}`;
+  document.title = docFilename;
+  
+  const content = `
+    <div class="doc-a4" style="padding:40px 40px;">
+      <div style="text-align:left;margin-bottom:30px;font-size:13px;line-height:1.6;">
+        <strong>${escapeHtml(co.name || '')}</strong><br>
+        ${co.owner ? `${escapeHtml(co.owner)}<br>` : ''}
+        OIB ${escapeHtml(co.oib || '')}<br>
+        ${escapeHtml(co.address || '')}
+      </div>
+      
+      <div style="text-align:center;margin:50px 0;">
+        <div style="font-size:16px;font-weight:800;margin-bottom:20px;">Odluka o blagajni\u010Dkom minimumu za sezonu ${year}.g.</div>
+        <div style="font-size:13px;line-height:1.6;margin-top:24px;">
+          Za potrebe naplate dobara, prilo\u017Eeni novac u blagajni iznosi <strong>${minAmount} \u20AC</strong>.
+        </div>
+      </div>
+      
+      <div style="text-align:right;margin-top:100px;padding-right:15%;font-size:13px;">
+        <div style="margin-bottom:4px;">potpis vl. obrta</div>
+        <div style="margin-top:32px;color:#9ca3af;font-style:italic;">_____________________</div>
+      </div>
+    </div>
+  `;
+  
+  body.innerHTML = content;
+  preview.classList.remove('hidden');
+  
+  document.getElementById('doc-preview-back').onclick = () => { preview.classList.add('hidden'); document.title = 'Murano Product Manager'; };
   document.getElementById('doc-actions-btn').onclick = () => {
     openModal({
       title: 'Akcije',
