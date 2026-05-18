@@ -6731,6 +6731,98 @@ function generateInterniAkt(year) {
   };
 }
 
+function generateEvidencijaPrigovora(year) {
+  const co = appState.companyInfo || {};
+  const set = appState.settings || {};
+  const preview = document.getElementById('doc-preview');
+  const body = document.getElementById('doc-preview-body');
+  if (!preview || !body) return;
+  
+  let docDateStr = new Date().toLocaleDateString('hr-HR');
+  if (set.docDate) docDateStr = new Date(set.docDate + 'T12:00:00').toLocaleDateString('hr-HR');
+  
+  const docFilename = `Evidencija_prigovora_potrosaca_${year}`;
+  document.title = docFilename;
+  
+  let tableRows = '';
+  for (let i = 0; i < 18; i++) {
+    tableRows += `<tr style="height:42px;"><td></td><td></td><td></td><td></td><td></td></tr>`;
+  }
+  
+  const content = `
+    <div style="width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:20mm 15mm;box-sizing:border-box;font-family:Times New Roman,serif;font-size:12px;color:#000;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td colspan="5" style="border:none;padding:0;">
+          <table style="width:100%;border-collapse:collapse;">
+            <tr>
+              <td style="border:none;width:55%;vertical-align:top;font-size:11px;">
+                <strong>${escapeHtml(co.name || '')}</strong><br>
+                ${co.owner ? `${escapeHtml(co.owner)}<br>` : ''}
+                OIB ${escapeHtml(co.oib || '')}<br>
+                ${escapeHtml(co.address || '')}
+              </td>
+              <td style="border:none;width:45%;vertical-align:bottom;font-size:11px;">
+                <div style="border-bottom:1px solid #000;width:80%;margin-bottom:2px;">&nbsp;</div>
+                <div>Potpis vl. obrta</div>
+                <div style="text-align:right;margin-top:8px;">Datum ustrojavanja evidencije ${docDateStr}.</div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+      
+      <div style="text-align:center;font-weight:bold;font-size:18px;margin:28px 0 20px;">EVIDENCIJA PRIGOVORA POTRO\u0160A\u010CA</div>
+      
+      <table style="width:100%;border-collapse:collapse;border:1px solid #000;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold;width:6%;">R.b.</th>
+            <th style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold;width:12%;">Datum</th>
+            <th style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold;width:36%;">Prezime, ime i adresa<br>osobe koja je dala prigovor</th>
+            <th style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold;width:28%;">Kratak razlog prigovora</th>
+            <th style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold;width:18%;">Datum slanja<br>pisanog odgovora</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+      
+      <div style="page-break-before:always;"></div>
+      
+      <div style="font-size:12px;line-height:1.6;padding-top:16px;">
+        <div style="font-weight:bold;font-size:14px;margin-bottom:6px;">Zakon o za\u0161titi potro\u0161a\u010Da (NN 41/14)</div>
+        <div style="font-style:italic;margin-bottom:2px;">Pisani prigovor</div>
+        <div style="font-weight:bold;margin-bottom:10px;">\u010Clanak 10.</div>
+        
+        <div style="margin-bottom:6px;">(1) Trgovac je du\u017ean omogu\u0107iti potro\u0161a\u010Dima da na njegovu adresu ili adresu elektroni\u010Dke po\u0161te upute prigovor pisano ili elektroni\u010Dkim putem, te je du\u017ean na isti odgovoriti pisano ili elektroni\u010Dkim putem najkasnije u roku od 15 dana od dana primitka prigovora.</div>
+        <div style="margin-bottom:6px;">(2) Trgovac je du\u017ean voditi evidenciju o prigovorima potro\u0161a\u010Da, na temelju koje u okviru svojih ovlasti, na zahtjev nadle\u017enog inspekcijskog tijela, dostavlja podatke o prigovorima.</div>
+        <div style="margin-bottom:6px;">(3) Trgovac kod kojeg je zaposleno vi\u0161e od 20 radnika du\u017ean je donijeti pravila postupanja s prigovorima potro\u0161a\u010Da.</div>
+        
+        <div style="margin-top:20px;margin-bottom:12px;text-align:center;font-weight:bold;font-size:14px;">OBAVIJEST</div>
+        <div style="text-align:center;font-weight:bold;font-size:13px;margin-bottom:10px;line-height:1.4;">NA PRU\u017DENE USLUGE POTRO\u0160A\u010C MO\u017DE PODNIJETI PRIGOVOR TRGOVCU TE NA OSNOVU \u010DLANKA 10. ZAKONA O ZA\u0160TITI POTRO\u0160A\u010DA DOBITI PISANI ODGOVOR</div>
+        <div style="text-align:center;font-weight:bold;font-size:12px;margin-top:12px;">vetromiani@gmail.com</div>
+      </div>
+    </div>
+  `;
+  
+  body.innerHTML = content;
+  preview.classList.remove('hidden');
+  
+  document.getElementById('doc-preview-back').onclick = () => { preview.classList.add('hidden'); document.title = 'Murano Product Manager'; };
+  document.getElementById('doc-actions-btn').onclick = () => {
+    openModal({
+      title: 'Akcije',
+      headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+      actionsLayout: 'stack',
+      actions: [
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
+        { label: 'Zatvori', tone: 'secondary' }
+      ]
+    });
+  };
+}
+
 // ── # Test Data System ──────────────────────────────────────────
 
 function deleteTestData() {
