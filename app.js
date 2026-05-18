@@ -6753,7 +6753,7 @@ function generateEvidencijaPrigovora(year) {
   }
   
   const content = `
-    <div class="evidencija-a4" style="font-family:Times New Roman,serif;font-size:12px;color:#000;">
+    <div class="evidencija-a4" style="font-family:Times New Roman,serif;font-size:12px;color:#000;padding:12mm 12mm;">
       <table style="width:100%;border-collapse:collapse;">
         <tr><td colspan="5" style="border:none;padding:0;">
           <table style="width:100%;border-collapse:collapse;">
@@ -6793,6 +6793,7 @@ function generateEvidencijaPrigovora(year) {
       
       <div style="page-break-before:always;"></div>
       
+      <!-- Second page -->
       <div style="font-size:12px;line-height:1.6;padding-top:16px;">
         <div style="font-weight:bold;font-size:14px;margin-bottom:6px;">Zakon o za\u0161titi potro\u0161a\u010Da (NN 41/14)</div>
         <div style="font-style:italic;margin-bottom:2px;">Pisani prigovor</div>
@@ -6810,6 +6811,7 @@ function generateEvidencijaPrigovora(year) {
   `;
   
   body.innerHTML = content;
+  body.style.cssText = 'padding:0;margin:0;max-width:none;';
   preview.classList.remove('hidden');
   
   document.getElementById('doc-preview-back').onclick = () => { preview.classList.add('hidden'); document.title = 'Murano Product Manager'; };
