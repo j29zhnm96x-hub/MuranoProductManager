@@ -2572,6 +2572,12 @@ function openSettings() {
   seasonGroup.appendChild(seasonBtns);
   wrap.appendChild(seasonGroup);
   
+  // ── Legal Documents ─────────────────────────────────────────
+  const legalGroup = document.createElement('div');
+  legalGroup.style.cssText = 'padding:4px 0;';
+  legalGroup.appendChild(makeBtn('Zakonski dokumenti', '', openLegalDocuments));
+  wrap.appendChild(legalGroup);
+  
   // ── Shop Categories ────────────────────────────────────────
   const catGroup = document.createElement('div');
   catGroup.style.cssText = 'padding:4px 0;';
@@ -6461,6 +6467,99 @@ function autoArchiveIfNeeded() {
   if (!hasItems && appState.settings?.endDate) {
     archiveCurrentSeason();
   }
+}
+
+// ── Legal Documents ──────────────────────────────────────────────
+
+function openLegalDocuments() {
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:8px;';
+  
+  const set = appState.settings || {};
+  const seasonStart = set.endDate ? new Date(set.endDate) : null;
+  const year = seasonStart ? seasonStart.getFullYear() : new Date().getFullYear();
+  const dateStr = seasonStart ? seasonStart.toLocaleDateString('hr-HR') : new Date().toLocaleDateString('hr-HR');
+  
+  const docBtn = document.createElement('button');
+  docBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-weight:600;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;';
+  docBtn.innerHTML = `\uD83D\uDCC4  Blagajni\u010Dki maksimum ${year}`;
+  docBtn.addEventListener('click', () => generateBlagajnickiMaksimum(year, dateStr));
+  body.appendChild(docBtn);
+  
+  openModal({
+    title: 'Zakonski dokumenti',
+    headerIcon: { symbol: '\uD83D\uDCCB', color: 'slate' },
+    body,
+    actions: [{ label: __('Close'), tone: 'secondary' }]
+  });
+}
+
+function generateBlagajnickiMaksimum(year, dateStr) {
+  const co = appState.companyInfo || {};
+  const preview = document.getElementById('doc-preview');
+  const body = document.getElementById('doc-preview-body');
+  if (!preview || !body) return;
+  
+  const docFilename = `Blagajnicki_maksimum_${year}`;
+  document.title = docFilename;
+  
+  const content = `
+    <div class="doc-a4" style="padding:40px 40px;">
+      <div style="text-align:left;margin-bottom:30px;font-size:13px;line-height:1.6;">
+        <strong>${escapeHtml(co.name || '')}</strong><br>
+        ${escapeHtml(co.address || '')}<br>
+        OIB ${escapeHtml(co.oib || '')}
+      </div>
+      
+      <div style="text-align:center;margin:30px 0;">
+        <div style="font-size:11px;line-height:1.5;color:#374151;">
+          Temeljem \u010Dlanka 29. zakona o fiskalizaciji u prometu gotovinom (NN-133/12)
+          dana ${dateStr} donosi
+        </div>
+        <div style="font-size:16px;font-weight:800;margin:16px 0 20px;">ODLUKU</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:20px;">O VISINI BLAGAJNI\u010CKOG MAKSIMUMA</div>
+      </div>
+      
+      <div style="font-size:13px;line-height:1.8;margin:20px 0;">
+        <div style="margin-bottom:12px;">
+          <strong>I.</strong><br>
+          Sukladno \u010Dl. 29. st. 2. zakona o fiskalizaciji u prometu gotovinom i \u010Dl. 3. zakona o poticanju razvoja malog gospodarstva, obrt je mikro subjekt.
+        </div>
+        <div style="margin-bottom:12px;">
+          <strong>II.</strong><br>
+          Utvr\u0111uje se blagajni\u010Dki maksimum za obrt u iznosu od <strong>2000 \u20AC</strong>.
+        </div>
+        <div>
+          <strong>III.</strong><br>
+          Ova odluka se primjenjuje od ${dateStr}. godine.
+        </div>
+      </div>
+      
+      <div style="text-align:right;margin-top:60px;padding-right:15%;font-size:13px;">
+        <div style="margin-bottom:4px;">Potpis vl. obrta</div>
+        <div style="margin-top:32px;color:#9ca3af;font-style:italic;">_________________________</div>
+      </div>
+    </div>
+  `;
+  
+  body.innerHTML = content;
+  preview.classList.remove('hidden');
+  
+  document.getElementById('doc-preview-back').onclick = () => {
+    preview.classList.add('hidden');
+    document.title = 'Murano Product Manager';
+  };
+  document.getElementById('doc-actions-btn').onclick = () => {
+    openModal({
+      title: 'Akcije',
+      headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+      actionsLayout: 'stack',
+      actions: [
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
+        { label: 'Zatvori', tone: 'secondary' }
+      ]
+    });
+  };
 }
 
 // ── # Test Data System ──────────────────────────────────────────
