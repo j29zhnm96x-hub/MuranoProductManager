@@ -875,6 +875,7 @@ function ensureStateFields() {
   }
   appState.companyInfo = appState.companyInfo || { name: '', address: '', oib: '', phone: '', email: '' };
   appState.settings.seasonEndDate = appState.settings.seasonEndDate || null;
+  appState.settings.docDate = appState.settings.docDate || '';
   appState.pendingTransfers = appState.pendingTransfers || [];
   appState.transferLog = appState.transferLog || [];
   appState.onSiteProduction = appState.onSiteProduction || [];
@@ -2477,6 +2478,7 @@ function openEditInfoModal() {
   const pInput = document.createElement('input'); pInput.type = 'number'; pInput.min = '0'; pInput.step = '1'; pInput.inputMode = 'numeric'; pInput.placeholder = '30000'; pInput.value = set.plannedValue ?? ''; pInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
   const dInput = document.createElement('input'); dInput.type = 'date'; dInput.value = set.endDate ? new Date(set.endDate).toISOString().slice(0,10) : ''; dInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
   const sdInput = document.createElement('input'); sdInput.type = 'date'; sdInput.value = set.seasonEndDate ? new Date(set.seasonEndDate).toISOString().slice(0,10) : ''; sdInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+  const docDateInput = document.createElement('input'); docDateInput.type = 'date'; docDateInput.value = set.docDate || ''; docDateInput.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
   
   const fields = [
     { key: 'name', label: 'Naziv tvrtke', val: co.name || '' },
@@ -2485,11 +2487,12 @@ function openEditInfoModal() {
     { key: 'phone', label: 'Telefon', val: co.phone || '' },
     { key: 'email', label: 'Email', val: co.email || '' },
   ];
-  const inputs = { planned: pInput, date: dInput, seasonEndDate: sdInput };
+  const inputs = { planned: pInput, date: dInput, seasonEndDate: sdInput, docDate: docDateInput };
   
   body.appendChild(makeFld('Planirani iznos', pInput));
   body.appendChild(makeFld('Početak sezone', dInput));
   body.appendChild(makeFld('Kraj sezone', sdInput));
+  body.appendChild(makeFld('Datum izdavanja dokumenata', docDateInput));
   for (const f of fields) {
     const inp = document.createElement('input'); inp.type = 'text'; inp.style.cssText = 'width:100%;padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
     inp.value = f.val; inputs[f.key] = inp;
@@ -2508,6 +2511,7 @@ function openEditInfoModal() {
             appState.settings.endDate = new Date(`${inputs.date.value}T23:59:59`).toISOString();
           } else { appState.settings.endDate = null; }
           appState.settings.seasonEndDate = inputs.seasonEndDate?.value ? new Date(`${inputs.seasonEndDate.value}T23:59:59`).toISOString() : null;
+          appState.settings.docDate = inputs.docDate?.value || '';
           appState.companyInfo = appState.companyInfo || {};
           for (const f of fields) {
             appState.companyInfo[f.key] = (inputs[f.key]?.value || '').trim();
@@ -2554,6 +2558,7 @@ function openSettings() {
   addRow('Planirani iznos', plannedVal);
   addRow('Početak sezone', endDateStr);
   addRow('Kraj sezone', seasonEndStr);
+  addRow('Datum dokumenata', set.docDate ? new Date(set.docDate + 'T12:00:00').toLocaleDateString('hr-HR') : '\u2014');
   infoGrid.innerHTML += `<span style="color:#6b7280;padding-top:4px;border-top:1px dashed #d1d5db;">Naziv tvrtke:</span><span style="font-weight:600;padding-top:4px;border-top:1px dashed #d1d5db;">${co.name || '\u2014'}</span>`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">Adresa:</span><span style="font-weight:600;">${co.address || '\u2014'}`;
   infoGrid.innerHTML += `<span style="color:#6b7280;">OIB:</span><span style="font-weight:600;">${co.oib || '\u2014'}`;
@@ -6496,9 +6501,16 @@ function openLegalDocuments() {
 
 function generateBlagajnickiMaksimum(year, dateStr) {
   const co = appState.companyInfo || {};
+  const set = appState.settings || {};
   const preview = document.getElementById('doc-preview');
   const body = document.getElementById('doc-preview-body');
   if (!preview || !body) return;
+  
+  // Use document date if set, otherwise fall back to season start
+  let docDateStr = dateStr;
+  if (set.docDate) {
+    docDateStr = new Date(set.docDate + 'T12:00:00').toLocaleDateString('hr-HR');
+  }
   
   const docFilename = `Blagajnicki_maksimum_${year}`;
   document.title = docFilename;
@@ -6514,13 +6526,13 @@ function generateBlagajnickiMaksimum(year, dateStr) {
       <div style="text-align:center;margin:30px 0;">
         <div style="font-size:11px;line-height:1.5;color:#374151;">
           Temeljem \u010Dlanka 29. zakona o fiskalizaciji u prometu gotovinom (NN-133/12)
-          dana ${dateStr} donosi
+          dana ${docDateStr} donosi
         </div>
         <div style="font-size:16px;font-weight:800;margin:16px 0 20px;">ODLUKU</div>
         <div style="font-size:14px;font-weight:700;margin-bottom:20px;">O VISINI BLAGAJNI\u010CKOG MAKSIMUMA</div>
       </div>
       
-      <div style="font-size:13px;line-height:1.8;margin:20px 0;">
+      <div style="text-align:center;font-size:13px;line-height:1.8;margin:20px 40px;">
         <div style="margin-bottom:12px;">
           <strong>I.</strong><br>
           Sukladno \u010Dl. 29. st. 2. zakona o fiskalizaciji u prometu gotovinom i \u010Dl. 3. zakona o poticanju razvoja malog gospodarstva, obrt je mikro subjekt.
@@ -6531,7 +6543,7 @@ function generateBlagajnickiMaksimum(year, dateStr) {
         </div>
         <div>
           <strong>III.</strong><br>
-          Ova odluka se primjenjuje od ${dateStr}. godine.
+          Ova odluka se primjenjuje od ${docDateStr}. godine.
         </div>
       </div>
       
