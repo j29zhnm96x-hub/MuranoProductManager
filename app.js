@@ -6819,7 +6819,7 @@ function generateEvidencijaPrigovora(year) {
   // Add landscape print style
   let ls = document.getElementById('evidencija-print-style');
   if (!ls) { ls = document.createElement('style'); ls.id = 'evidencija-print-style'; document.head.appendChild(ls); }
-  ls.textContent = `@media print { @page { size: A4 landscape; margin: 8mm; } #doc-preview { height:auto !important; overflow:visible !important; } .doc-preview-body { padding:0 !important; margin:0 !important; max-width:none !important; height:auto !important; overflow:visible !important; } .evidencija-a4 { box-shadow:none; padding:8mm 10mm; page-break-after:avoid; } }`;
+  ls.textContent = `@media print { @page { size: A4 landscape; margin: 0; @bottom-center { content: counter(page); font-family:sans-serif; font-size:10px; color:#9ca3af; } } #doc-preview { height:auto !important; overflow:visible !important; } .doc-preview-body { padding:0 !important; margin:0 !important; max-width:none !important; height:auto !important; overflow:visible !important; } .evidencija-a4 { box-shadow:none; padding:12mm 15mm 16mm; page-break-after:avoid; } }`;
   preview.classList.remove('hidden');
   
   document.getElementById('doc-preview-back').onclick = () => {
