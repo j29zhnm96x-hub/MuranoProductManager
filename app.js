@@ -6521,6 +6521,7 @@ function generateBlagajnickiMaksimum(year, dateStr) {
     <div class="doc-a4" style="padding:40px 40px;">
       <div style="text-align:left;margin-bottom:30px;font-size:13px;line-height:1.6;">
         <strong>${escapeHtml(co.name || '')}</strong><br>
+        ${co.owner ? `${escapeHtml(co.owner)}<br>` : ''}
         ${escapeHtml(co.address || '')}<br>
         OIB ${escapeHtml(co.oib || '')}
       </div>
