@@ -6498,7 +6498,7 @@ function openLegalDocuments() {
     const b = document.createElement('button');
     b.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-weight:600;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;';
     b.innerHTML = `\uD83D\uDCC4  ${escapeHtml(label)}`;
-    b.addEventListener('click', fn);
+    b.addEventListener('click', () => { closeModal(); fn(); });
     body.appendChild(b);
   };
   
