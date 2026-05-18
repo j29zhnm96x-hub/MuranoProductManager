@@ -6747,8 +6747,8 @@ function generateEvidencijaPrigovora(year) {
   
   let tableRows = '';
   for (let i = 0; i < 12; i++) {
-    const borderStyle = i < 7 ? 'border-bottom:1px solid #000;' : '';
-    tableRows += `<tr style="height:38px;"><td style="${borderStyle}"></td><td style="${borderStyle}"></td><td style="${borderStyle}"></td><td style="${borderStyle}"></td><td style="${borderStyle}"></td></tr>`;
+    const b = i < 7 ? 'border:1px solid #000;' : '';
+    tableRows += `<tr style="height:38px;"><td style="${b}border-top:none;"></td><td style="${b}border-top:none;border-left:none;"></td><td style="${b}border-top:none;border-left:none;"></td><td style="${b}border-top:none;border-left:none;"></td><td style="${b}border-top:none;border-left:none;"></td></tr>`;
   }
   
   const content = `
