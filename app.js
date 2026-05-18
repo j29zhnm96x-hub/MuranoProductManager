@@ -6504,6 +6504,7 @@ function openLegalDocuments() {
   
   addDocBtn(`Blagajni\u010Dki maksimum ${year}`, () => generateBlagajnickiMaksimum(year, dateStr));
   addDocBtn(`Blagajni\u010Dki minimum ${year}`, () => generateBlagajnickiMinimum(year));
+  addDocBtn(`Interni akt ${year}`, () => generateInterniAkt(year));
   
   openModal({
     title: 'Zakonski dokumenti',
@@ -6622,6 +6623,97 @@ function generateBlagajnickiMinimum(year) {
       <div style="text-align:right;margin-top:100px;padding-right:15%;font-size:13px;">
         <div style="margin-bottom:4px;">potpis vl. obrta</div>
         <div style="margin-top:32px;color:#9ca3af;font-style:italic;">_____________________</div>
+      </div>
+    </div>
+  `;
+  
+  body.innerHTML = content;
+  preview.classList.remove('hidden');
+  
+  document.getElementById('doc-preview-back').onclick = () => { preview.classList.add('hidden'); document.title = 'Murano Product Manager'; };
+  document.getElementById('doc-actions-btn').onclick = () => {
+    openModal({
+      title: 'Akcije',
+      headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+      actionsLayout: 'stack',
+      actions: [
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
+        { label: 'Zatvori', tone: 'secondary' }
+      ]
+    });
+  };
+}
+
+function generateInterniAkt(year) {
+  const co = appState.companyInfo || {};
+  const set = appState.settings || {};
+  const preview = document.getElementById('doc-preview');
+  const body = document.getElementById('doc-preview-body');
+  if (!preview || !body) return;
+  
+  let docDateStr = new Date().toLocaleDateString('hr-HR');
+  if (set.docDate) docDateStr = new Date(set.docDate + 'T12:00:00').toLocaleDateString('hr-HR');
+  
+  const docFilename = `Interni_akt_${year}`;
+  document.title = docFilename;
+  
+  const content = `
+    <div class="doc-a4" style="padding:40px 40px;font-size:13px;line-height:1.7;">
+      <div style="text-align:center;margin-bottom:30px;">
+        <div style="font-weight:800;font-size:15px;">ODLUKA</div>
+      </div>
+      
+      <div style="text-align:justify;margin-bottom:24px;">
+        U skladu sa \u010Dlankom 11. stavkom 2. zakona o fiskalizaciji u prometu gotovinom (NN 133/12)
+        <strong>${escapeHtml(co.name || '')}</strong>, ${co.owner ? `${escapeHtml(co.owner)}, ` : ''}
+        ${escapeHtml(co.address || '')}, OIB: ${escapeHtml(co.oib || '')}, dana ${docDateStr}. godine donosi
+      </div>
+      
+      <div style="text-align:center;font-weight:800;font-size:14px;margin:30px 0;">ODLUKU</div>
+      
+      <div style="text-align:center;margin-bottom:20px;font-size:12px;">
+        kojom se ure\u0111uju pravila slijednosti numeri\u010Dkih brojeva ra\u010Duna, radnog vremena, popisa prodajnih mjesta te dodjeljivanje oznake istima.
+      </div>
+      
+      <div style="margin:16px 0;">
+        <strong>I.</strong><br>
+        Obrt ${escapeHtml(co.name || '')} djelatnost izrade i prodaje vlastitog proizvoda od stakla
+        obavlja na ku\u0107noj adresi (sjedi\u0161tu) te na otvorenom prostoru na ljetnim sajmovima.
+      </div>
+      
+      <div style="margin:16px 0;">
+        <strong>II.</strong><br>
+        Za potrebe fiskalizacije, oznaka pokretnog poslovnog prostora  &bdquo;1&ldquo; dodaje se prodajnom mjestu &bdquo;Pokretna trgovina&rdquo; na otvorenom pod opisom &bdquo;LJETNI SAJMOVI&rdquo;.
+      </div>
+      
+      <div style="margin:16px 0;">
+        <strong>III.</strong><br>
+        Ra\u010Duni se izdaju pokretnom blagajnom putem aplikacije &bdquo;Neosalon&rdquo; tvrtke Superius d.o.o. na mobilnom ure\u0111aju. Oznaka &bdquo;1&rdquo; dodijeljena je pokretnoj blagajni koja se nalazi u pokretnom poslovnom prostoru &bdquo;Pokretna trgovina&rdquo; pod opisom &bdquo;LJETNI SAJMOVI&rdquo;.
+      </div>
+      
+      <div style="margin:16px 0;">
+        <strong>IV.</strong><br>
+        Numeri\u010Dki broj ra\u010Duna po svakom naplatnom ure\u0111aju po\u010Dinje s po\u010Detkom kalendarske godine, na dan 1. sije\u010Dnja, od rednog broja 1 do broja &bdquo;n&rdquo; na dan 31. prosinca teku\u0107e godine po\u0161tuju\u0107i pravilo slijednosti numeri\u010Dkih brojeva ra\u010Duna. Oznaka ra\u010Duna sastoji se od rednog broja ra\u010Duna, oznake poslovnog prostora i oznake naplatnog ure\u0111aja.
+      </div>
+      
+      <div style="margin:16px 0;">
+        <strong>V.</strong><br>
+        Radno vrijeme obavljanja djelatnosti obrta je: pon-ned od 0 do 24 sati.
+      </div>
+      
+      <div style="margin:16px 0;">
+        <strong>VI.</strong><br>
+        Ra\u010Dune izdaju: Emina Miani OIB: 14638217565 pod oznakom &bdquo;EM&rdquo;, Alen Miani OIB: 13264858727 pod oznakom &bdquo;AM&rdquo;, Nila Miani OIB: 81376377171 pod oznakom &bdquo;NM&rdquo;
+      </div>
+      
+      <div style="margin:16px 0;">
+        <strong>VII.</strong><br>
+        Ova odluka stupa na snagu ${docDateStr}. godine.
+      </div>
+      
+      <div style="text-align:right;margin-top:60px;padding-right:15%;font-size:12px;">
+        <div style="margin-bottom:4px;">potpis vlasnika obrta</div>
+        <div style="margin-top:32px;color:#9ca3af;font-style:italic;">____________________________</div>
       </div>
     </div>
   `;
