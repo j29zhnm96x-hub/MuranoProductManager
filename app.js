@@ -7570,7 +7570,7 @@ function correctProductQuantity() {
             const totalEl = document.getElementById('pp-total'); if (totalEl) totalEl.textContent = formatCurrency(Number(p.price || 0) * newQty);
           }
           inputEl.value = '';
-          renderFolderList();
+          renderAll();
           try { closeModal(); } catch {}
       }},
       { label: __('Cancel') }
