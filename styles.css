@@ -45,7 +45,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 .breadcrumb-search .icon { width: 18px; height: 18px; display: block; }
 .breadcrumb-search:hover { background: #f3f4f6; border-radius: 6px; }
 #stats-bar { margin: 0 12px 4px; }
-.stats-bar-inner { display: flex; flex-wrap: nowrap; gap: 4px; align-items: stretch; overflow-x: auto; padding-bottom: 4px; }
+.stats-bar-inner { display: flex; flex-wrap: nowrap; gap: 6px; align-items: stretch; overflow-x: auto; padding-bottom: 4px; }
 .sb-item { background: #faf7f2; border: 1px solid #d9d0c8; border-radius: 12px; padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 56px; text-align: center; white-space: nowrap; flex: 0 0 auto; width: max-content; }
 @media (max-width: 768px) {
   .sb-item { padding: 5px 8px; }
