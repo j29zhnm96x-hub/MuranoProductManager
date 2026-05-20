@@ -3846,7 +3846,7 @@ function renderFolderList(folderId = currentFolderId) {
       } else if (addedToday < fixedDailyGoal) {
         itemRemain.innerHTML = `<div class="sb-col"><div class="sb-k sb-bad">${__('To do')}</div><div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div></div>`;
       } else {
-        itemRemain.innerHTML = `<div class="sb-col"><div class="sb-v sb-good" style="font-size:16px;">+${formatCurrency(extraToday)}</div></div>`;
+        itemRemain.innerHTML = `<div class="sb-col"><div class="sb-v sb-good">+${formatCurrency(extraToday)}</div></div>`;
       }
       wrap.appendChild(itemRemain);
     }
