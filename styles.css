@@ -16,9 +16,9 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 #top-bar .center { flex: 1 1 auto; min-width: 0; justify-content: center; }
 #top-bar #add-btn { width: var(--control-h); height: var(--control-h); border-radius: 8px; border: 1px solid #d68a6e; background: #d68a6e; color: #fff; font-size: 18px; font-weight: 700; line-height: 0; display: grid; place-items: center; }
 #top-bar #import-btn, #top-bar #export-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #cdc3ba; background: #faf7f2; }
-#top-bar .btn-save { height: var(--control-h); padding: 0 12px; border-radius: 8px; border: 1px solid #d68a6e; background: #d68a6e; color: #fff; font-weight: 700; display: inline-flex; align-items: center; }
-#top-bar .btn-save:hover { background: #c6755a; border-color: #c6755a; }
-#top-bar #save-btn { background: #d68a6e; border-color: #d68a6e; color: #fff; font-weight: 700; }
+#top-bar .btn-save { height: var(--control-h); padding: 0 12px; border-radius: 8px; border: 1px solid #7a9c71; background: #7a9c71; color: #fff; font-weight: 700; display: inline-flex; align-items: center; }
+#top-bar .btn-save:hover { background: #5c7d54; border-color: #5c7d54; }
+#top-bar #save-btn { background: #7a9c71; border-color: #7a9c71; color: #fff; font-weight: 700; }
 #top-bar #actions-btn { background: #d68a6e; border-color: #d68a6e; color: #fff; font-weight: 700; }
 #top-bar #settings-btn { height: var(--control-h); padding: 0 10px; border-radius: 8px; border: 1px solid #d4a373; background: #d4a373; display: inline-flex; align-items: center; }
 #sync-status { width: var(--control-h); height: var(--control-h); display: inline-grid; place-items: center; border-radius: 8px; background: #9ca3af; color: #ffffff; font-size: 18px; font-weight: 700; }
@@ -330,8 +330,8 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 
 /* Top bar buttons */
 .btn-search { height: var(--control-h); padding: 0 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; cursor: pointer; display: inline-flex; align-items: center; }
-.btn-shop { height: var(--control-h); padding: 0 10px; border-radius: 8px; border: 1px solid #d68a6e; background: #d68a6e; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; }
-.btn-shop:hover { background: #c6755a; }
+.btn-shop { height: var(--control-h); padding: 0 10px; border-radius: 8px; border: 1px solid #6a9a9e; background: #6a9a9e; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; }
+.btn-shop:hover { background: #4f7a7e; }
 #settings-btn { height: var(--control-h); padding: 0 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; display: inline-flex; align-items: center; }
 
 /* Icon size */
