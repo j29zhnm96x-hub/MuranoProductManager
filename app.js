@@ -3325,7 +3325,7 @@ function renderHistoryPage() {
   const netTone = periodSummary.netValue > 0 ? 'positive' : periodSummary.netValue < 0 ? 'negative' : '';
   const row1 = [
     { label: __('Events'), value: String(allEntries.length) },
-    { label: __('Showing'), value: String(entries.length) },
+    { label: __('Showing'), value: shownCount < entries.length ? `${shownCount} (+${hiddenSubCount} repro)` : String(entries.length) },
     { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode) },
     { label: __('Total Produced'), value: formatCurrency(periodSummary.doneValue), tone: 'positive' },
     { label: __('Total Removed'), value: formatCurrency(periodSummary.removedValue), tone: 'negative' },
@@ -3387,8 +3387,32 @@ function renderHistoryPage() {
     return;
   }
 
+  /* ── Group dynamic_deduction entries under parent production entries ── */
+  const subEntryMap = new Map();
+  const claimedSubIds = new Set();
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    if (e.eventType === 'dynamic_deduction' && e.relatedProductId) {
+      for (let j = i - 1; j >= 0; j--) {
+        const parent = entries[j];
+        if (parent.productId === e.relatedProductId &&
+            parent.eventType !== 'dynamic_deduction' &&
+            Math.abs(parent.ts - e.ts) < 5000) {
+          if (!subEntryMap.has(parent.id)) subEntryMap.set(parent.id, []);
+          subEntryMap.get(parent.id).push(e);
+          claimedSubIds.add(e.id);
+          break;
+        }
+      }
+    }
+  }
+  // Update "Showing" count to exclude grouped sub-entries
+  const shownCount = entries.filter(e => !claimedSubIds.has(e.id)).length;
+  const hiddenSubCount = claimedSubIds.size;
+
   let currentDayKey = null;
   for (const entry of entries) {
+    if (claimedSubIds.has(entry.id)) continue;
     const dayKey = formatHistoryDayKey(entry.ts);
     if (dayKey !== currentDayKey) {
       currentDayKey = dayKey;
@@ -3459,15 +3483,22 @@ function renderHistoryPage() {
     }
 
     /* Expand/collapse toggle */
+    const entrySubs = subEntryMap.get(entry.id) || [];
     const expandBtn = document.createElement('button');
     expandBtn.className = 'history-entry-expand';
     expandBtn.type = 'button';
     expandBtn.textContent = '\u25B8';
     expandBtn.addEventListener('click', () => {
       const dl = body.querySelector('.history-entry-details');
-      if (!dl) return;
-      const hidden = dl.style.display === 'none' || !dl.style.display;
-      dl.style.display = hidden ? 'block' : 'none';
+      const subs = body.querySelector('.history-entry-subs');
+      if (!dl && !subs) return;
+      let hidden = true;
+      // Check whichever exists
+      if (dl && subs) hidden = dl.style.display === 'none' || !dl.style.display;
+      else if (dl) hidden = dl.style.display === 'none' || !dl.style.display;
+      else if (subs) hidden = subs.style.display === 'none' || !subs.style.display;
+      if (dl) dl.style.display = hidden ? 'block' : 'none';
+      if (subs) subs.style.display = hidden ? 'block' : 'none';
       expandBtn.textContent = hidden ? '\u25BE' : '\u25B8';
       expandBtn.classList.toggle('expanded', hidden);
     });
@@ -3497,6 +3528,69 @@ function renderHistoryPage() {
       details.textContent = parts.join('  \u00B7  ');
     }
     body.appendChild(details);
+
+    /* Sub-entries section (hidden by default) — component deductions */
+    if (entrySubs.length > 0) {
+      const subs = document.createElement('div');
+      subs.className = 'history-entry-subs';
+      subs.style.display = 'none';
+      for (const sub of entrySubs) {
+        const subDelta = safeHistoryNumber(sub.delta);
+        const subValue = safeHistoryNumber(sub.value);
+        const subProduct = sub.productId ? appState.products?.[sub.productId] : null;
+
+        const subCard = document.createElement('div');
+        subCard.className = 'history-entry-sub';
+
+        /* Component image (24x24) */
+        if (subProduct?.imageUrl) {
+          const img = document.createElement('img');
+          img.className = 'history-entry-sub-img';
+          img.src = subProduct.imageUrl;
+          img.alt = '';
+          subCard.appendChild(img);
+        } else {
+          const ph = document.createElement('div');
+          ph.className = 'history-entry-sub-placeholder';
+          ph.textContent = subProduct?.name ? subProduct.name.charAt(0).toUpperCase() : '?';
+          subCard.appendChild(ph);
+        }
+
+        /* Sub body */
+        const subBody = document.createElement('div');
+        subBody.className = 'history-entry-sub-body';
+
+        const subName = document.createElement('span');
+        subName.className = 'history-entry-sub-name';
+        subName.textContent = sub.productName || subProduct?.name || __('Unknown');
+        subBody.appendChild(subName);
+
+        /* Delta and value */
+        const subMeta = document.createElement('span');
+        subMeta.className = 'history-entry-sub-meta';
+        subMeta.textContent = `${subDelta} pc  (${formatCurrency(subValue)})`;
+        subBody.appendChild(subMeta);
+
+        subCard.appendChild(subBody);
+
+        /* Link to component product */
+        if (sub.productId && appState.products?.[sub.productId]) {
+          const subNav = document.createElement('button');
+          subNav.className = 'history-entry-sub-nav';
+          subNav.type = 'button';
+          subNav.textContent = '\u2192';
+          subNav.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeHistoryPage();
+            openProductPage(sub.productId);
+          });
+          subCard.appendChild(subNav);
+        }
+
+        subs.appendChild(subCard);
+      }
+      body.appendChild(subs);
+    }
 
     card.appendChild(body);
 
