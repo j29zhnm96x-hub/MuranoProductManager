@@ -3319,6 +3319,29 @@ function renderHistoryPage() {
   const currentStats = getOverallBusinessStats();
   const periodSummary = getHistoryPeriodSummary(periodEntries);
 
+  /* ── Group dynamic_deduction entries under parent production entries ── */
+  const subEntryMap = new Map();
+  const claimedSubIds = new Set();
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    if (e.eventType === 'dynamic_deduction' && e.relatedProductId) {
+      for (let j = i + 1; j < entries.length; j++) {
+        const parent = entries[j];
+        if (parent.productId === e.relatedProductId &&
+            parent.eventType !== 'dynamic_deduction' &&
+            Math.abs(parent.ts - e.ts) < 5000) {
+          if (!subEntryMap.has(parent.id)) subEntryMap.set(parent.id, []);
+          subEntryMap.get(parent.id).push(e);
+          claimedSubIds.add(e.id);
+          break;
+        }
+      }
+    }
+  }
+  // Update "Showing" count to exclude grouped sub-entries
+  const shownCount = entries.filter(e => !claimedSubIds.has(e.id)).length;
+  const hiddenSubCount = claimedSubIds.size;
+
   /* ── Summary grid (Excel-like) ─────────────────────────── */
   summaryEl.innerHTML = '';
 
@@ -3386,29 +3409,6 @@ function renderHistoryPage() {
     listEl.appendChild(empty);
     return;
   }
-
-  /* ── Group dynamic_deduction entries under parent production entries ── */
-  const subEntryMap = new Map();
-  const claimedSubIds = new Set();
-  for (let i = 0; i < entries.length; i++) {
-    const e = entries[i];
-    if (e.eventType === 'dynamic_deduction' && e.relatedProductId) {
-      for (let j = i - 1; j >= 0; j--) {
-        const parent = entries[j];
-        if (parent.productId === e.relatedProductId &&
-            parent.eventType !== 'dynamic_deduction' &&
-            Math.abs(parent.ts - e.ts) < 5000) {
-          if (!subEntryMap.has(parent.id)) subEntryMap.set(parent.id, []);
-          subEntryMap.get(parent.id).push(e);
-          claimedSubIds.add(e.id);
-          break;
-        }
-      }
-    }
-  }
-  // Update "Showing" count to exclude grouped sub-entries
-  const shownCount = entries.filter(e => !claimedSubIds.has(e.id)).length;
-  const hiddenSubCount = claimedSubIds.size;
 
   let currentDayKey = null;
   for (const entry of entries) {
