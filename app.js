@@ -3143,18 +3143,16 @@ function entryMatchesHistoryPeriod(entry, dateValue, periodMode = historyPeriodM
 }
 
 function getHistoryPeriodSummary(entries) {
-  let doneValue = 0;
-  let removedValue = 0;
-  let netValue = 0;
+  let producedValue = 0;
+  let transferredValue = 0;
 
   for (const entry of entries) {
     const value = safeHistoryNumber(entry.value);
-    if (value > 0 && (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production')) doneValue += value;
-    if (value < 0) removedValue += Math.abs(value);
-    netValue += value;
+    if (value > 0 && (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production')) producedValue += value;
+    if (entry.eventType === 'transfer_to_shop' && value < 0) transferredValue += Math.abs(value);
   }
 
-  return { doneValue, removedValue, netValue };
+  return { producedValue, transferredValue };
 }
 
 function updateHistoryPeriodControls() {
@@ -3364,18 +3362,17 @@ function renderHistoryPage() {
   /* ── Summary grid (Excel-like) ─────────────────────────── */
   summaryEl.innerHTML = '';
 
-  const netTone = periodSummary.netValue > 0 ? 'positive' : periodSummary.netValue < 0 ? 'negative' : '';
+  const producedDisplay = Math.max(periodSummary.producedValue, currentStats.totalValue);
+
   const row1 = [
-    { label: __('Events'), value: String(allEntries.length) },
-    { label: __('Showing'), value: shownCount < entries.length ? `${shownCount} (+${hiddenSubCount} repro)` : String(entries.length) },
-    { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode) },
-    { label: __('Total Produced'), value: formatCurrency(periodSummary.doneValue), tone: 'positive' },
-    { label: __('Total Removed'), value: formatCurrency(periodSummary.removedValue), tone: 'negative' },
-    { label: __('Net Change'), value: formatSignedCurrency(periodSummary.netValue), tone: netTone },
+    { label: __('Showing'), value: shownCount < entries.length ? `${shownCount} (+${hiddenSubCount} repro)` : String(entries.length), span: 2 },
+    { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode), span: 2 },
+    { label: __('Total Produced'), value: formatCurrency(producedDisplay), tone: 'positive', span: 1 },
+    { label: __('PREB. U PRODAJU'), value: formatCurrency(periodSummary.transferredValue), tone: 'negative', span: 1 },
   ];
   row1.forEach(d => {
     const cell = document.createElement('div');
-    cell.className = 'history-summary-cell';
+    cell.className = d.span ? `history-summary-cell history-summary-span${d.span}` : 'history-summary-cell';
     const lbl = document.createElement('div');
     lbl.className = 'history-summary-label';
     lbl.textContent = d.label;
@@ -3388,8 +3385,8 @@ function renderHistoryPage() {
   });
 
   const row2 = [
-    { label: __('Overall Qty'), value: `${currentStats.totalQty} pc`, span: 3 },
-    { label: __('Overall Value'), value: formatCurrency(currentStats.totalValue), span: 3 },
+    { label: __('Uk. količina'), value: `${currentStats.totalQty} kom`, span: 3 },
+    { label: __('Uk. u skladištu'), value: formatCurrency(currentStats.totalValue), span: 3 },
   ];
   row2.forEach(d => {
     const cell = document.createElement('div');
