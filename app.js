@@ -3363,12 +3363,14 @@ function renderHistoryPage() {
   summaryEl.innerHTML = '';
 
   const producedDisplay = currentStats.totalValue;
+  const shownProduction = periodEntries.filter(e => e.eventType === 'manual_add' || e.eventType === 'onsite_production');
+  const shownCount = shownProduction.length;
+  const shownValue = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.value), 0);
 
   const row1 = [
-    { label: __('Showing'), value: String(entries.filter(e => e.eventType === 'manual_add' || e.eventType === 'onsite_production').length), span: 2 },
+    { label: 'Prikazano', value: `${shownCount} kom = ${formatCurrency(shownValue)}`, span: 2 },
     { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode), span: 2 },
-    { label: __('Total Produced'), value: formatCurrency(producedDisplay), tone: 'positive', span: 1 },
-    { label: __('PREB. U PRODAJU'), value: formatCurrency(periodSummary.transferredValue), tone: 'negative', span: 1 },
+    { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: 2 },
   ];
   row1.forEach(d => {
     const cell = document.createElement('div');
@@ -3385,8 +3387,9 @@ function renderHistoryPage() {
   });
 
   const row2 = [
-    { label: __('Uk. količina'), value: `${currentStats.totalQty} kom`, span: 3 },
-    { label: __('Uk. u skladištu'), value: formatCurrency(currentStats.totalValue), span: 3 },
+    { label: 'PREB. U PRODAJU', value: formatCurrency(periodSummary.transferredValue), tone: 'negative', span: 2 },
+    { label: 'Uk. količina', value: `${currentStats.totalQty} kom`, span: 2 },
+    { label: 'Uk. u skladištu', value: formatCurrency(currentStats.totalValue), tone: 'positive', span: 2 },
   ];
   row2.forEach(d => {
     const cell = document.createElement('div');
