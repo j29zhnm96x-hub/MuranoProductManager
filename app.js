@@ -1600,6 +1600,8 @@ async function startRemoteBackupWatcher() {
     try {
       const latestName = await getLatestRemoteBackupName();
       if (!latestName) return;
+      // Don't overwrite unsaved work
+      if (modified || autosaveInProgress) return;
       // If the latest remote backup is not ours and not already applied, refresh
       if (latestName !== lastUploadedBackupName && latestName !== lastAppliedBackupName) {
         // Skip if the latest backup clearly belongs to this client (filename contains CLIENT_ID)
@@ -1607,7 +1609,6 @@ async function startRemoteBackupWatcher() {
           lastAppliedBackupName = latestName; // acknowledge
           return;
         }
-        showToast('New version found, refreshing', 1000);
         setSyncStatus('syncing');
         const overlay = document.getElementById('refresh-overlay');
         try { overlay?.classList.add('show'); } catch {}
@@ -1620,7 +1621,7 @@ async function startRemoteBackupWatcher() {
     } catch (e) {
       // Silent poll failures
     }
-  }, 1000);
+  }, 30000);
 }
 
 async function deleteBackupObject(name) {
@@ -5220,6 +5221,7 @@ function transferFromWarehouse() {
     for (const pid of (folder.products || [])) {
       const p = appState.products[pid];
       if (!p || Number(p.quantity || 0) <= 0) continue;
+      if (isProductInIndependentFolder(pid)) continue;
       const catInfo = getCategoryItemInfo(p.shopCategory);
       const catName = catInfo ? `${catInfo.group.name} / ${catInfo.item.name}` : '';
       html += `<div class="transfer-product" data-pid="${pid}" style="padding:6px 8px 6px ${depth * 16 + 16}px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;margin:2px 0;">`;
@@ -5234,6 +5236,7 @@ function transferFromWarehouse() {
     for (const sfId of (folder.subfolders || [])) {
       const sf = appState.folders[sfId];
       if (!sf) continue;
+      if (sf.isIndependent) continue;
       if (!sf.products?.length && !sf.subfolders?.length) continue;
       html += `<div class="transfer-folder" data-fid="${sfId}" style="padding:6px 8px 6px ${depth * 16}px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:14px;border-bottom:1px solid #f3f4f6;border-radius:6px;margin:2px 0;">`;
       html += `<span style="color:#6b7280;">\u25B6</span>`;
