@@ -855,12 +855,12 @@ async function ensureAuthenticated() {
     const check = setInterval(() => {
       if (isSessionActive()) { clearInterval(check); resolve(); }
     }, 100);
-    // Safety timeout: if overlay is hidden (user logged in) but Promise didn't resolve, force it
+    // Safety timeout: resolve if still waiting after 30s (e.g. edge case with SW/bFCache)
     setTimeout(() => {
-      clearInterval(check);
       const ao = document.getElementById('auth-overlay');
       if (ao && ao.classList.contains('hidden')) { setSessionActive(); resolve(); }
-    }, 5000);
+      // Don't clear interval — let it resolve naturally if user logs in later
+    }, 30000);
   });
 }
 
