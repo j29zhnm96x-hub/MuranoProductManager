@@ -497,8 +497,6 @@ function getAuthHash() {
 function setAuthHash(hash) {
   localStorage.setItem(AUTH_HASH_KEY, hash);
   if (appState) { appState.settings = appState.settings || {}; appState.settings.passwordHash = hash; }
-  // Invalidate session on password change - force re-login with new password
-  localStorage.removeItem(AUTH_SESSION_KEY);
   saveStateDebounced();
 }
 
@@ -515,8 +513,8 @@ function getAuthLockRemaining() {
   return 0;
 }
 
-function isSessionActive() { return localStorage.getItem(AUTH_SESSION_KEY) === '1'; }
-function setSessionActive() { localStorage.setItem(AUTH_SESSION_KEY, '1'); }
+function isSessionActive() { return sessionStorage.getItem(AUTH_SESSION_KEY) === '1'; }
+function setSessionActive() { sessionStorage.setItem(AUTH_SESSION_KEY, '1'); }
  
 // ---------------------------- UI Sounds ----------------------------
 const CLICK_SOUND_URL = './assets/Click.mp3';
@@ -752,7 +750,7 @@ try {
 function ensureAuthOverlayElements() {
   if (document.getElementById('auth-overlay')) return;
   
-  const ov = document.createElement('div'); ov.id = 'auth-overlay'; ov.className = 'auth-overlay';
+  const ov = document.createElement('div'); ov.id = 'auth-overlay'; ov.className = 'auth-overlay'; ov.classList.add('hidden');
   const box = document.createElement('div'); box.className = 'auth-box';
   const title = document.createElement('div'); title.className = 'auth-title';
   const message = document.createElement('div'); message.id = 'auth-message'; message.className = 'auth-message';
@@ -813,29 +811,33 @@ function ensureAuthOverlayElements() {
       }, 1000);
       
       submitBtn.onclick = async () => {
-        const rem = getAuthLockRemaining();
-        if (rem > 0) {
-          lockMsg.classList.remove('hidden');
-          lockMsg.textContent = `Pričekajte ${Math.ceil(rem / 1000)} sekundi`;
-          return;
-        }
-        const pwd = inp.value; inp.value = '';
-        const h = await sha256(pwd);
-        if (h === getAuthHash()) {
-          setAuthAttempts(0); setSessionActive(); ov.classList.add('hidden'); message.textContent = '';
-        } else {
-          const attempts = getAuthAttempts() + 1;
-          setAuthAttempts(attempts);
-          const remaining = AUTH_MAX_ATTEMPTS - attempts;
-          if (remaining <= 0) {
-            const until = Date.now() + AUTH_LOCK_MS;
-            localStorage.setItem(AUTH_LOCK_KEY, String(until));
+        try {
+          const rem = getAuthLockRemaining();
+          if (rem > 0) {
             lockMsg.classList.remove('hidden');
-            lockMsg.textContent = `Previše pogrešnih. Pričekajte ${Math.ceil(AUTH_LOCK_MS / 1000)} sekundi.`;
-          } else {
-            message.textContent = `Netočna lozinka. Preostalo pokušaja: ${remaining}`;
+            lockMsg.textContent = `Pričekajte ${Math.ceil(rem / 1000)} sekundi`;
+            return;
           }
-          setTimeout(() => inp.focus(), 100);
+          const pwd = inp.value; inp.value = '';
+          const h = await sha256(pwd);
+          if (h === getAuthHash()) {
+            setAuthAttempts(0); setSessionActive(); ov.classList.add('hidden'); message.textContent = '';
+          } else {
+            const attempts = getAuthAttempts() + 1;
+            setAuthAttempts(attempts);
+            const remaining = AUTH_MAX_ATTEMPTS - attempts;
+            if (remaining <= 0) {
+              const until = Date.now() + AUTH_LOCK_MS;
+              localStorage.setItem(AUTH_LOCK_KEY, String(until));
+              lockMsg.classList.remove('hidden');
+              lockMsg.textContent = `Previše pogrešnih. Pričekajte ${Math.ceil(AUTH_LOCK_MS / 1000)} sekundi.`;
+            } else {
+              message.textContent = `Netočna lozinka. Preostalo pokušaja: ${remaining}`;
+            }
+            setTimeout(() => inp.focus(), 100);
+          }
+        } catch (e) {
+          message.textContent = 'Greška: ' + (e.message || 'neuspješna prijava');
         }
       };
     }
@@ -853,6 +855,12 @@ async function ensureAuthenticated() {
     const check = setInterval(() => {
       if (isSessionActive()) { clearInterval(check); resolve(); }
     }, 100);
+    // Safety timeout: if overlay is hidden (user logged in) but Promise didn't resolve, force it
+    setTimeout(() => {
+      clearInterval(check);
+      const ao = document.getElementById('auth-overlay');
+      if (ao && ao.classList.contains('hidden')) { setSessionActive(); resolve(); }
+    }, 5000);
   });
 }
 
