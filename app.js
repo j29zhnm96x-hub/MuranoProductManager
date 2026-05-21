@@ -4647,24 +4647,8 @@ function duplicateProduct(productId) {
   const p = appState.products[productId];
   if (!p) return;
   const id = uuid();
-  const copy = { ...p, id, name: (p.name || 'Product') + ' (copy)' };
+  const copy = { ...p, id, name: (p.name || 'Product') + ' (copy)', quantity: 0 };
   appState.products[id] = copy;
-  for (const f of Object.values(appState.folders)) {
-    const idx = f.products.indexOf(productId);
-    if (idx >= 0) { f.products.push(id); break; }
-  }
-  if (Number(copy.quantity || 0) > 0) {
-    recordInventoryEvent({
-      eventType: 'product_duplicated',
-      productId: id,
-      productName: copy.name || 'Product copy',
-      delta: Number(copy.quantity || 0),
-      price: Number(copy.price || 0),
-      value: Number(copy.price || 0) * Number(copy.quantity || 0),
-      source: 'duplicate',
-      note: p.name ? `Duplicated from ${p.name}.` : 'Duplicated product.'
-    });
-  }
   saveStateDebounced();
   openProductEditModal(id);
 }
