@@ -617,7 +617,9 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .history-summary { grid-template-columns: repeat(3, 1fr); }
+  .history-summary { grid-template-columns: repeat(6, 1fr); }
+  .history-summary-span2 { grid-column: span 2; }
+  .history-summary-span3 { grid-column: span 3; }
   .history-controls-line2 { gap: 4px; }
   .history-ctrl-divider { display: none; }
   .history-entry { padding: 6px 8px; gap: 6px; min-height: 44px; }

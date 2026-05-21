@@ -3055,7 +3055,7 @@ function formatHistoryDayKey(ts) {
 }
 
 function formatHistoryFilterDate(dateValue) {
-  if (!dateValue) return 'All dates';
+  if (!dateValue) return __('All dates');
   const date = new Date(`${dateValue}T12:00:00`);
   if (Number.isNaN(date.getTime())) return dateValue;
   return date.toLocaleDateString(undefined, {
@@ -3107,7 +3107,7 @@ function getHistoryRange(dateValue, periodMode = historyPeriodMode) {
 }
 
 function formatHistoryPeriodLabel(dateValue, periodMode = historyPeriodMode) {
-  if (!dateValue) return 'All dates';
+  if (!dateValue) return __('All dates');
   const range = getHistoryRange(dateValue, periodMode);
   if (!range) return dateValue;
 
