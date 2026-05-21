@@ -3954,9 +3954,8 @@ function renderFolderList(folderId = currentFolderId) {
 
       const itemRemain = document.createElement('div');
       itemRemain.className = 'sb-item sb-daily';
-      if (addedToday === 0) {
-        itemRemain.innerHTML = `<div class="sb-col"><div class="sb-k">${__('Daily goal')}</div><div class="sb-v">${formatCurrency(fixedDailyGoal)}</div></div>`;
-      } else if (addedToday < fixedDailyGoal) {
+      const remainingOverall = Math.max(0, Number(settings.plannedValue || 0) - Number(currentValue || 0));
+      if (remainingToday > 0) {
         itemRemain.innerHTML = `<div class="sb-col"><div class="sb-k sb-bad">${__('To do')}</div><div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div></div>`;
       } else {
         itemRemain.innerHTML = `<div class="sb-col"><div class="sb-v sb-good">+${formatCurrency(extraToday)}</div></div>`;
@@ -6596,6 +6595,119 @@ function autoArchiveIfNeeded() {
   if (!hasItems && appState.settings?.endDate) {
     archiveCurrentSeason();
   }
+}
+
+function showEndSeasonReport() {
+  const set = appState.settings || {};
+  if (!set.endDate) {
+    showToast('Prvo postavite datum po\u010Detka sezone u Postavke');
+    return;
+  }
+  
+  const seasonStart = new Date(set.endDate);
+  const year = seasonStart.getFullYear();
+  const data = buildSeasonData(seasonStart, new Date().toISOString());
+  
+  // Totals
+  const totalVal = data.reduce((s, d) => s + d.producedDuring * d.price + d.producedBefore * d.price, 0);
+  const totalTransferred = data.reduce((s, d) => s + d.transferred, 0);
+  const totalReturned = data.reduce((s, d) => s + d.returned, 0);
+  const totalSoldQty = data.reduce((s, d) => s + d.sold, 0);
+  const totalSoldVal = data.reduce((s, d) => s + d.sold * d.price, 0);
+  const totalBefore = data.reduce((s, d) => s + d.producedBefore * d.price, 0);
+  const totalDuring = data.reduce((s, d) => s + d.producedDuring * d.price, 0);
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:12px;max-height:75vh;overflow:auto;';
+  
+  // Summary cards
+  body.innerHTML = `
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;">
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:6px;">Sezona ${year} — pregled</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:13px;">
+        <span>Proizvedeno prije sezone:</span><span style="text-align:right;font-weight:600;">${formatCurrency(totalBefore)}</span>
+        <span>+ Proizvedeno u sezoni:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${formatCurrency(totalDuring)}</span>
+        <span style="border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;">= Ukupno proizvedeno:</span><span style="text-align:right;border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;">${formatCurrency(totalVal)}</span>
+        <span>- Preneseno u prodaju:</span><span style="text-align:right;font-weight:600;color:#dc2626;">-${totalTransferred} kom</span>
+        <span>+ Vra\u0107eno iz prodaje:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${totalReturned} kom</span>
+        <span style="border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;color:#2563eb;">= Prodano:</span><span style="text-align:right;border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;color:#2563eb;">${totalSoldQty} kom (${formatCurrency(totalSoldVal)})</span>
+      </div>
+    </div>
+  `;
+  
+  // All-season button
+  const endBtn = document.createElement('button');
+  endBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid #dc2626;background:#fef2f2;color:#dc2626;font-weight:700;font-size:15px;cursor:pointer;';
+  endBtn.textContent = 'Zavr\u0161i sezonu i arhiviraj';
+  endBtn.addEventListener('click', () => {
+    if (!confirm(`Jeste li sigurni da \u017Eelite zavr\u0161iti sezonu ${year}?`)) return;
+    // Archive current season
+    archiveCurrentSeason();
+    // Start new season: set new endDate to today
+    set.endDate = todayStr();
+    saveStateDebounced();
+    closeModal();
+    showToast(`Sezona ${year} arhivirana. Nova sezona zapo\u010Deta.`);
+    // Recalculate daily goal
+    recomputeDailyGoalNow();
+  });
+  body.appendChild(endBtn);
+  
+  // Current stock value
+  const stats = getOverallBusinessStats();
+  const stockDiv = document.createElement('div');
+  stockDiv.style.cssText = 'background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:13px;display:flex;gap:12px;';
+  stockDiv.innerHTML = `
+    <span style="font-weight:700;">Trenutno u skladi\u0161tu:</span>
+    <span style="font-weight:700;">${stats.totalQty} kom</span>
+    <span style="color:#9ca3af;">|</span>
+    <span style="font-weight:700;">${formatCurrency(stats.totalValue)}</span>
+    <span style="color:#6b7280;font-size:12px;">(prelazi u novu sezonu)</span>
+  `;
+  body.appendChild(stockDiv);
+  
+  // Product list (same style as renderSeasonReport)
+  const searchInput = document.createElement('input');
+  searchInput.placeholder = '\uD83D\uDD0D  Pretra\u017Ei proizvod...';
+  searchInput.style.cssText = 'width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+  body.appendChild(searchInput);
+  
+  const listDiv = document.createElement('div');
+  listDiv.style.cssText = 'display:grid;gap:6px;';
+  body.appendChild(listDiv);
+  
+  function renderCards(query) {
+    listDiv.innerHTML = '';
+    const q = (query || '').toLowerCase().trim();
+    for (const d of data) {
+      if (q && !d.productName.toLowerCase().includes(q)) continue;
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#f9fafb;border-radius:8px;padding:8px;font-size:13px;';
+      card.innerHTML = `
+        <div style="font-weight:700;margin-bottom:2px;">${escapeHtml(d.productName)}</div>
+        ${d.productPath ? `<div style="color:#9ca3af;font-size:12px;margin-bottom:6px;">${escapeHtml(d.productPath)}</div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;color:#374151;">
+          <span>Proizvedeno prije sezone:</span><span style="text-align:right;font-weight:600;">${d.producedBefore} kom</span>
+          <span>+ U sezoni:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${d.producedDuring} kom</span>
+          <span>- Preneseno:</span><span style="text-align:right;font-weight:600;color:#dc2626;">-${d.transferred} kom</span>
+          <span>+ Vra\u0107eno:</span><span style="text-align:right;font-weight:600;color:#16a34a;">+${d.returned} kom</span>
+          <span style="border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;color:#2563eb;">= Prodano:</span><span style="text-align:right;border-top:1px solid #d1d5db;padding-top:4px;font-weight:700;color:#2563eb;">${d.sold} kom</span>
+        </div>
+      `;
+      listDiv.appendChild(card);
+    }
+    if (!listDiv.children.length) listDiv.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema proizvoda</div>';
+  }
+  renderCards('');
+  searchInput.addEventListener('input', () => renderCards(searchInput.value));
+  
+  openModal({
+    title: `Kraj sezone ${year}`,
+    headerIcon: { symbol: '\uD83D\uDCCA', color: 'blue' },
+    size: 'large',
+    body,
+    actions: [{ label: __('Close'), tone: 'secondary' }]
+  });
 }
 
 // ── Legal Documents ──────────────────────────────────────────────
