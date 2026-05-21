@@ -3149,7 +3149,7 @@ function getHistoryPeriodSummary(entries) {
 
   for (const entry of entries) {
     const value = safeHistoryNumber(entry.value);
-    if (value > 0) doneValue += value;
+    if (value > 0 && (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production')) doneValue += value;
     if (value < 0) removedValue += Math.abs(value);
     netValue += value;
   }
