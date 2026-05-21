@@ -1600,8 +1600,16 @@ async function startRemoteBackupWatcher() {
     try {
       const latestName = await getLatestRemoteBackupName();
       if (!latestName) return;
-      // Don't overwrite unsaved work
-      if (modified || autosaveInProgress) return;
+      // Don't overwrite unsaved work or disrupt active views
+      if (modified || autosaveInProgress || modalStack > 0) return;
+      const pp = document.getElementById('product-page');
+      if (pp && !pp.classList.contains('hidden')) return;
+      const hp = document.getElementById('history-page');
+      if (hp && !hp.classList.contains('hidden')) return;
+      const sp = document.getElementById('shop-page');
+      if (sp && !sp.classList.contains('hidden')) return;
+      const op = document.getElementById('onsite-page');
+      if (op && !op.classList.contains('hidden')) return;
       // If the latest remote backup is not ours and not already applied, refresh
       if (latestName !== lastUploadedBackupName && latestName !== lastAppliedBackupName) {
         // Skip if the latest backup clearly belongs to this client (filename contains CLIENT_ID)
