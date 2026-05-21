@@ -3364,7 +3364,7 @@ function renderHistoryPage() {
 
   const producedDisplay = currentStats.totalValue;
   const shownProduction = periodEntries.filter(e => e.eventType === 'manual_add' || e.eventType === 'onsite_production');
-  const shownCount = shownProduction.length;
+  const shownCount = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.delta), 0);
   const shownValue = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.value), 0);
 
   const row1 = [
