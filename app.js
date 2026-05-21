@@ -866,7 +866,11 @@ async function ensureAuthenticated() {
 
 // ---------------------------- Daily Progress ----------------------------
 function todayStr() {
-  const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 function ensureStateFields() {
   if (!appState) return;
@@ -3355,17 +3359,13 @@ function renderHistoryPage() {
       }
     }
   }
-  // Update "Showing" count to exclude grouped sub-entries
-  const shownCount = entries.filter(e => !claimedSubIds.has(e.id)).length;
-  const hiddenSubCount = claimedSubIds.size;
-
   /* ── Summary grid (Excel-like) ─────────────────────────── */
   summaryEl.innerHTML = '';
 
-  const producedDisplay = Math.max(periodSummary.producedValue, currentStats.totalValue);
+  const producedDisplay = currentStats.totalValue;
 
   const row1 = [
-    { label: __('Showing'), value: shownCount < entries.length ? `${shownCount} (+${hiddenSubCount} repro)` : String(entries.length), span: 2 },
+    { label: __('Showing'), value: String(entries.filter(e => e.eventType === 'manual_add' || e.eventType === 'onsite_production').length), span: 2 },
     { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode), span: 2 },
     { label: __('Total Produced'), value: formatCurrency(producedDisplay), tone: 'positive', span: 1 },
     { label: __('PREB. U PRODAJU'), value: formatCurrency(periodSummary.transferredValue), tone: 'negative', span: 1 },
@@ -7178,11 +7178,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const historyDate = document.getElementById('history-date');
   if (historyDate) historyDate.addEventListener('input', () => renderHistoryPage());
   const historyPeriodDayBtn = document.getElementById('history-period-day');
-  if (historyPeriodDayBtn) historyPeriodDayBtn.addEventListener('click', () => setHistoryPeriodMode('day'));
+  if (historyPeriodDayBtn) historyPeriodDayBtn.addEventListener('click', () => { document.getElementById('history-date').value = todayStr(); setHistoryPeriodMode('day'); });
   const historyPeriodWeekBtn = document.getElementById('history-period-week');
-  if (historyPeriodWeekBtn) historyPeriodWeekBtn.addEventListener('click', () => setHistoryPeriodMode('week'));
+  if (historyPeriodWeekBtn) historyPeriodWeekBtn.addEventListener('click', () => { document.getElementById('history-date').value = todayStr(); setHistoryPeriodMode('week'); });
   const historyPeriodMonthBtn = document.getElementById('history-period-month');
-  if (historyPeriodMonthBtn) historyPeriodMonthBtn.addEventListener('click', () => setHistoryPeriodMode('month'));
+  if (historyPeriodMonthBtn) historyPeriodMonthBtn.addEventListener('click', () => { document.getElementById('history-date').value = todayStr(); setHistoryPeriodMode('month'); });
   const historyTodayBtn = document.getElementById('history-today');
   if (historyTodayBtn) historyTodayBtn.addEventListener('click', () => {
     const dateInput = document.getElementById('history-date');
