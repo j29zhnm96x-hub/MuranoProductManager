@@ -497,6 +497,8 @@ function getAuthHash() {
 function setAuthHash(hash) {
   localStorage.setItem(AUTH_HASH_KEY, hash);
   if (appState) { appState.settings = appState.settings || {}; appState.settings.passwordHash = hash; }
+  // Invalidate session on password change - force re-login with new password
+  localStorage.removeItem(AUTH_SESSION_KEY);
   saveStateDebounced();
 }
 
@@ -513,8 +515,8 @@ function getAuthLockRemaining() {
   return 0;
 }
 
-function isSessionActive() { return sessionStorage.getItem(AUTH_SESSION_KEY) === '1'; }
-function setSessionActive() { sessionStorage.setItem(AUTH_SESSION_KEY, '1'); }
+function isSessionActive() { return localStorage.getItem(AUTH_SESSION_KEY) === '1'; }
+function setSessionActive() { localStorage.setItem(AUTH_SESSION_KEY, '1'); }
  
 // ---------------------------- UI Sounds ----------------------------
 const CLICK_SOUND_URL = './assets/Click.mp3';
