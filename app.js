@@ -7218,11 +7218,11 @@ function generatePopisRobe(year, dateStr) {
     const qty = item ? item.qty : 0;
     totalQty += qty;
     tableRows += `<tr>
-      <td style="text-align:center;font-size:8pt;height:4mm;border:0.5px solid #000;padding:0 2px;">${i + 1}</td>
-      <td style="font-size:8pt;height:4mm;border:0.5px solid #000;padding:0 2px;">&nbsp;</td>
-      <td style="font-size:8pt;height:4mm;border:0.5px solid #000;padding:0 2px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
-      <td style="text-align:right;font-size:8pt;height:4mm;border:0.5px solid #000;padding:0 2px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
-      <td style="text-align:center;font-size:8pt;height:4mm;border:0.5px solid #000;padding:0 2px;">${qty > 0 ? qty : '&nbsp;'}</td>
+      <td style="text-align:center;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${i + 1}</td>
+      <td style="font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">&nbsp;</td>
+      <td style="font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
+      <td style="text-align:right;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
+      <td style="text-align:center;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${qty > 0 ? qty : '&nbsp;'}</td>
     </tr>`;
   }
 
@@ -7232,7 +7232,7 @@ function generatePopisRobe(year, dateStr) {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         @page { size: A4 portrait; margin: 8mm 10mm 5mm 10mm; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border: 0.5px solid #000; padding: 0 2px; }
+        th, td { border: 1px solid #000; padding: 0 2px; }
         th { text-align: center; vertical-align: middle; font-weight: bold; font-size: 8pt; }
         td { vertical-align: top; font-size: 8pt; }
         tr { page-break-inside: avoid; }
@@ -7261,9 +7261,9 @@ function generatePopisRobe(year, dateStr) {
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="text-align:right;font-weight:bold;font-size:8pt;border:0.5px solid #000;padding:0 2px;">UKUPNO KOMADA:</td>
-            <td style="border:0.5px solid #000;">&nbsp;</td>
-            <td style="text-align:center;font-weight:bold;font-size:8pt;border:0.5px solid #000;padding:0 2px;">${totalQty || '&nbsp;'}</td>
+            <td colspan="3" style="text-align:right;font-weight:bold;font-size:8pt;border:1px solid #000;padding:0 2px;">UKUPNO KOMADA:</td>
+            <td style="border:1px solid #000;">&nbsp;</td>
+            <td style="text-align:center;font-weight:bold;font-size:8pt;border:1px solid #000;padding:0 2px;">${totalQty || '&nbsp;'}</td>
           </tr>
         </tfoot>
       </table>
