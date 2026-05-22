@@ -7218,11 +7218,11 @@ function generatePopisRobe(year, dateStr) {
     const qty = item ? item.qty : 0;
     totalQty += qty;
     tableRows += `<tr>
-      <td style="text-align:center;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${i + 1}</td>
-      <td style="font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">&nbsp;</td>
-      <td style="font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
-      <td style="text-align:right;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
-      <td style="text-align:center;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${qty > 0 ? qty : '&nbsp;'}</td>
+      <td style="text-align:center;font-size:8pt;height:6.5mm;border:1px solid #000;padding:0 2px;">${i + 1}</td>
+      <td style="font-size:8pt;height:6.5mm;border:1px solid #000;padding:0 2px;">&nbsp;</td>
+      <td style="font-size:8pt;height:6.5mm;border:1px solid #000;padding:0 2px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
+      <td style="text-align:right;font-size:8pt;height:6.5mm;border:1px solid #000;padding:0 2px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
+      <td style="text-align:center;font-size:8pt;height:6.5mm;border:1px solid #000;padding:0 2px;">${qty > 0 ? qty : '&nbsp;'}</td>
     </tr>`;
   }
 
