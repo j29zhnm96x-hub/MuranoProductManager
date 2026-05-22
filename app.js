@@ -7272,6 +7272,22 @@ function generatePopisRobe(year, dateStr) {
 
   body.innerHTML = content;
   preview.classList.remove('hidden');
+
+  document.getElementById('doc-preview-back').onclick = () => {
+    preview.classList.add('hidden');
+    document.title = 'Murano Product Manager';
+  };
+  document.getElementById('doc-actions-btn').onclick = () => {
+    openModal({
+      title: 'Akcije',
+      headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+      actionsLayout: 'stack',
+      actions: [
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
+        { label: 'Zatvori', tone: 'secondary' }
+      ]
+    });
+  };
 }
 
 function escapeHtml(str) {
