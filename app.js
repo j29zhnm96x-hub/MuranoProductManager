@@ -6720,6 +6720,7 @@ function openLegalDocuments() {
   addDocBtn(`Blagajni\u010Dki minimum ${year}`, () => generateBlagajnickiMinimum(year));
   addDocBtn(`Interni akt ${year}`, () => generateInterniAkt(year));
   addDocBtn(`Evidencija prigovora potro\u0161a\u010Da ${year}`, () => generateEvidencijaPrigovora(year));
+  addDocBtn(`Popis robe izra\u0111ene na prodajnom mjestu ${year}`, () => generatePopisRobe(year, dateStr));
   
   openModal({
     title: 'Zakonski dokumenti',
@@ -7181,6 +7182,96 @@ function collectSubfolderIds(folderId, set) {
     set.add(sfId);
     collectSubfolderIds(sfId, set);
   }
+}
+
+function generatePopisRobe(year, dateStr) {
+  const co = appState.companyInfo || {};
+  const set = appState.settings || {};
+  const preview = document.getElementById('doc-preview');
+  const body = document.getElementById('doc-preview-body');
+  if (!preview || !body) return;
+
+  // Gather on-site produced items (pending + archived)
+  const itemMap = new Map();
+  for (const item of (appState.pendingOnSite || [])) {
+    const key = item.productId || item.shopCategory;
+    if (!itemMap.has(key)) itemMap.set(key, { name: item.productName || item.name || 'Nepoznato', qty: 0, price: item.price || 0 });
+    itemMap.get(key).qty += item.qty || 0;
+  }
+  for (const batch of (appState.onSiteProduction || [])) {
+    for (const item of (batch.items || [])) {
+      const key = item.productId || item.shopCategory;
+      if (!itemMap.has(key)) itemMap.set(key, { name: item.productName || item.name || 'Nepoznato', qty: 0, price: item.price || 0 });
+      itemMap.get(key).qty += item.qty || 0;
+    }
+  }
+  const items = Array.from(itemMap.values());
+
+  const docFilename = `Popis_robe_izradene_na_prodajnom_mjestu_${year}`;
+  document.title = docFilename;
+
+  // Build table rows: fill with actual items, then empty rows up to 40
+  let tableRows = '';
+  let totalQty = 0;
+  for (let i = 0; i < 40; i++) {
+    const item = items[i];
+    const qty = item ? item.qty : 0;
+    totalQty += qty;
+    tableRows += `<tr>
+      <td style="text-align:center;vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${i + 1}</td>
+      <td style="vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">&nbsp;</td>
+      <td style="vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
+      <td style="text-align:center;vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${qty > 0 ? qty : '&nbsp;'}</td>
+      <td style="text-align:right;vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
+    </tr>`;
+  }
+
+  const content = `
+    <div class="doc-a4" style="padding:12mm 14mm;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;">
+      <style>
+        * { box-sizing: border-box; }
+        @page { size: A4 portrait; margin: 12mm 14mm; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid #000; padding: 2px 4px; }
+        th { text-align: center; vertical-align: middle; font-weight: bold; font-size: 10pt; }
+        td { vertical-align: top; font-size: 10pt; }
+        tr { page-break-inside: avoid; }
+      </style>
+
+      <div style="margin-bottom:6mm;font-size:10pt;line-height:1.3;text-transform:uppercase;">
+        <div>VETRO MIANI, OBRT ZA TRGOVINU I PROIZVODNJU</div>
+        <div>VL. EMINA MIANI, PAKRANI, PAKRANI 74</div>
+        <div>OIB 14638217565</div>
+      </div>
+
+      <h1 style="text-align:center;font-size:17pt;font-weight:bold;margin:8mm 0 6mm 0;text-transform:uppercase;letter-spacing:0.02em;">POPIS ROBE IZRA\u0110ENE NA PRODAJNOM MJESTU</h1>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:6%;">R. BR.</th>
+            <th style="width:12%;">NADNEVAK</th>
+            <th style="width:40%;">ARTIKAL</th>
+            <th style="width:16%;">KOLI\u010cINA<br>(KOM)</th>
+            <th style="width:18%;">JEDINI\u010cNA CIJENA</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align:right;font-weight:bold;font-size:10pt;border:1px solid #000;padding:2px 4px;">UKUPNO KOMADA:</td>
+            <td style="text-align:center;font-weight:bold;font-size:10pt;border:1px solid #000;padding:2px 4px;">${totalQty || '&nbsp;'}</td>
+            <td style="border:1px solid #000;">&nbsp;</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+
+  body.innerHTML = content;
+  preview.classList.remove('hidden');
 }
 
 function escapeHtml(str) {
