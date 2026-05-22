@@ -7218,11 +7218,11 @@ function generatePopisRobe(year, dateStr) {
     const qty = item ? item.qty : 0;
     totalQty += qty;
     tableRows += `<tr>
-      <td style="text-align:center;vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${i + 1}</td>
-      <td style="vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">&nbsp;</td>
-      <td style="vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
-      <td style="text-align:center;vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${qty > 0 ? qty : '&nbsp;'}</td>
-      <td style="text-align:right;vertical-align:top;font-size:10pt;height:8mm;border:1px solid #000;padding:2px 4px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
+      <td style="text-align:center;vertical-align:top;font-size:9pt;height:5mm;border:1px solid #000;padding:1px 3px;">${i + 1}</td>
+      <td style="vertical-align:top;font-size:9pt;height:5mm;border:1px solid #000;padding:1px 3px;">&nbsp;</td>
+      <td style="vertical-align:top;font-size:9pt;height:5mm;border:1px solid #000;padding:1px 3px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
+      <td style="text-align:center;vertical-align:top;font-size:9pt;height:5mm;border:1px solid #000;padding:1px 3px;">${qty > 0 ? qty : '&nbsp;'}</td>
+      <td style="text-align:right;vertical-align:top;font-size:9pt;height:5mm;border:1px solid #000;padding:1px 3px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
     </tr>`;
   }
 
@@ -7230,30 +7230,30 @@ function generatePopisRobe(year, dateStr) {
     <div class="doc-a4" style="padding:12mm 14mm;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;">
       <style>
         * { box-sizing: border-box; }
-        @page { size: A4 portrait; margin: 12mm 14mm; }
+        @page { size: A4 portrait; margin: 14mm 12mm; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border: 1px solid #000; padding: 2px 4px; }
-        th { text-align: center; vertical-align: middle; font-weight: bold; font-size: 10pt; }
-        td { vertical-align: top; font-size: 10pt; }
+        th, td { border: 1px solid #000; padding: 1px 3px; }
+        th { text-align: center; vertical-align: middle; font-weight: bold; font-size: 9pt; }
+        td { vertical-align: top; font-size: 9pt; }
         tr { page-break-inside: avoid; }
       </style>
 
-      <div style="margin-bottom:6mm;font-size:10pt;line-height:1.3;text-transform:uppercase;">
+      <div style="margin-bottom:3mm;font-size:9pt;line-height:1.2;text-transform:uppercase;">
         <div>VETRO MIANI, OBRT ZA TRGOVINU I PROIZVODNJU</div>
         <div>VL. EMINA MIANI, PAKRANI, PAKRANI 74</div>
         <div>OIB 14638217565</div>
       </div>
 
-      <h1 style="text-align:center;font-size:17pt;font-weight:bold;margin:8mm 0 6mm 0;text-transform:uppercase;letter-spacing:0.02em;">POPIS ROBE IZRA\u0110ENE NA PRODAJNOM MJESTU</h1>
+      <h1 style="text-align:center;font-size:13pt;font-weight:bold;margin:0 0 3mm 0;text-transform:uppercase;letter-spacing:0.02em;">POPIS ROBE IZRA\u0110ENE NA PRODAJNOM MJESTU</h1>
 
       <table>
         <thead>
           <tr>
-            <th style="width:6%;">R. BR.</th>
-            <th style="width:12%;">NADNEVAK</th>
-            <th style="width:40%;">ARTIKAL</th>
-            <th style="width:16%;">KOLI\u010cINA<br>(KOM)</th>
-            <th style="width:18%;">JEDINI\u010cNA CIJENA</th>
+            <th style="width:6%;font-size:9pt;padding:1px 3px;">R. BR.</th>
+            <th style="width:12%;font-size:9pt;padding:1px 3px;">NADNEVAK</th>
+            <th style="width:40%;font-size:9pt;padding:1px 3px;">ARTIKAL</th>
+            <th style="width:16%;font-size:9pt;padding:1px 3px;">KOLI\u010cINA<br>(KOM)</th>
+            <th style="width:18%;font-size:9pt;padding:1px 3px;">JEDINI\u010cNA CIJENA</th>
           </tr>
         </thead>
         <tbody>
@@ -7261,8 +7261,8 @@ function generatePopisRobe(year, dateStr) {
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="text-align:right;font-weight:bold;font-size:10pt;border:1px solid #000;padding:2px 4px;">UKUPNO KOMADA:</td>
-            <td style="text-align:center;font-weight:bold;font-size:10pt;border:1px solid #000;padding:2px 4px;">${totalQty || '&nbsp;'}</td>
+            <td colspan="3" style="text-align:right;font-weight:bold;font-size:9pt;border:1px solid #000;padding:1px 3px;">UKUPNO KOMADA:</td>
+            <td style="text-align:center;font-weight:bold;font-size:9pt;border:1px solid #000;padding:1px 3px;">${totalQty || '&nbsp;'}</td>
             <td style="border:1px solid #000;">&nbsp;</td>
           </tr>
         </tfoot>
