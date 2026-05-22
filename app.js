@@ -7227,10 +7227,10 @@ function generatePopisRobe(year, dateStr) {
   }
 
   const content = `
-    <div class="doc-a4" style="padding:0;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;">
+    <div class="doc-a4" style="padding:8mm 10mm 5mm 10mm;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @page { size: A4 portrait; margin: 8mm 10mm 5mm 10mm; }
+        @page { size: A4 portrait; margin: 0; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { border: 1px solid #000; padding: 0 2px; }
         th { text-align: center; vertical-align: middle; font-weight: bold; font-size: 8pt; }
