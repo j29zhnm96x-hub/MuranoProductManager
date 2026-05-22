@@ -68,7 +68,10 @@ const LANG = {
     'Note saved': 'Bilješka spremljena',
     'Cannot delete root': 'Ne može se izbrisati korijen',
     'Import complete': 'Uvoz završen',
+    'Import failed': 'Uvoz nije uspio',
     'Import failed: invalid JSON': 'Uvoz nije uspio',
+    'Confirm Quantity Change': 'Potvrdi promjenu količine',
+    'Invalid JSON format.': 'Neispravan JSON format.',
     'Network Required': 'Potrebna mreža',
     'Reset All Quantities': 'Resetiraj sve količine',
     'Reset Stats': 'Resetiraj stat.',
@@ -258,6 +261,7 @@ const LANG = {
     'Note saved': 'Note saved',
     'Cannot delete root': 'Cannot delete root',
     'Import complete': 'Import complete',
+    'Import failed': 'Import failed',
     'Import failed: invalid JSON': 'Import failed: invalid JSON',
     'Network Required': 'Network Required',
     'Reset All Quantities': 'Reset All Quantities',
@@ -1183,15 +1187,15 @@ function openReorderMenu(folder, itemKey, itemLabel) {
   };
 
   const actions = [];
-  if (index > 0) actions.push({ label: 'Move up', onClick: () => moveTo(index - 1) });
-  if (index < order.length - 1) actions.push({ label: 'Move down', onClick: () => moveTo(index + 1) });
-  if (index > 0) actions.push({ label: 'Move to top', onClick: () => moveTo(0) });
-  if (index < order.length - 1) actions.push({ label: 'Move to bottom', onClick: () => moveTo(order.length - 1) });
-  actions.push({ label: 'Close' });
+  if (index > 0) actions.push({ label: __('Move up'), onClick: () => moveTo(index - 1) });
+  if (index < order.length - 1) actions.push({ label: __('Move down'), onClick: () => moveTo(index + 1) });
+  if (index > 0) actions.push({ label: __('Move to top'), onClick: () => moveTo(0) });
+  if (index < order.length - 1) actions.push({ label: __('Move to bottom'), onClick: () => moveTo(order.length - 1) });
+  actions.push({ label: __('Close') });
 
   openModal({
-    title: 'Reorder item',
-    body: buildModalMenuHeader('↕', itemLabel, 'Drag the handle or use a quick move.'),
+    title: __('Reorder item'),
+    body: buildModalMenuHeader('↕', itemLabel, __('Drag the handle or use a quick move.')),
     bodyClassName: 'modal-body-compact',
     actionsLayout: 'stack',
     actions
@@ -1842,10 +1846,10 @@ async function pruneBackups(maxKeep = 3) {
 function confirmDeleteProduct(productId) {
   const p = appState.products[productId];
   openModal({
-    title: 'Delete Product',
+    title: __('Delete Product'),
     headerIcon: { symbol: '\u2716', color: 'red' },
     size: 'small',
-    body: `Are you sure you want to delete "${p?.name || 'Product'}"?`,
+    body: `${__('Are you sure you want to delete')} "${p?.name || 'Product'}"?`,
     actions: [
       { label: __('Delete'), tone: 'danger', onClick: () => { deleteProduct(productId); } },
       { label: __('Cancel'), tone: 'secondary' }
@@ -1910,10 +1914,10 @@ async function saveSnapshot(downloadAlso = false) {
 function confirmDeleteFolder(folderId) {
   const f = appState.folders[folderId];
   openModal({
-    title: 'Delete Folder',
+    title: __('Delete Folder'),
     headerIcon: { symbol: '\u2716', color: 'red' },
     size: 'small',
-    body: `Delete folder "${f?.name || 'Folder'}" and everything inside?`,
+    body: `"${f?.name || 'Folder'}" ${__('and everything inside?')}`,
     actions: [
       { label: __('Delete'), tone: 'danger', onClick: () => { deleteFolder(folderId); } },
       { label: __('Cancel'), tone: 'secondary' }
@@ -2201,8 +2205,8 @@ function openProductEditModal(productId) {
         removeBtn.textContent = '×';
         removeBtn.addEventListener('click', () => {
           openModal({
-            title: 'Remove Link',
-            body: 'Unlink will break quantity sync. OK?',
+            title: __('Remove Link'),
+            body: __('Unlink will break quantity sync. OK?'),
             headerIcon: { symbol: '!', color: 'red' },
             size: 'small',
             actions: [
@@ -2509,7 +2513,7 @@ function openLinkSelectorModal(onSelect) {
   wrap.appendChild(unitsGroup);
   
   openModal({
-    title: 'Add Link',
+    title: __('Add Link'),
     headerIcon: { symbol: '\uD83D\uDD17', color: 'purple' },
     body: wrap,
     actions: [
@@ -3871,7 +3875,7 @@ function openReportModal() {
   wrap.appendChild(pre);
 
   openModal({
-    title: 'Report',
+    title: __('Report'),
     body: wrap,
     actions: [
       { label: 'Copy', keepOpen: true, onClick: async () => {
@@ -4762,13 +4766,12 @@ function openAddMenu(targetFolderId) {
 function openFolderMenu(folderId) {
   const folder = appState.folders[folderId];
   openModal({
-    title: 'Folder actions',
-    body: buildModalMenuHeader('📁', folder?.name || 'Folder', 'Choose what you want to do with this folder.'),
-    bodyClassName: 'modal-body-compact',
+    title: __('Folder actions'),
+    body: buildModalMenuHeader('??', folder?.name || 'Folder', __('Choose what you want to do with this folder.')),
+    headerIcon: { symbol: '\uD83D\uDCC1', color: 'slate' },
     actionsLayout: 'stack',
     actions: [
-      { label: __('Edit'), onClick: () => openFolderEditModal(folderId) },
-      { label: 'New Subfolder', onClick: () => createFolder(folderId) },
+      { label: __('New Subfolder'), onClick: () => createFolder(folderId) },
       { label: __('New Product'), onClick: () => openProductCreateModal(folderId) },
       { label: __('Move to...'), onClick: () => openMoveDialog('folder', folderId) },
       { label: __('Delete'), onClick: () => confirmDeleteFolder(folderId) }
@@ -4779,15 +4782,13 @@ function openFolderMenu(folderId) {
 function openProductMenu(productId) {
   const product = appState.products[productId];
   openModal({
-    title: 'Product actions',
-    body: buildModalMenuHeader('📦', product?.name || 'Product', 'Choose what you want to do with this product.'),
-    bodyClassName: 'modal-body-compact',
+    title: __('Product actions'),
+    body: buildModalMenuHeader('??', product?.name || 'Product', __('Choose what you want to do with this product.')),
+    headerIcon: { symbol: '\uD83D\uDCC1', color: 'slate' },
     actionsLayout: 'stack',
     actions: [
-      { label: __('Edit'), onClick: () => openProductEditModal(productId) },
-      { label: 'Duplicate', onClick: () => duplicateProduct(productId) },
-      { label: __('Move to...'), onClick: () => openMoveDialog('product', productId) },
-      { label: (() => { const p = appState.products[productId]; return p?.priority ? 'Unmark priority' : 'Mark as priority'; })(), onClick: () => {
+      { label: __('Duplicate'), onClick: () => duplicateProduct(productId) },
+      { label: (() => { const p = appState.products[productId]; return p?.priority ? __('Unmark priority') : __('Mark as priority'); })(), onClick: () => {
           const p = appState.products[productId]; if (!p) return; p.priority = !p.priority; saveStateDebounced(); renderAll();
         } },
       { label: __('Delete'), onClick: () => confirmDeleteProduct(productId) }
@@ -5017,7 +5018,7 @@ function importState(file) {
     } catch (e) {
       console.error(e);
       showToast(__('Import failed: invalid JSON'));
-      openModal({ title: 'Import failed', headerIcon: { symbol: '\u2716', color: 'red' }, size: 'small', body: 'Invalid JSON format.' });
+      openModal({ title: __('Import failed'), headerIcon: { symbol: '\u2716', color: 'red' }, size: 'small', body: __('Invalid JSON format.') });
     }
   };
   reader.readAsText(file);
@@ -5086,7 +5087,7 @@ async function resolveRemoteConflict(remote) {
       <p>${__('Remote modified')}: ${new Date(remote.lastModified || 0).toLocaleString()}</p>
     `;
     openModal({
-      title: 'Sync Conflict',
+      title: __('Sync Conflict'),
       headerIcon: { symbol: '\u26A0', color: 'amber' },
       body,
       actions: [
@@ -7472,7 +7473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try { loadedRemote0 = await loadLatestCloudBackup(); } catch {}
   if (!loadedRemote0) {
     setSyncStatus('error');
-    openModal({ title: 'Network Required', headerIcon: { symbol: '\u26A0', color: 'amber' }, size: 'small', body: 'Latest cloud save is required. Please connect to the internet to continue.', actions: [] });
+    openModal({ title: __('Network Required'), headerIcon: { symbol: '\u26A0', color: 'amber' }, size: 'small', body: __('Latest cloud save is required. Please connect to the internet to continue.'), actions: [] });
     return;
   }
   try { overlay0?.classList.remove('show'); } catch {}
@@ -7902,10 +7903,10 @@ function openProductPage(productId) {
           removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             openModal({
-              title: 'Remove Link',
+              title: __('Remove Link'),
               headerIcon: { symbol: '!', color: 'red' },
               size: 'small',
-              body: 'Unlink will break quantity sync. OK?',
+              body: __('Unlink will break quantity sync. OK?'),
               actions: [
                 { label: __('Remove'), tone: 'danger', onClick: () => {
                   const component = appState.products[productId];
@@ -7983,10 +7984,10 @@ function adjustProductQuantity(direction) { // direction: +1 add, -1 remove
   let qty = Number(p.quantity || 0);
   const newQty = direction > 0 ? qty + delta : Math.max(0, qty - delta);
   openModal({
-    title: 'Confirm Quantity Change',
+    title: __('Confirm Quantity Change'),
     headerIcon: { symbol: direction > 0 ? '\u2795' : '\u2796', color: direction > 0 ? 'green' : 'red' },
     size: 'small',
-    body: `Change quantity from ${qty} to ${newQty}?`,
+    body: `${qty} \u2192 ${newQty}?`,
     actions: [
       { label: __('Confirm'), onClick: () => {
           p.quantity = newQty;
