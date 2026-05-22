@@ -7210,14 +7210,14 @@ function generatePopisRobe(year, dateStr) {
   const docFilename = `Popis_robe_izradene_na_prodajnom_mjestu_${year}`;
   document.title = docFilename;
 
-  // Build table rows: fill with actual items, then empty rows up to 40
+  // Build table rows: fill with actual items, then empty rows up to 35
   let tableRows = '';
   let totalQty = 0;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 35; i++) {
     const item = items[i];
     const qty = item ? item.qty : 0;
     totalQty += qty;
-    tableRows += `<tr style="height:6mm;">
+    tableRows += `<tr style="height:5mm;">
       <td style="text-align:center;font-size:8pt;border:1px solid #000;padding:0 2px;">${i + 1}</td>
       <td style="font-size:8pt;border:1px solid #000;padding:0 2px;">&nbsp;</td>
       <td style="font-size:8pt;border:1px solid #000;padding:0 2px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
