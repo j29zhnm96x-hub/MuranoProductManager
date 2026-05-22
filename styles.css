@@ -505,7 +505,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .evidencija-a4 { width: 297mm; min-height: 210mm; margin: 0 auto; background: #fff; padding: 10mm 12mm; box-sizing: border-box; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
 @media print {
-  @page { margin: 5mm 8mm; size: A4; }
+  @page { margin: 0; size: A4; }
   html, body { height: auto; overflow: visible; }
   body > *:not(#doc-preview) { display: none !important; }
   #doc-preview { display: block !important; position: static; width: 100%; }
