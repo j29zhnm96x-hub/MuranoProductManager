@@ -107,6 +107,86 @@ const LANG = {
     'Enter Password': 'Lozinka',
     'Submit': 'Potvrdi', 'Clear': 'Izbriši',
     'Language': 'Jezik',
+    'Offline': 'Ofline',
+    'Top': 'Na vrh',
+    'Next': 'Sljedeći', 'Previous': 'Prethodni',
+    'Add folder or product': 'Dodaj mapu ili proizvod',
+    'Filter history by date': 'Filtriraj povijest po datumu',
+    'Cloud sync status': 'Status sinkronizacije',
+    'Save state': 'Spremi stanje',
+    'Product detail': 'Detalji proizvoda',
+    'Inventory history': 'Povijest proizvodnje',
+    'Overall stats': 'Ukupna statistika',
+    'Editor panel': 'Uređivač',
+    'Refreshing to latest version': 'Osvježavanje na najnoviju verziju',
+    'all quantities reset': 'sve količine resetirane',
+    'link already exists': 'veza već postoji',
+    'link added': 'veza dodana',
+    'Please select an item': 'Odaberite stavku',
+    'Snapshot saved': 'Snimka spremljena',
+    'Snapshot save failed': 'Snimka nije uspjela',
+    'Cloud sync failed': 'Sinkronizacija nije uspjela',
+    'IndexedDB error': 'IndexedDB greška',
+    'Reorder item': 'Promijeni redoslijed',
+    'Drag the handle or use a quick move.': 'Povucite ili koristite brzi pomak.',
+    'Move up': 'Pomakni gore',
+    'Move down': 'Pomakni dolje',
+    'Move to top': 'Na vrh',
+    'Move to bottom': 'Na dno',
+    'Delete Product': 'Izbriši proizvod',
+    'Delete Folder': 'Izbriši mapu',
+    'Are you sure you want to delete': 'Jeste li sigurni da želite izbrisati',
+    'and everything inside?': 'i sve unutra?',
+    'Remove Link': 'Ukloni vezu',
+    'Unlink will break quantity sync. OK?': 'Uklanjanje veze prekida sink. količina. OK?',
+    'Add Link': 'Dodaj vezu',
+    'When enabled, this component will auto-deduct from stock when linked products are produced.': 'Kada je uključeno, ova komponenta će se automatski oduzimati kada se povezani proizvodi proizvode.',
+    'Units per Item': 'Jedinica po artiklu',
+    'Set when adding a link below.': 'Postavlja se pri dodavanju veze.',
+    'Link to': 'Poveži na',
+    'Search & Select': 'Pretraži i odaberi',
+    'Type to search...': 'Upiši za pretragu...',
+    'No products found': 'Nema proizvoda',
+    'No folders found': 'Nema mapa',
+    'Units used': 'Korišteno jedinica',
+    'How many of this component per 1 finished product.': 'Koliko ove komponente po 1 gotovom proizvodu.',
+    'No links added yet': 'Još nema dodanih veza',
+    'New group name': 'Naziv nove grupe',
+    'Product name': 'Naziv proizvoda',
+    '(optional)': '(opcionalno)',
+    'Report copied': 'Izvještaj kopiran',
+    'Copy failed': 'Kopiranje nije uspjelo',
+    'Share opened': 'Dijeljenje otvoreno',
+    'Copied to clipboard': 'Kopirano u međuspremnik',
+    'Share not supported': 'Dijeljenje nije podržano',
+    'Murano Report': 'Murano izvještaj',
+    'Copy': 'Kopiraj',
+    'Download': 'Preuzmi',
+    'Report': 'Izvještaj',
+    'Folder actions': 'Akcije za mapu',
+    'Product actions': 'Akcije za proizvod',
+    'Choose what you want to do with this folder.': 'Odaberite što želite napraviti s ovom mapom.',
+    'Choose what you want to do with this product.': 'Odaberite što želite napraviti s ovim proizvodom.',
+    'New Subfolder': 'Nova podmapa',
+    'Duplicate': 'Dupliciraj',
+    'Mark as priority': 'Označi kao prioritet',
+    'Unmark priority': 'Makni prioritet',
+    'Import failed: invalid JSON': 'Uvoz nije uspio: neispravan JSON',
+    'Invalid JSON format.': 'Neispravan JSON format.',
+    'Sync Conflict': 'Sukob sinkronizacije',
+    'A newer remote save was found.': 'Pronađena je novija udaljena snimka.',
+    'Local modified': 'Lokalno modificirano',
+    'Remote modified': 'Udaljeno modificirano',
+    'Quantity changes, removals, deductions, and other stock events will appear here.': 'Promjene količine, uklanjanja, oduzimanja i ostali događaji će se prikazati ovdje.',
+    'No history events matched your search in': 'Nema događaja koji odgovaraju pretrazi u',
+    'No history events were recorded in': 'Nema zabilježenih događaja u',
+    'Try a different search term to find product movements.': 'Pokušajte drugačiji pojam za pretragu.',
+    'Estimated': 'Procjena',
+    'Report': 'Izvještaj',
+    'Murano Product Manager': 'Murano Product Manager',
+    'Add a note...': 'Dodaj bilješku...',
+    'Search products...': 'Traži proizvode...',
+    'Edit details': 'Uredi detalje',
   },
   en: {
     'Home': 'Home', 'Save': 'Save', 'Actions': 'Actions',
@@ -217,6 +297,83 @@ const LANG = {
     'Enter Password': 'Enter Password',
     'Submit': 'Submit', 'Clear': 'Clear',
     'Language': 'Language',
+    'Offline': 'Offline',
+    'Top': 'Top',
+    'Next': 'Next', 'Previous': 'Previous',
+    'Add folder or product': 'Add folder or product',
+    'Filter history by date': 'Filter history by date',
+    'Cloud sync status': 'Cloud sync status',
+    'Save state': 'Save state',
+    'Product detail': 'Product detail',
+    'Inventory history': 'Inventory history',
+    'Overall stats': 'Overall stats',
+    'Editor panel': 'Editor panel',
+    'Refreshing to latest version': 'Refreshing to latest version',
+    'all quantities reset': 'all quantities reset',
+    'link already exists': 'link already exists',
+    'link added': 'link added',
+    'Please select an item': 'Please select an item',
+    'Snapshot saved': 'Snapshot saved',
+    'Snapshot save failed': 'Snapshot save failed',
+    'Cloud sync failed': 'Cloud sync failed',
+    'IndexedDB error': 'IndexedDB error',
+    'Reorder item': 'Reorder item',
+    'Drag the handle or use a quick move.': 'Drag the handle or use a quick move.',
+    'Move up': 'Move up',
+    'Move down': 'Move down',
+    'Move to top': 'Move to top',
+    'Move to bottom': 'Move to bottom',
+    'Delete Product': 'Delete Product',
+    'Delete Folder': 'Delete Folder',
+    'Are you sure you want to delete': 'Are you sure you want to delete',
+    'and everything inside?': 'and everything inside?',
+    'Remove Link': 'Remove Link',
+    'Unlink will break quantity sync. OK?': 'Unlink will break quantity sync. OK?',
+    'Add Link': 'Add Link',
+    'When enabled, this component will auto-deduct from stock when linked products are produced.': 'When enabled, this component will auto-deduct from stock when linked products are produced.',
+    'Units per Item': 'Units per Item',
+    'Set when adding a link below.': 'Set when adding a link below.',
+    'Link to': 'Link to',
+    'Search & Select': 'Search & Select',
+    'Type to search...': 'Type to search...',
+    'No products found': 'No products found',
+    'No folders found': 'No folders found',
+    'Units used': 'Units used',
+    'How many of this component per 1 finished product.': 'How many of this component per 1 finished product.',
+    'No links added yet': 'No links added yet',
+    'New group name': 'New group name',
+    'Product name': 'Product name',
+    '(optional)': '(optional)',
+    'Report copied': 'Report copied',
+    'Copy failed': 'Copy failed',
+    'Share opened': 'Share opened',
+    'Copied to clipboard': 'Copied to clipboard',
+    'Share not supported': 'Share not supported',
+    'Murano Report': 'Murano Report',
+    'Copy': 'Copy',
+    'Download': 'Download',
+    'Report': 'Report',
+    'Folder actions': 'Folder actions',
+    'Product actions': 'Product actions',
+    'Choose what you want to do with this folder.': 'Choose what you want to do with this folder.',
+    'Choose what you want to do with this product.': 'Choose what you want to do with this product.',
+    'New Subfolder': 'New Subfolder',
+    'Duplicate': 'Duplicate',
+    'Mark as priority': 'Mark as priority',
+    'Unmark priority': 'Unmark priority',
+    'Import failed: invalid JSON': 'Import failed: invalid JSON',
+    'Invalid JSON format.': 'Invalid JSON format.',
+    'A newer remote save was found.': 'A newer remote save was found.',
+    'Local modified': 'Local modified',
+    'Remote modified': 'Remote modified',
+    'Quantity changes, removals, deductions, and other stock events will appear here.': 'Quantity changes, removals, deductions, and other stock events will appear here.',
+    'No history events matched your search in': 'No history events matched your search in',
+    'No history events were recorded in': 'No history events were recorded in',
+    'Try a different search term to find product movements.': 'Try a different search term to find product movements.',
+    'Estimated': 'Estimated',
+    'Murano Product Manager': 'Murano Product Manager',
+    'Search products...': 'Search products...',
+    'Edit details': 'Edit details',
   }
 };
 
@@ -251,6 +408,14 @@ function translateStaticUI() {
     } else {
       el.textContent = __(key);
     }
+  });
+  // Also translate title attributes
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = __(el.getAttribute('data-i18n-title'));
+  });
+  // Also translate aria-label attributes
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    el.setAttribute('aria-label', __(el.getAttribute('data-i18n-aria')));
   });
 }
 
@@ -316,7 +481,7 @@ function resetAllProductQuantities() {
   saveStateDebounced();
   ensureDailyProgress();
   renderAll();
-  showToast('All product quantities reset to 0');
+  showToast(__('all quantities reset'));
 }
 // ---------------------------- Priority Graph ----------------------------
 // Helper: Recursively collect all product IDs in a folder and its subfolders
@@ -403,7 +568,7 @@ function renderPriorityGraph() {
     const color = pctColor(Math.max(0, Math.min(100, rawPct))); // color scale based on 0..100
     percent.style.color = color;
     const meta = document.createElement('div'); meta.className = 'pg-meta';
-    meta.innerHTML = `${qtyNum} / ${tgtNum} pc <span style="color:${color}">(${rawPct}%)</span>`;
+    meta.innerHTML = `${qtyNum} / ${tgtNum} ${__('pc')} <span style="color:${color}">(${rawPct}%)</span>`;
     row.appendChild(name); row.appendChild(bar); row.appendChild(percent); row.appendChild(meta); ul.appendChild(row);
   }
   box.innerHTML = ''; box.appendChild(wrap); box.appendChild(ul);
@@ -1727,7 +1892,7 @@ async function saveSnapshot(downloadAlso = false) {
     const ts = Date.now();
     const record = { ts, state: structuredClone(appState) };
     await putSnapshot(record);
-    showToast('Snapshot saved');
+    showToast(__('Snapshot saved'));
     if (downloadAlso) {
       const blob = new Blob([JSON.stringify(record.state, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -1738,7 +1903,7 @@ async function saveSnapshot(downloadAlso = false) {
     }
   } catch (e) {
     console.warn(e);
-    showToast('Snapshot save failed');
+    showToast(__('Snapshot save failed'));
   }
 }
 
@@ -2059,13 +2224,13 @@ function openProductEditModal(productId) {
         // Check for duplicates
         const exists = p.dynamicLinks.some(l => l.type === selectedType && l.targetId === selectedId);
         if (exists) {
-          showToast('This link already exists');
+          showToast(__('link already exists'));
           return;
         }
         const units = Math.max(1, Number(selectedUnits || 1));
         p.dynamicLinks.push({ type: selectedType, targetId: selectedId, units });
         renderLinkList();
-        showToast('Link added');
+        showToast(__('link added'));
         saveStateDebounced();
         closeModal();
         if (productPageProductId === productId) {
@@ -2349,7 +2514,7 @@ function openLinkSelectorModal(onSelect) {
     body: wrap,
     actions: [
       { label: __('Add'), onClick: () => {
-          if (!selectedItem.id) { showToast('Please select an item'); return; }
+          if (!selectedItem.id) { showToast(__('Please select an item')); return; }
           const units = Math.max(1, Number(unitsInput.value || 1));
           onSelect(selectedItem.type, selectedItem.id, units);
         } },
@@ -3584,7 +3749,7 @@ function renderHistoryPage() {
         /* Delta and value */
         const subMeta = document.createElement('span');
         subMeta.className = 'history-entry-sub-meta';
-        subMeta.textContent = `${subDelta} pc  (${formatCurrency(subValue)})`;
+        subMeta.textContent = `${subDelta} ${__('pc')}  (${formatCurrency(subValue)})`;
         subBody.appendChild(subMeta);
 
         subCard.appendChild(subBody);
@@ -3719,24 +3884,12 @@ function openReportModal() {
               return ok;
             } catch { return false; }
           };
-          if (doExecCopy()) { showToast('Report copied'); return; }
-          try { await navigator.clipboard.writeText(pre.value); showToast('Report copied'); }
-          catch { showToast('Copy failed'); }
-        } },
-      { label: 'Share', keepOpen: true, onClick: async () => {
-          const payload = { title: 'Murano Report', text: pre.value };
-          if (navigator.share) {
-            try { await navigator.share(payload); showToast('Share opened'); return; }
-            catch (err) { /* cancelled or unsupported */ }
-          }
-          // Fallback: copy to clipboard
-          try {
-            const ta = document.createElement('textarea'); ta.value = pre.value; ta.setAttribute('readonly',''); ta.style.position='absolute'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select();
-            const ok = document.execCommand('copy'); document.body.removeChild(ta);
-            if (ok) { showToast('Copied to clipboard'); return; }
-          } catch {}
-          try { await navigator.clipboard.writeText(pre.value); showToast('Copied to clipboard'); }
-          catch { showToast('Share not supported'); }
+          if (doExecCopy()) { showToast(__('Report copied')); return; }
+          try { await navigator.clipboard.writeText(pre.value); showToast(__('Report copied')); }
+          catch { showToast(__('Copy failed')); }
+          if (ok) { showToast(__('Copied to clipboard')); return; }
+          try { await navigator.clipboard.writeText(pre.value); showToast(__('Copied to clipboard')); }
+          catch { showToast(__('Share not supported')); }
         } },
       { label: 'Download', onClick: () => { try { const blob = new Blob([pre.value], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `murano_report_${new Date().toISOString().slice(0,10)}.txt`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); } catch {} } },
       { label: 'Close' }
@@ -4881,7 +5034,7 @@ function queueCloudSync() {
   syncQueued = true;
   setTimeout(async () => {
     syncQueued = false;
-    await uploadToCloud().catch(err => { console.warn(err); showToast('Cloud sync failed'); setSyncStatus('error'); });
+    await uploadToCloud().catch(err => { console.warn(err); showToast(__('Cloud sync failed')); setSyncStatus('error'); });
   }, 800);
 }
 
@@ -4928,18 +5081,18 @@ async function resolveRemoteConflict(remote) {
   return new Promise((resolve) => {
     const body = document.createElement('div');
     body.innerHTML = `
-      <p>A newer remote save was found.</p>
-      <p>Local modified: ${new Date(appState.lastModified).toLocaleString()}</p>
-      <p>Remote modified: ${new Date(remote.lastModified || 0).toLocaleString()}</p>
+      <p>${__('A newer remote save was found.')}</p>
+      <p>${__('Local modified')}: ${new Date(appState.lastModified).toLocaleString()}</p>
+      <p>${__('Remote modified')}: ${new Date(remote.lastModified || 0).toLocaleString()}</p>
     `;
     openModal({
       title: 'Sync Conflict',
       headerIcon: { symbol: '\u26A0', color: 'amber' },
       body,
       actions: [
-        { label: 'Overwrite Remote', onClick: () => resolve('overwrite') },
-        { label: 'Load Remote', onClick: () => resolve('load_remote') },
-        { label: 'Auto-merge', onClick: () => resolve('merge') },
+        { label: __('Overwrite Remote'), onClick: () => resolve('overwrite') },
+        { label: __('Load Remote'), onClick: () => resolve('load_remote') },
+        { label: __('Auto-merge'), onClick: () => resolve('merge') },
         { label: 'Cancel', tone: 'secondary', onClick: () => resolve('cancel') },
       ]
     });
@@ -7311,7 +7464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, { passive: false });
   } catch {}
   // DB
-  try { db = await openDB(); } catch (e) { console.error(e); showToast('IndexedDB error'); }
+  try { db = await openDB(); } catch (e) { console.error(e); showToast(__('IndexedDB error')); }
   // Remote-first: block until latest cloud backup is loaded
   const overlay0 = document.getElementById('refresh-overlay');
   try { overlay0?.classList.add('show'); } catch {}

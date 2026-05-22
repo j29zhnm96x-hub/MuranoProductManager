@@ -16,10 +16,10 @@
   <!-- Top Bar -->
   <div id="top-bar">
     <div class="left">
-      <div id="sync-status" title="Cloud sync status" data-i18n="Offline">Offline</div>
-      <button id="save-btn" title="Save state" type="button" style="width:36px;height:36px;padding:0;border-radius:8px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;font-size:16px;line-height:1;display:grid;place-items:center;cursor:pointer;">💾</button>
-      <button id="actions-btn" class="btn-save" title="Actions" type="button" data-i18n="Actions">Actions</button>
-      <button id="add-btn" title="Add folder or product">+</button>
+      <div id="sync-status" data-i18n-title="Cloud sync status" data-i18n="Offline">Offline</div>
+      <button id="save-btn" data-i18n-title="Save state" type="button" style="width:36px;height:36px;padding:0;border-radius:8px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;font-size:16px;line-height:1;display:grid;place-items:center;cursor:pointer;">💾</button>
+      <button id="actions-btn" class="btn-save" data-i18n-title="Actions" type="button" data-i18n="Actions">Actions</button>
+      <button id="add-btn" data-i18n-title="Add folder or product">+</button>
     </div>
     <div class="center">
       <div id="search-bar">
@@ -30,21 +30,21 @@
     <div class="mid-right"></div>
     <div class="right">
       <button id="shop-btn" class="btn-shop" type="button" title="Shop/Prodaja">Prodaja</button>
-      <button id="settings-btn" title="Settings" type="button"><img src="./assets/setting.png" alt="Settings" class="icon"/></button>
+      <button id="settings-btn" data-i18n-title="Settings" type="button"><img src="./assets/setting.png" alt="Settings" class="icon"/></button>
     </div>
   </div>
 
   <!-- Refresh overlay -->
-  <div id="refresh-overlay" aria-live="assertive" aria-label="Refreshing to latest version">
-    <div class="box">New version found, refreshing…</div>
+  <div id="refresh-overlay" aria-live="assertive" data-i18n-aria="Refreshing to latest version">
+    <div class="box" data-i18n="Refreshing to latest version">New version found, refreshing...</div>
   </div>
 
   <!-- Product Detail Page (overlay) -->
-  <div id="product-page" class="hidden" aria-label="Product detail">
+  <div id="product-page" class="hidden" data-i18n-aria="Product detail">
     <div class="pp-header">
       <div class="pp-left">
         <button id="pp-back" class="pp-back" type="button">← <span data-i18n="Back">Back</span></button>
-        <button id="pp-edit" class="pp-edit" title="Edit details" type="button" data-i18n="Edit">Edit</button>
+        <button id="pp-edit" class="pp-edit" data-i18n-title="Edit details" type="button" data-i18n="Edit">Edit</button>
       </div>
       <div id="pp-title" class="pp-title"></div>
     </div>
@@ -89,13 +89,13 @@
   </div>
 
   <!-- History Page (overlay) -->
-  <div id="history-page" class="hidden" aria-label="Inventory history">
+  <div id="history-page" class="hidden" data-i18n-aria="Inventory history">
     <div class="history-header">
       <div class="history-left">
         <button id="history-back" class="history-back" type="button" data-i18n="Back">Back</button>
       </div>
       <div class="history-title" data-i18n="Stock History">Inventory History</div>
-      <button id="history-totop" class="history-totop" type="button">Top</button>
+      <button id="history-totop" class="history-totop" type="button" data-i18n="Top">Top</button>
     </div>
     <div class="history-content">
       <div class="history-toolbar">
@@ -107,7 +107,7 @@
             </div>
           </div>
           <div class="history-controls-line2">
-            <input id="history-date" type="date" class="history-date-input" title="Filter history by date" aria-label="Filter history by date" />
+            <input id="history-date" type="date" class="history-date-input" data-i18n-title="Filter history by date" data-i18n-aria="Filter history by date" />
             <button id="history-today" type="button" class="history-ctrl-btn" data-i18n="Today">Today</button>
             <button id="history-clear-date" type="button" class="history-ctrl-btn secondary" data-i18n="All dates">All dates</button>
             <span class="history-ctrl-divider">|</span>
@@ -127,21 +127,21 @@
   <!-- Breadcrumbs -->
   <div id="breadcrumb-line">
     <div id="breadcrumbs"></div>
-    <button id="search-toggle" class="breadcrumb-search" title="Search" type="button"><img src="./assets/magnifying-glass.png" alt="Search" class="icon"/></button>
+    <button id="search-toggle" class="breadcrumb-search" data-i18n-title="Search" type="button"><img src="./assets/magnifying-glass.png" alt="Search" class="icon"/></button>
   </div>
 
   <!-- Stats Bar -->
-  <div id="stats-bar" aria-label="Overall stats"></div>
+  <div id="stats-bar" data-i18n-aria="Overall stats"></div>
 
   <!-- Main Content -->
   <div id="main">
-    <div id="folder-list" aria-label="Folder and product tree"></div>
-    <div id="priority-graph" aria-label="Priority products progress"></div>
-
-    <div id="editor-panel" class="hidden" aria-label="Editor panel">
+    <div id="folder-list" data-i18n-aria="Folder and product tree"></div>
+    <div id="priority-graph" data-i18n-aria="Priority products progress"></div>
+    
+    <div id="editor-panel" class="hidden" data-i18n-aria="Editor panel">
       <div class="editor-header">
         <span id="editor-title" data-i18n="Editor">Editor</span>
-        <button id="editor-close" title="Close">✕</button>
+        <button id="editor-close" data-i18n-title="Close">✕</button>
       </div>
       <form id="editor-form">
         <!-- Common fields -->
