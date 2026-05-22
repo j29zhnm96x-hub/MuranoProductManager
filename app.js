@@ -4649,6 +4649,10 @@ function duplicateProduct(productId) {
   const id = uuid();
   const copy = { ...p, id, name: (p.name || 'Product') + ' (copy)', quantity: 0 };
   appState.products[id] = copy;
+  for (const f of Object.values(appState.folders)) {
+    const idx = f.products.indexOf(productId);
+    if (idx >= 0) { f.products.push(id); break; }
+  }
   saveStateDebounced();
   openProductEditModal(id);
 }
