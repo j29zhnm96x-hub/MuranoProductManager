@@ -583,11 +583,11 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .history-entry-causal { color: #9ca3af; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Expand/collapse button */
-.history-entry-expand { width: 32px; height: 32px; flex-shrink: 0; border: 1px solid #d1c9c0; background: #f5f0eb; color: #6b7280; font-size: 16px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 0; transition: background 0.15s, border-color 0.15s; }
+.history-entry-expand { width: 28px; height: 28px; flex-shrink: 0; border: none; background: transparent; color: #6b7280; font-size: 18px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; padding: 0; }
 
-.history-entry-expand:hover { background: #e8e0d8; color: #374151; border-color: #b8aea4; }
+.history-entry-expand:hover { background: transparent; color: #111827; }
 
-.history-entry-expand.expanded { color: #374151; background: #e8e0d8; border-color: #b8aea4; }
+.history-entry-expand.expanded { color: #374151; }
 
 /* Expanded details line */
 .history-entry-details { font-size: 12px; color: #9ca3af; font-weight: 600; line-height: 1.3; padding: 2px 0 0 0; }
@@ -627,7 +627,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
   .history-entry { padding: 6px 8px; gap: 6px; min-height: 44px; }
   .history-entry-time { font-size: 10px; }
   .history-entry-nav { width: 32px; height: 32px; }
-  .history-entry-expand { width: 36px; height: 36px; font-size: 18px; }
+  .history-entry-expand { width: 32px; height: 32px; font-size: 20px; }
 }
 
 /* Floating back button (always accessible) */

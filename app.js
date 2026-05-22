@@ -434,6 +434,7 @@ let appState = null;
 let currentFolderId = 'root';
 let saveDebounceTimer = null;
 let productPageProductId = null;
+let _productReturnTo = null; // 'history', 'shop', null=main
 let historyPeriodMode = 'day';
 let backupLoaded = false; // indicates a successful cloud backup load in this session
 // Persistent client ID for self-change detection
@@ -3448,13 +3449,15 @@ function renderHistoryPage() {
     card.className = 'history-entry';
     card.dataset.direction = direction;
 
-    /* Product image (32x32) */
+    /* Product image (32x32) — click opens preview */
     const product = entry.productId ? appState.products?.[entry.productId] : null;
     if (product?.imageUrl) {
       const img = document.createElement('img');
       img.className = 'history-entry-img';
       img.src = product.imageUrl;
       img.alt = '';
+      img.style.cursor = 'pointer';
+      img.addEventListener('click', () => openImagePreview(product.imageUrl));
       card.appendChild(img);
     } else {
       const ph = document.createElement('div');
@@ -3462,12 +3465,6 @@ function renderHistoryPage() {
       ph.textContent = product?.name ? product.name.charAt(0).toUpperCase() : '?';
       card.appendChild(ph);
     }
-
-    /* Badge */
-    const badge = document.createElement('span');
-    badge.className = `history-badge ${getHistoryBadgeTone(entry)}`;
-    badge.textContent = getHistoryBadgeLabel(entry);
-    card.appendChild(badge);
 
     /* Body (title + expandable details) */
     const body = document.createElement('div');
@@ -3600,6 +3597,7 @@ function renderHistoryPage() {
           subNav.textContent = '\u2192';
           subNav.addEventListener('click', (e) => {
             e.stopPropagation();
+            _productReturnTo = 'history';
             closeHistoryPage();
             openProductPage(sub.productId);
           });
@@ -3626,6 +3624,7 @@ function renderHistoryPage() {
       navBtn.type = 'button';
       navBtn.textContent = '\u2192';
       navBtn.addEventListener('click', () => {
+        _productReturnTo = 'history';
         closeHistoryPage();
         openProductPage(entry.productId);
       });
@@ -7435,22 +7434,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pp-correct-btn').addEventListener('click', () => correctProductQuantity());
   document.getElementById('pp-upload-btn').addEventListener('click', () => document.getElementById('pp-image-file').click());
   document.getElementById('pp-image-file').addEventListener('change', onProductImageSelected);
+  // Reusable image preview overlay
+  function openImagePreview(src) {
+    let overlay = document.getElementById('img-preview-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div'); overlay.id = 'img-preview-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+      const img = document.createElement('img'); img.id = 'img-preview-full';
+      img.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 24px rgba(0,0,0,0.4);';
+      overlay.appendChild(img);
+      overlay.addEventListener('click', () => overlay.classList.add('hidden'));
+      document.body.appendChild(overlay);
+    }
+    document.getElementById('img-preview-full').src = src;
+    overlay.classList.remove('hidden');
+  }
+  window.openImagePreview = openImagePreview;
   // Image preview on click
   document.getElementById('pp-image-preview').addEventListener('click', function() {
-    if (this.src && !this.classList.contains('hidden')) {
-      let overlay = document.getElementById('img-preview-overlay');
-      if (!overlay) {
-        overlay = document.createElement('div'); overlay.id = 'img-preview-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;';
-        const img = document.createElement('img'); img.id = 'img-preview-full';
-        img.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 24px rgba(0,0,0,0.4);';
-        overlay.appendChild(img);
-        overlay.addEventListener('click', () => overlay.classList.add('hidden'));
-        document.body.appendChild(overlay);
-      }
-      document.getElementById('img-preview-full').src = this.src;
-      overlay.classList.remove('hidden');
-    }
+    if (this.src && !this.classList.contains('hidden')) openImagePreview(this.src);
   });
   document.getElementById('pp-edit').addEventListener('click', () => { if (productPageProductId) openProductEditModal(productPageProductId); });
   // Note autosaves on exit; no explicit Save button binding
@@ -7705,6 +7707,9 @@ function closeProductPage() {
   try { onSaveProductNote(); } catch {}
   document.getElementById('product-page').classList.add('hidden');
   productPageProductId = null;
+  const ret = _productReturnTo;
+  _productReturnTo = null;
+  if (ret === 'history') { openHistoryPage(); return; }
   renderAll();
 }
 
