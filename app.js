@@ -7210,30 +7210,32 @@ function generatePopisRobe(year, dateStr) {
   const docFilename = `Popis_robe_izradene_na_prodajnom_mjestu_${year}`;
   document.title = docFilename;
 
-  // Build table rows: fill with actual items, then empty rows up to 35
+  // Build table rows: fill with actual items, then empty rows up to 40
   let tableRows = '';
   let totalQty = 0;
-  for (let i = 0; i < 35; i++) {
+  for (let i = 0; i < 40; i++) {
     const item = items[i];
     const qty = item ? item.qty : 0;
     totalQty += qty;
-    tableRows += `<tr style="height:7mm;">
-      <td style="text-align:center;font-size:8pt;border:1px solid #000;padding:0 2px;">${i + 1}</td>
-      <td style="font-size:8pt;border:1px solid #000;padding:0 2px;">&nbsp;</td>
-      <td style="font-size:8pt;border:1px solid #000;padding:0 2px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
-      <td style="text-align:right;font-size:8pt;border:1px solid #000;padding:0 2px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
-      <td style="text-align:center;font-size:8pt;border:1px solid #000;padding:0 2px;">${qty > 0 ? qty : '&nbsp;'}</td>
+    tableRows += `<tr>
+      <td style="text-align:center;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${i + 1}</td>
+      <td style="font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">&nbsp;</td>
+      <td style="font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${item ? escapeHtml(item.name) : '&nbsp;'}</td>
+      <td style="text-align:right;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${item && item.price > 0 ? item.price.toFixed(2) : '&nbsp;'}</td>
+      <td style="text-align:center;font-size:8pt;height:4mm;border:1px solid #000;padding:0 2px;">${qty > 0 ? qty : '&nbsp;'}</td>
     </tr>`;
   }
 
   const content = `
-    <div class="doc-a4" style="padding:0;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;width:194mm;height:281mm;margin:auto;overflow:hidden;">
+    <div class="doc-a4" style="padding:0;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        @page { size: A4 portrait; margin: 8mm 10mm 5mm 10mm; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { border: 1px solid #000; padding: 0 2px; }
         th { text-align: center; vertical-align: middle; font-weight: bold; font-size: 8pt; }
         td { vertical-align: top; font-size: 8pt; }
+        tr { page-break-inside: avoid; }
       </style>
 
       <div style="margin-bottom:1mm;font-size:8pt;line-height:1.15;text-transform:uppercase;">
@@ -7244,7 +7246,7 @@ function generatePopisRobe(year, dateStr) {
 
       <div style="text-align:center;font-size:10pt;font-weight:bold;margin:0 0 2mm 0;text-transform:uppercase;">POPIS ROBE IZRA\u0110ENE NA PRODAJNOM MJESTU</div>
 
-      <table style="height:258mm;">
+      <table>
         <thead>
           <tr>
             <th style="width:6%;font-size:8pt;">R. BR.</th>
