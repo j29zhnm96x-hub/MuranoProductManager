@@ -3251,6 +3251,40 @@ function getStartOfHistoryWeek(date) {
   return weekStart;
 }
 
+function deleteHistoryEntry(entryId) {
+  const idx = (appState.productionLog || []).findIndex(e => e.id === entryId);
+  if (idx === -1) { showToast('Događaj nije pronađen'); return; }
+  // Also remove any sub-entries (dynamic_deductions with same relatedProductId and close timestamp)
+  const entry = appState.productionLog[idx];
+  const toRemove = [idx];
+  for (let i = 0; i < appState.productionLog.length; i++) {
+    const e = appState.productionLog[i];
+    if (e.eventType === 'dynamic_deduction' && e.relatedProductId === entry.productId &&
+        Math.abs(e.ts - entry.ts) < 5000 && i !== idx) {
+      toRemove.push(i);
+    }
+  }
+  // Remove in reverse order to preserve indices
+  toRemove.sort((a, b) => b - a);
+  for (const i of toRemove) appState.productionLog.splice(i, 1);
+  saveStateDebounced();
+  renderHistoryPage();
+  showToast('Događaj izbrisan iz povijesti');
+}
+
+function confirmDeleteHistoryEntry(entryId) {
+  openModal({
+    title: 'Izbri\u0161i doga\u0111aj',
+    headerIcon: { symbol: '\u26A0', color: 'red' },
+    size: 'small',
+    body: 'Izbrisati ovaj doga\u0111aj iz povijesti? Ovo ne mijenja koli\u010dine u skladi\u0161tu.',
+    actions: [
+      { label: 'Izbri\u0161i', tone: 'danger', onClick: () => { closeModal(); deleteHistoryEntry(entryId); } },
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
 function getHistoryRange(dateValue, periodMode = historyPeriodMode) {
   const anchorDate = createHistoryAnchorDate(dateValue);
   if (!anchorDate) return null;
@@ -3689,6 +3723,42 @@ function renderHistoryPage() {
       expandBtn.classList.toggle('expanded', hidden);
     });
     row.appendChild(expandBtn);
+
+    /* Delete button (visible on hover for desktop, or ✕) */
+    const delBtn = document.createElement('button');
+    delBtn.className = 'history-entry-del';
+    delBtn.type = 'button';
+    delBtn.textContent = '\u2715';
+    delBtn.addEventListener('click', (e) => { e.stopPropagation(); confirmDeleteHistoryEntry(entry.id); });
+    row.appendChild(delBtn);
+
+    /* Touch swipe-to-delete */
+    let touchStartX = 0;
+    let touchCurrentX = 0;
+    let isSwiping = false;
+    card.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchCurrentX = touchStartX;
+      isSwiping = false;
+    }, { passive: true });
+    card.addEventListener('touchmove', (e) => {
+      touchCurrentX = e.touches[0].clientX;
+      const dx = touchStartX - touchCurrentX;
+      if (dx > 10) isSwiping = true;
+      if (dx > 0) {
+        card.style.transform = `translateX(-${Math.min(dx, 80)}px)`;
+        card.style.transition = 'none';
+      }
+    }, { passive: true });
+    card.addEventListener('touchend', (e) => {
+      if (!isSwiping) return;
+      const dx = touchStartX - touchCurrentX;
+      card.style.transform = '';
+      card.style.transition = 'transform 0.2s ease';
+      if (dx > 60) {
+        confirmDeleteHistoryEntry(entry.id);
+      }
+    }, { passive: true });
 
     body.appendChild(row);
 
