@@ -1095,9 +1095,10 @@ function ensureDailyProgress() {
     }
     try { saveStateDebounced(); } catch {}
   } else {
-    // Same day: recalc goal from current total (handles any change: adds, deletes, transfers)
+    // Same day: DON'T recalc fixedGoal — freeze it from morning
+    // Only recalc if no goal was set yet (edge case)
     const settings = appState.settings || {};
-    if (settings.plannedValue && settings.endDate) {
+    if (!appState.dailyProgress.fixedGoal && settings.plannedValue && settings.endDate) {
       const end = new Date(settings.endDate);
       const today = new Date(); today.setHours(0,0,0,0);
       const remainingOverall = Math.max(0, Number(settings.plannedValue || 0) - Number(stats.totalValue || 0));
