@@ -1072,6 +1072,12 @@ function ensureStateFields() {
       if (p.shopCategory === undefined) p.shopCategory = '';
     }
   }
+  // Migrate legacy productionLog entries without id
+  if (appState.productionLog) {
+    for (const e of appState.productionLog) {
+      if (!e.id) e.id = uuid();
+    }
+  }
 }
 
 function ensureDailyProgress() {
@@ -3279,7 +3285,7 @@ function confirmDeleteHistoryEntry(entryId) {
     size: 'small',
     body: 'Izbrisati ovaj doga\u0111aj iz povijesti? Ovo ne mijenja koli\u010dine u skladi\u0161tu.',
     actions: [
-      { label: 'Izbri\u0161i', tone: 'danger', onClick: () => { closeModal(); deleteHistoryEntry(entryId); } },
+      { label: 'Izbri\u0161i', tone: 'danger', onClick: () => { closeModal(); setTimeout(() => deleteHistoryEntry(entryId), 0); } },
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
