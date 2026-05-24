@@ -632,7 +632,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
   .history-entry-time { font-size: 10px; }
   .history-entry-nav { width: 32px; height: 32px; }
   .history-entry-expand { width: 32px; height: 32px; font-size: 20px; }
-  .history-entry-del { opacity: 1; color: #aaa; }
+  .history-entry-del { display: none; }
 }
 
 /* Floating back button (always accessible) */
