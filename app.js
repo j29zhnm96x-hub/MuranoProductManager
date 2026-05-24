@@ -3727,6 +3727,9 @@ function renderHistoryPage() {
       if (subs) subs.style.display = hidden ? 'block' : 'none';
       expandBtn.textContent = hidden ? '\u25BE' : '\u25B8';
       expandBtn.classList.toggle('expanded', hidden);
+      /* Hide time when expanded to prevent horizontal scroll on mobile */
+      const timeEl = card.querySelector('.history-entry-time');
+      if (timeEl) timeEl.style.display = hidden ? 'none' : 'inline';
     });
     row.appendChild(expandBtn);
 
