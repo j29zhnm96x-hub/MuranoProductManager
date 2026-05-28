@@ -4618,6 +4618,46 @@ function openProductCreateModal(folderId) {
   imgGroup.appendChild(preview);
   wrap.appendChild(imgGroup);
 
+  /* Price input */
+  const priceGroup = document.createElement('div');
+  priceGroup.className = 'modal-form-group';
+  const priceLabel = document.createElement('label');
+  priceLabel.className = 'modal-form-label';
+  priceLabel.textContent = __('Price') + ' ';
+  const priceHint = document.createElement('span');
+  priceHint.className = 'optional';
+  priceHint.textContent = '(\u20AC)';
+  priceLabel.appendChild(priceHint);
+  const priceInput = document.createElement('input');
+  priceInput.className = 'modal-input';
+  priceInput.type = 'number';
+  priceInput.step = '0.01';
+  priceInput.min = '0';
+  priceInput.value = '0';
+  priceGroup.appendChild(priceLabel);
+  priceGroup.appendChild(priceInput);
+  wrap.appendChild(priceGroup);
+
+  /* Target Quantity input */
+  const targetGroup = document.createElement('div');
+  targetGroup.className = 'modal-form-group';
+  const targetLabel = document.createElement('label');
+  targetLabel.className = 'modal-form-label';
+  targetLabel.textContent = __('Target Quantity') + ' ';
+  const targetHint = document.createElement('span');
+  targetHint.className = 'optional';
+  targetHint.textContent = '(pc)';
+  targetLabel.appendChild(targetHint);
+  const targetInput = document.createElement('input');
+  targetInput.className = 'modal-input';
+  targetInput.type = 'number';
+  targetInput.step = '1';
+  targetInput.min = '0';
+  targetInput.value = '0';
+  targetGroup.appendChild(targetLabel);
+  targetGroup.appendChild(targetInput);
+  wrap.appendChild(targetGroup);
+
   /* Priority toggle */
   const priorityRow = document.createElement('label');
   priorityRow.className = 'modal-check-row';
@@ -4643,7 +4683,7 @@ function openProductCreateModal(folderId) {
           const id = uuid();
           const name = (nameInput.value || 'New Product').trim();
           const imageUrl = preview.dataset?.src || null;
-          appState.products[id] = { id, name, price: 0, quantity: 0, note: '', imageUrl, targetQuantity: 0, priority: priorityCheck.checked };
+          appState.products[id] = { id, name, price: Number(priceInput.value || 0), quantity: 0, note: '', imageUrl, targetQuantity: Number(targetInput.value || 0), priority: priorityCheck.checked };
           appState.folders[folderId].products.push(id);
           saveStateDebounced();
           renderAll();
