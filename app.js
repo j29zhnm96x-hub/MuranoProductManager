@@ -2308,6 +2308,23 @@ function openProductEditModal(productId) {
     wrap.appendChild(targetGroup);
   }
 
+  /* Priority toggle */
+  const priorityRow = document.createElement('label');
+  priorityRow.className = 'modal-check-row';
+  priorityRow.style.marginTop = '8px';
+  const priorityCheck = document.createElement('input');
+  priorityCheck.type = 'checkbox';
+  priorityCheck.checked = !!p.priority;
+  const priorityTrack = document.createElement('span');
+  priorityTrack.className = 'modal-check-track';
+  const priorityLabel = document.createElement('span');
+  priorityLabel.className = 'modal-check-label';
+  priorityLabel.textContent = 'Prioritetni proizvod';
+  priorityRow.appendChild(priorityCheck);
+  priorityRow.appendChild(priorityTrack);
+  priorityRow.appendChild(priorityLabel);
+  wrap.appendChild(priorityRow);
+
   openModal({
     title: __('Edit Product'),
     headerIcon: { symbol: '\u270E', color: 'blue' },
@@ -2321,6 +2338,7 @@ function openProductEditModal(productId) {
           p.isDynamic = dynamicCheckbox ? dynamicCheckbox.checked : false;
           if (!p.isDynamic) { p.dynamicLinks = []; }
           p.warnThreshold = newWarnThreshold;
+          p.priority = priorityCheck.checked;
           if (!inIndependentFolder) {
             p.price = priceInput ? Number(priceInput.value || 0) : (p.price || 0);
             p.targetQuantity = targetInput ? Number(targetInput.value || 0) : (p.targetQuantity || 0);
@@ -4600,6 +4618,22 @@ function openProductCreateModal(folderId) {
   imgGroup.appendChild(preview);
   wrap.appendChild(imgGroup);
 
+  /* Priority toggle */
+  const priorityRow = document.createElement('label');
+  priorityRow.className = 'modal-check-row';
+  priorityRow.style.marginTop = '8px';
+  const priorityCheck = document.createElement('input');
+  priorityCheck.type = 'checkbox';
+  const priorityTrack = document.createElement('span');
+  priorityTrack.className = 'modal-check-track';
+  const priorityLabel = document.createElement('span');
+  priorityLabel.className = 'modal-check-label';
+  priorityLabel.textContent = 'Prioritetni proizvod';
+  priorityRow.appendChild(priorityCheck);
+  priorityRow.appendChild(priorityTrack);
+  priorityRow.appendChild(priorityLabel);
+  wrap.appendChild(priorityRow);
+
   openModal({
     title: __('New Product'),
     headerIcon: { symbol: '\uD83D\uDCE6', color: 'green' },
@@ -4609,7 +4643,7 @@ function openProductCreateModal(folderId) {
           const id = uuid();
           const name = (nameInput.value || 'New Product').trim();
           const imageUrl = preview.dataset?.src || null;
-          appState.products[id] = { id, name, price: 0, quantity: 0, note: '', imageUrl, targetQuantity: 0, priority: false };
+          appState.products[id] = { id, name, price: 0, quantity: 0, note: '', imageUrl, targetQuantity: 0, priority: priorityCheck.checked };
           appState.folders[folderId].products.push(id);
           saveStateDebounced();
           renderAll();
@@ -4880,7 +4914,7 @@ function duplicateProduct(productId) {
   const p = appState.products[productId];
   if (!p) return;
   const id = uuid();
-  const copy = { ...p, id, name: (p.name || 'Product') + ' (copy)', quantity: 0 };
+  const copy = { ...p, id, name: (p.name || 'Product') + ' (copy)', quantity: 0, priority: false };
   appState.products[id] = copy;
   for (const f of Object.values(appState.folders)) {
     const idx = f.products.indexOf(productId);
