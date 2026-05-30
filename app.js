@@ -4925,6 +4925,7 @@ function openFolderMenu(folderId) {
     headerIcon: { symbol: '\uD83D\uDCC1', color: 'slate' },
     actionsLayout: 'stack',
     actions: [
+      { label: __('Edit'), onClick: () => { closeModal(); openEditor('folder', folderId); } },
       { label: __('New Subfolder'), onClick: () => createFolder(folderId) },
       { label: __('New Product'), onClick: () => openProductCreateModal(folderId) },
       { label: __('Move to...'), onClick: () => openMoveDialog('folder', folderId) },
