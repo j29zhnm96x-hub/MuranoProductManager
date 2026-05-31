@@ -1186,8 +1186,8 @@ function moveFolderOrderItem(folder, itemKey, nextIndex) {
   order.splice(boundedIndex, 0, itemKey);
   setFolderOrder(folder, order);
   saveStateDebounced();
+  showUndoToast('Proizvod izbrisan');
   renderAll();
-  return true;
 }
 
 function openReorderMenu(folder, itemKey, itemLabel) {
