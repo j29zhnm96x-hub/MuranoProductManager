@@ -1858,17 +1858,7 @@ async function pruneBackups(maxKeep = 3) {
 
 // ---------------------------- Confirmations & Edit Modals ----------------------------
 function confirmDeleteProduct(productId) {
-  const p = appState.products[productId];
-  openModal({
-    title: __('Delete Product'),
-    headerIcon: { symbol: '\u2716', color: 'red' },
-    size: 'small',
-    body: `${__('Are you sure you want to delete')} "${p?.name || 'Product'}"?`,
-    actions: [
-      { label: __('Delete'), tone: 'danger', onClick: () => { closeModal(); deleteProduct(productId); } },
-      { label: __('Cancel'), tone: 'secondary' }
-    ]
-  });
+  deleteProduct(productId);
 }
 
 // ---------------------------- Snapshots (New Save System) ----------------------------
@@ -1926,17 +1916,7 @@ async function saveSnapshot(downloadAlso = false) {
 }
 
 function confirmDeleteFolder(folderId) {
-  const f = appState.folders[folderId];
-  openModal({
-    title: __('Delete Folder'),
-    headerIcon: { symbol: '\u2716', color: 'red' },
-    size: 'small',
-    body: `"${f?.name || 'Folder'}" ${__('and everything inside?')}`,
-    actions: [
-      { label: __('Delete'), tone: 'danger', onClick: () => { closeModal(); deleteFolder(folderId); } },
-      { label: __('Cancel'), tone: 'secondary' }
-    ]
-  });
+  deleteFolder(folderId);
 }
 
 // ---------------------------- Dynamic Link Helpers ----------------------------
@@ -3188,8 +3168,6 @@ function saveUndoSnapshot() {
 
 function showUndoToast(msg) {
   if (appState.settings?.undoEnabled === false) return;
-  if (_undoTimer) clearTimeout(_undoTimer);
-  // Remove old undo toast if exists
   const old = document.getElementById('undo-toast');
   if (old) old.remove();
 
@@ -3199,10 +3177,7 @@ function showUndoToast(msg) {
   const span = document.createElement('span');
   span.innerHTML = msg;
   const btnWrap = document.createElement('div');
-  btnWrap.style.cssText = 'display:flex;align-items:center;gap:10px;';
-  const timerEl = document.createElement('span');
-  timerEl.style.cssText = 'font-size:14px;color:#9ca3af;font-weight:600;min-width:28px;text-align:center;';
-  timerEl.textContent = '15';
+  btnWrap.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
   const btn = document.createElement('button');
   btn.textContent = __('Undo');
   btn.style.cssText = 'padding:8px 20px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#60a5fa;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap;';
@@ -3211,20 +3186,19 @@ function showUndoToast(msg) {
     appState.products = JSON.parse(JSON.stringify(_undoSnapshot.products));
     appState.folders = JSON.parse(JSON.stringify(_undoSnapshot.folders));
     _undoSnapshot = null;
-    if (_undoTimer) { clearTimeout(_undoTimer); _undoTimer = null; }
     toast.remove();
     saveStateDebounced();
     renderAll();
   });
-  btnWrap.appendChild(timerEl);
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '\u2715';
+  closeBtn.style.cssText = 'width:32px;height:32px;border:none;background:transparent;color:#9ca3af;font-size:16px;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;padding:0;';
+  closeBtn.addEventListener('click', () => { toast.remove(); _undoSnapshot = null; });
   btnWrap.appendChild(btn);
+  btnWrap.appendChild(closeBtn);
   toast.appendChild(span);
   toast.appendChild(btnWrap);
   document.body.appendChild(toast);
-
-  let remaining = 15;
-  const tick = () => { remaining -= 1; timerEl.textContent = String(remaining); if (remaining <= 0) { toast.remove(); _undoSnapshot = null; } else _undoTimer = setTimeout(tick, 1000); };
-  _undoTimer = setTimeout(tick, 1000);
 }
 
 function normalizeHistoryEntry(entry, index) {
