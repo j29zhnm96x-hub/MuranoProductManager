@@ -1186,7 +1186,6 @@ function moveFolderOrderItem(folder, itemKey, nextIndex) {
   order.splice(boundedIndex, 0, itemKey);
   setFolderOrder(folder, order);
   saveStateDebounced();
-  showUndoToast('Proizvod izbrisan');
   renderAll();
 }
 
@@ -4928,6 +4927,7 @@ function deleteProduct(productId) {
     });
   }
   saveStateDebounced();
+  showUndoToast('Proizvod izbrisan');
   renderAll();
 }
 
