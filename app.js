@@ -4209,7 +4209,9 @@ function renderFolderList(folderId = currentFolderId) {
       const itemRemain = document.createElement('div');
       itemRemain.className = 'sb-item sb-daily';
       const remainingOverall = Math.max(0, Number(settings.plannedValue || 0) - Number(currentValue || 0));
-      if (remainingToday > 0) {
+      if (remainingOverall === 0) {
+        itemRemain.innerHTML = `<div class="sb-col"><div class="sb-v sb-good">0</div></div>`;
+      } else if (remainingToday > 0) {
         itemRemain.innerHTML = `<div class="sb-col"><div class="sb-k sb-bad">${__('To do')}</div><div class="sb-v sb-bad">${formatCurrency(remainingToday)}</div></div>`;
       } else {
         itemRemain.innerHTML = `<div class="sb-col"><div class="sb-v sb-good">+${formatCurrency(extraToday)}</div></div>`;
@@ -4229,7 +4231,9 @@ function renderFolderList(folderId = currentFolderId) {
 
     // Finally totals: Qty and Value
     const itemQty = document.createElement('div'); itemQty.className = 'sb-item'; itemQty.innerHTML = `<div class="sb-k">${__('Total Qty')}</div><div class="sb-v">${stats.totalQty} ${__('pc')}</div>`;
-    const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">${__('Total Value')}</div><div class="sb-v">${formatCurrency(stats.totalValue)}</div>`;
+    const overGoal = settings.plannedValue && stats.totalValue >= Number(settings.plannedValue);
+    const valClass = overGoal ? 'sb-v sb-good' : 'sb-v';
+    const itemVal = document.createElement('div'); itemVal.className = 'sb-item'; itemVal.innerHTML = `<div class="sb-k">${__('Total Value')}</div><div class="${valClass}">${formatCurrency(stats.totalValue)}</div>`;
     wrap.appendChild(itemQty); wrap.appendChild(itemVal);
 
     statsBar.appendChild(wrap);
