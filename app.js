@@ -190,6 +190,8 @@ const LANG = {
     'Add a note...': 'Dodaj bilješku...',
     'Search products...': 'Traži proizvode...',
     'Edit details': 'Uredi detalje',
+    'Undo': 'Poni\u0161ti',
+    'Enable undo': 'Omogu\u0107i poni\u0161ti (Undo)',
   },
   en: {
     'Home': 'Home', 'Save': 'Save', 'Actions': 'Actions',
@@ -378,6 +380,8 @@ const LANG = {
     'Murano Product Manager': 'Murano Product Manager',
     'Search products...': 'Search products...',
     'Edit details': 'Edit details',
+    'Undo': 'Undo',
+    'Enable undo': 'Enable undo',
   }
 };
 
@@ -1862,7 +1866,7 @@ function confirmDeleteProduct(productId) {
     size: 'small',
     body: `${__('Are you sure you want to delete')} "${p?.name || 'Product'}"?`,
     actions: [
-      { label: __('Delete'), tone: 'danger', onClick: () => { deleteProduct(productId); } },
+      { label: __('Delete'), tone: 'danger', onClick: () => { closeModal(); deleteProduct(productId); } },
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
@@ -1930,7 +1934,7 @@ function confirmDeleteFolder(folderId) {
     size: 'small',
     body: `"${f?.name || 'Folder'}" ${__('and everything inside?')}`,
     actions: [
-      { label: __('Delete'), tone: 'danger', onClick: () => { deleteFolder(folderId); } },
+      { label: __('Delete'), tone: 'danger', onClick: () => { closeModal(); deleteFolder(folderId); } },
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
@@ -2860,6 +2864,23 @@ function openSettings() {
   }));
   wrap.appendChild(pwdGroup);
 
+  // ── Undo toggle ─────────────────────────────────────────────
+  const undoRow = document.createElement('label');
+  undoRow.className = 'modal-check-row';
+  undoRow.style.cssText = 'padding:4px 0;';
+  const undoCheck = document.createElement('input');
+  undoCheck.type = 'checkbox';
+  undoCheck.checked = set.undoEnabled !== false; // default true
+  const undoTrack = document.createElement('span');
+  undoTrack.className = 'modal-check-track';
+  const undoLabel = document.createElement('span');
+  undoLabel.className = 'modal-check-label';
+  undoLabel.textContent = __('Enable undo');
+  undoRow.appendChild(undoCheck);
+  undoRow.appendChild(undoTrack);
+  undoRow.appendChild(undoLabel);
+  wrap.appendChild(undoRow);
+
   // ── Open modal ─────────────────────────────────────────────
   openModal({
     title: __('Settings'),
@@ -2871,6 +2892,7 @@ function openSettings() {
       { label: __('Save'), onClick: () => {
           const langSel = document.querySelector('.modal-header-lang');
           if (langSel) { setLang(langSel.value); }
+          set.undoEnabled = undoCheck.checked;
           showToast(__('Settings saved'));
         } },
       { label: __('Close'), tone: 'secondary' }
@@ -3158,6 +3180,7 @@ function inferHistoryEventType(entry) {
 
 /* ── Undo System ──────────────────────────────────────────── */
 function saveUndoSnapshot() {
+  if (appState.settings?.undoEnabled === false) return;
   _undoSnapshot = {
     products: JSON.parse(JSON.stringify(appState.products || {})),
     folders: JSON.parse(JSON.stringify(appState.folders || {}))
@@ -3165,6 +3188,7 @@ function saveUndoSnapshot() {
 }
 
 function showUndoToast(msg) {
+  if (appState.settings?.undoEnabled === false) return;
   if (_undoTimer) clearTimeout(_undoTimer);
   // Remove old undo toast if exists
   const old = document.getElementById('undo-toast');
@@ -3181,7 +3205,7 @@ function showUndoToast(msg) {
   timerEl.style.cssText = 'font-size:14px;color:#9ca3af;font-weight:600;min-width:28px;text-align:center;';
   timerEl.textContent = '15';
   const btn = document.createElement('button');
-  btn.textContent = 'Undo';
+  btn.textContent = __('Undo');
   btn.style.cssText = 'padding:8px 20px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#60a5fa;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap;';
   btn.addEventListener('click', () => {
     if (!_undoSnapshot) return;
