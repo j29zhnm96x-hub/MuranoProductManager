@@ -466,6 +466,7 @@ function showResetStatsConfirm() {
 }
 
 function resetAllProductQuantities() {
+  saveUndoSnapshot();
   for (const p of Object.values(appState.products || {})) {
     const oldQty = Number(p.quantity || 0);
     p.quantity = 0;
@@ -484,6 +485,7 @@ function resetAllProductQuantities() {
   }
   saveStateDebounced();
   ensureDailyProgress();
+  showUndoToast('Sve koli\u010Dine resetirane');
   renderAll();
   showToast(__('all quantities reset'));
 }
@@ -604,6 +606,8 @@ let currentFolderId = 'root';
 let saveDebounceTimer = null;
 let productPageProductId = null;
 let _productReturnTo = null; // 'history', 'shop', null=main
+let _undoSnapshot = null;
+let _undoTimer = null;
 let historyPeriodMode = 'day';
 let backupLoaded = false; // indicates a successful cloud backup load in this session
 // Persistent client ID for self-change detection
@@ -3152,6 +3156,45 @@ function inferHistoryEventType(entry) {
   return 'system';
 }
 
+/* ── Undo System ──────────────────────────────────────────── */
+function saveUndoSnapshot() {
+  _undoSnapshot = {
+    products: JSON.parse(JSON.stringify(appState.products || {})),
+    folders: JSON.parse(JSON.stringify(appState.folders || {}))
+  };
+}
+
+function showUndoToast(msg) {
+  if (_undoTimer) clearTimeout(_undoTimer);
+  // Remove old undo toast if exists
+  const old = document.getElementById('undo-toast');
+  if (old) old.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'undo-toast';
+  toast.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;padding:14px 16px;background:#111827;color:#f9fafb;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,0.25);';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  const btn = document.createElement('button');
+  btn.textContent = 'Undo';
+  btn.style.cssText = 'padding:8px 20px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#60a5fa;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap;';
+  btn.addEventListener('click', () => {
+    if (!_undoSnapshot) return;
+    appState.products = JSON.parse(JSON.stringify(_undoSnapshot.products));
+    appState.folders = JSON.parse(JSON.stringify(_undoSnapshot.folders));
+    _undoSnapshot = null;
+    if (_undoTimer) { clearTimeout(_undoTimer); _undoTimer = null; }
+    toast.remove();
+    saveStateDebounced();
+    renderAll();
+  });
+  toast.appendChild(span);
+  toast.appendChild(btn);
+  document.body.appendChild(toast);
+
+  _undoTimer = setTimeout(() => { toast.remove(); _undoSnapshot = null; }, 15000);
+}
+
 function normalizeHistoryEntry(entry, index) {
   const delta = safeHistoryNumber(entry.delta);
   const price = safeHistoryNumber(entry.price);
@@ -4790,6 +4833,7 @@ function createProduct(folderId) {
 function deleteFolder(folderId, options = {}) {
   const nested = !!options.nested;
   if (folderId === 'root') return showToast(__('Cannot delete root'));
+  if (!nested) saveUndoSnapshot();
   const f = appState.folders[folderId];
   if (!f) return;
   const folderName = f.name || 'Folder';
@@ -4818,6 +4862,7 @@ function deleteFolder(folderId, options = {}) {
   }
   if (!nested) {
     saveStateDebounced();
+    showUndoToast('Mapa izbrisana');
     renderAll();
   }
 }
@@ -4825,6 +4870,7 @@ function deleteFolder(folderId, options = {}) {
 function deleteProduct(productId) {
   const p = appState.products[productId];
   if (!p) return;
+  saveUndoSnapshot();
   const productName = p.name || 'Product';
   // Compute value being removed for production log
   const removedValue = (Number(p.price || 0)) * (Number(p.quantity || 0));
@@ -4933,22 +4979,26 @@ function openFolderMenu(folderId) {
       { label: __('New Subfolder'), onClick: () => createFolder(folderId) },
       { label: __('New Product'), onClick: () => openProductCreateModal(folderId) },
       { label: '\u2B50  Ozna\u010Di sve kao prioritet', onClick: () => {
+        saveUndoSnapshot();
         const pids = getAllProductIdsInFolder(folderId);
         let count = 0;
         for (const pid of pids) {
           const p = appState.products[pid];
           if (p && !p.priority) { p.priority = true; count++; }
         }
-        saveStateDebounced(); closeModal(); renderAll(); if (count > 0) showToast(count + ' proizvoda ozna\u010Deno prioritetnim');
+        saveStateDebounced(); closeModal(); renderAll();
+        if (count > 0) showUndoToast(count + ' proizvoda ozna\u010Deno prioritetnim');
       } },
       { label: '\u2606  Makni prioritet svima', onClick: () => {
+        saveUndoSnapshot();
         const pids = getAllProductIdsInFolder(folderId);
         let count = 0;
         for (const pid of pids) {
           const p = appState.products[pid];
           if (p && p.priority) { p.priority = false; count++; }
         }
-        saveStateDebounced(); closeModal(); renderAll(); if (count > 0) showToast(count + ' proizvoda maknuto iz prioriteta');
+        saveStateDebounced(); closeModal(); renderAll();
+        if (count > 0) showUndoToast(count + ' proizvoda maknuto iz prioriteta');
       } },
       { label: __('Move to...'), onClick: () => openMoveDialog('folder', folderId) },
       { label: __('Delete'), onClick: () => confirmDeleteFolder(folderId) }

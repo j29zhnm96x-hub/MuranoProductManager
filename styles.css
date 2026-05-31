@@ -621,6 +621,14 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .history-empty { background: #ffffff; border: 1px dashed #d1d5db; border-radius: 12px; padding: 24px 16px; text-align: center; color: #6b7280; display: grid; gap: 6px; }
 .history-empty strong { color: #111827; font-size: 15px; }
 
+/* Undo toast */
+#undo-toast { animation: undoSlideIn 0.3s ease; }
+@keyframes undoSlideIn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+@media (max-width: 600px) {
+  #undo-toast { flex-direction: column; gap: 8px; padding: 12px; text-align: center; font-size: 14px; }
+  #undo-toast button { width: 100%; }
+}
+
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .history-summary { grid-template-columns: repeat(6, 1fr); }
