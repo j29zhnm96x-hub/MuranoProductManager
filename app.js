@@ -4932,6 +4932,24 @@ function openFolderMenu(folderId) {
       { label: __('Edit'), onClick: () => { closeModal(); openEditor('folder', folderId); } },
       { label: __('New Subfolder'), onClick: () => createFolder(folderId) },
       { label: __('New Product'), onClick: () => openProductCreateModal(folderId) },
+      { label: '\u2B50  Ozna\u010Di sve kao prioritet', onClick: () => {
+        const pids = getAllProductIdsInFolder(folderId);
+        let count = 0;
+        for (const pid of pids) {
+          const p = appState.products[pid];
+          if (p && !p.priority) { p.priority = true; count++; }
+        }
+        saveStateDebounced(); closeModal(); renderAll(); if (count > 0) showToast(count + ' proizvoda ozna\u010Deno prioritetnim');
+      } },
+      { label: '\u2606  Makni prioritet svima', onClick: () => {
+        const pids = getAllProductIdsInFolder(folderId);
+        let count = 0;
+        for (const pid of pids) {
+          const p = appState.products[pid];
+          if (p && p.priority) { p.priority = false; count++; }
+        }
+        saveStateDebounced(); closeModal(); renderAll(); if (count > 0) showToast(count + ' proizvoda maknuto iz prioriteta');
+      } },
       { label: __('Move to...'), onClick: () => openMoveDialog('folder', folderId) },
       { label: __('Delete'), onClick: () => confirmDeleteFolder(folderId) }
     ]
