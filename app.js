@@ -611,7 +611,6 @@ let saveDebounceTimer = null;
 let productPageProductId = null;
 let _productReturnTo = null; // 'history', 'shop', null=main
 let _undoSnapshot = null;
-let _undoTimer = null;
 let historyPeriodMode = 'day';
 let backupLoaded = false; // indicates a successful cloud backup load in this session
 // Persistent client ID for self-change detection
@@ -3168,37 +3167,26 @@ function saveUndoSnapshot() {
 
 function showUndoToast(msg) {
   if (appState.settings?.undoEnabled === false) return;
-  const old = document.getElementById('undo-toast');
-  if (old) old.remove();
-
-  const toast = document.createElement('div');
-  toast.id = 'undo-toast';
-  toast.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;padding:14px 16px;background:#111827;color:#f9fafb;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,0.25);';
-  const span = document.createElement('span');
-  span.innerHTML = msg;
-  const btnWrap = document.createElement('div');
-  btnWrap.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
-  const btn = document.createElement('button');
-  btn.textContent = __('Undo');
-  btn.style.cssText = 'padding:8px 20px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#60a5fa;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap;';
-  btn.addEventListener('click', () => {
-    if (!_undoSnapshot) return;
-    appState.products = JSON.parse(JSON.stringify(_undoSnapshot.products));
-    appState.folders = JSON.parse(JSON.stringify(_undoSnapshot.folders));
-    _undoSnapshot = null;
-    toast.remove();
-    saveStateDebounced();
-    renderAll();
+  const snap = _undoSnapshot;
+  if (!snap) return;
+  openModal({
+    title: 'Poni\u0161ti',
+    headerIcon: { symbol: '\u21A9', color: 'slate' },
+    size: 'small',
+    body: msg,
+    actions: [
+      { label: __('Undo'), onClick: () => {
+          if (!_undoSnapshot) { closeModal(); return; }
+          appState.products = JSON.parse(JSON.stringify(_undoSnapshot.products));
+          appState.folders = JSON.parse(JSON.stringify(_undoSnapshot.folders));
+          _undoSnapshot = null;
+          closeModal();
+          saveStateDebounced();
+          renderAll();
+        } },
+      { label: 'Zatvori', tone: 'secondary' }
+    ]
   });
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = '\u2715';
-  closeBtn.style.cssText = 'width:32px;height:32px;border:none;background:transparent;color:#9ca3af;font-size:16px;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;padding:0;';
-  closeBtn.addEventListener('click', () => { toast.remove(); _undoSnapshot = null; });
-  btnWrap.appendChild(btn);
-  btnWrap.appendChild(closeBtn);
-  toast.appendChild(span);
-  toast.appendChild(btnWrap);
-  document.body.appendChild(toast);
 }
 
 function normalizeHistoryEntry(entry, index) {
