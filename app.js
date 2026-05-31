@@ -3174,7 +3174,12 @@ function showUndoToast(msg) {
   toast.id = 'undo-toast';
   toast.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;padding:14px 16px;background:#111827;color:#f9fafb;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,0.25);';
   const span = document.createElement('span');
-  span.textContent = msg;
+  span.innerHTML = msg;
+  const btnWrap = document.createElement('div');
+  btnWrap.style.cssText = 'display:flex;align-items:center;gap:10px;';
+  const timerEl = document.createElement('span');
+  timerEl.style.cssText = 'font-size:14px;color:#9ca3af;font-weight:600;min-width:28px;text-align:center;';
+  timerEl.textContent = '15';
   const btn = document.createElement('button');
   btn.textContent = 'Undo';
   btn.style.cssText = 'padding:8px 20px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#60a5fa;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap;';
@@ -3188,11 +3193,15 @@ function showUndoToast(msg) {
     saveStateDebounced();
     renderAll();
   });
+  btnWrap.appendChild(timerEl);
+  btnWrap.appendChild(btn);
   toast.appendChild(span);
-  toast.appendChild(btn);
+  toast.appendChild(btnWrap);
   document.body.appendChild(toast);
 
-  _undoTimer = setTimeout(() => { toast.remove(); _undoSnapshot = null; }, 15000);
+  let remaining = 15;
+  const tick = () => { remaining -= 1; timerEl.textContent = String(remaining); if (remaining <= 0) { toast.remove(); _undoSnapshot = null; } else _undoTimer = setTimeout(tick, 1000); };
+  _undoTimer = setTimeout(tick, 1000);
 }
 
 function normalizeHistoryEntry(entry, index) {
