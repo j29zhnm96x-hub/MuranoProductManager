@@ -3633,11 +3633,30 @@ function renderHistoryPage() {
   const shownCount = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.delta), 0);
   const shownValue = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.value), 0);
 
+  // Cumulative production value up to the end of the selected period
+  let cumulativeToDate = 0;
+  if (selectedDate) {
+    const range = getHistoryRange(selectedDate, historyPeriodMode);
+    if (range) {
+      const endOfPeriod = range.end.getTime();
+      for (const entry of allEntries) {
+        if (entry.ts <= endOfPeriod &&
+            (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') &&
+            safeHistoryNumber(entry.value) > 0) {
+          cumulativeToDate += safeHistoryNumber(entry.value);
+        }
+      }
+    }
+  }
+
   const row1 = [
     { label: 'Prikazano', value: `${shownCount} kom = ${formatCurrency(shownValue)}`, span: 2 },
     { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode), span: 2 },
-    { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: 2 },
+    { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: cumulativeToDate > 0 ? 1 : 2 },
   ];
+  if (cumulativeToDate > 0) {
+    row1.push({ label: 'Proizvedeno do navedenog datuma', value: formatCurrency(cumulativeToDate), tone: 'positive', span: 1 });
+  }
   row1.forEach(d => {
     const cell = document.createElement('div');
     cell.className = d.span ? `history-summary-cell history-summary-span${d.span}` : 'history-summary-cell';
