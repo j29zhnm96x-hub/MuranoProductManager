@@ -3655,7 +3655,7 @@ function renderHistoryPage() {
     { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: cumulativeToDate > 0 ? 1 : 2 },
   ];
   if (cumulativeToDate > 0) {
-    row1.push({ label: 'Proizvedeno do navedenog datuma', value: formatCurrency(cumulativeToDate), tone: 'positive', span: 1 });
+    row1.push({ label: 'Proiz. do nav. datuma', value: formatCurrency(cumulativeToDate), tone: 'positive', span: 1 });
   }
   row1.forEach(d => {
     const cell = document.createElement('div');
