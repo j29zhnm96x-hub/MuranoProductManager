@@ -3720,10 +3720,30 @@ function renderHistoryPage() {
     chartWrap.style.cssText = 'margin:4px 0 8px;padding:10px;background:#faf7f2;border:1px solid #d9d0c8;border-radius:10px;display:none;';
     
     if (dayMap.size > 2) {
-      const days = Array.from(dayMap.entries());
-      const dateKey = d => { const p = d[0].split('.'); return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; };
-      days.sort((a, b) => dateKey(a).localeCompare(dateKey(b)));
-      const maxVal = Math.max(...days.map(d => d[1]), 1);
+      // Get the date range for this period
+      const range = selectedDate ? getHistoryRange(selectedDate, historyPeriodMode) : null;
+      let chartDays = [];
+      if (range) {
+        // Generate ALL days from range start to range end
+        const start = new Date(range.start);
+        const end = new Date(range.end);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dayStr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+          const val = dayMap.get(dayStr) || 0;
+          chartDays.push({ day: dayStr, val, dateObj: new Date(d) });
+        }
+      } else {
+        // Svi datumi: use all days from map (sorted)
+        chartDays = Array.from(dayMap.entries()).map(([day, val]) => {
+          const p = day.split('.');
+          return { day, val, dateObj: new Date(`${p[2]}-${p[1]}-${p[0]}`) };
+        }).sort((a, b) => a.dateObj - b.dateObj);
+      }
+      
+      if (chartDays.length < 3) return; // not enough data
+      
+      const maxVal = Math.max(...chartDays.map(d => d.val), 1);
+      const isAllDates = !selectedDate;
       
       // Y-axis: fixed 3 labels (max, mid, 0)
       const yLabels = [
@@ -3746,47 +3766,48 @@ function renderHistoryPage() {
         chartInner.appendChild(line);
       }
       
-      // Bars (absolutely positioned from bottom)
+      // Bars with flex:1 to fill full width
       const barArea = document.createElement('div');
-      barArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:0;top:0;display:flex;align-items:flex-end;gap:1px;';
+      barArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:16px;top:0;display:flex;align-items:flex-end;gap:1px;';
       
-      const labelStep = Math.max(1, Math.floor(days.length / 8));
-      const barWidth = Math.max(3, Math.min(14, 320 / days.length));
+      const labelStep = Math.max(1, Math.floor(chartDays.length / 8));
       const dateInputEl = document.getElementById('history-date');
       
-      for (let i = 0; i < days.length; i++) {
-        const [day, val] = days[i];
+      for (let i = 0; i < chartDays.length; i++) {
+        const { day, val, dateObj } = chartDays[i];
         const pct = Math.max(1, (val / maxVal) * 100);
         const bar = document.createElement('div');
-        bar.style.cssText = `width:${barWidth}px;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;`;
+        bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;transition:opacity 0.15s;`;
         bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
         bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
         bar.addEventListener('click', () => {
-          // Navigate to that date
-          if (dateInputEl) {
-            const parts = day.split('.');
-            dateInputEl.value = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          if (dateInputEl && !isAllDates) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            dateInputEl.value = `${y}-${m}-${d}`;
             renderHistoryPage();
           }
         });
-        bar.title = `${day}: ${val > 0 ? formatCurrency(val) : '0 €'}`;
+        bar.title = `${day}: ${val > 0 ? formatCurrency(val) : '0 \u20AC'}`;
         barArea.appendChild(bar);
-        
-        // Date label below (only every Nth)
-        if (i % labelStep === 0) {
-          const lbl = document.createElement('div');
-          lbl.style.cssText = `position:absolute;left:${(i / days.length) * 100}%;top:100%;transform:translateX(-50%);font-size:8px;color:#9ca3af;white-space:nowrap;`;
-          lbl.textContent = day;
-          barArea.appendChild(lbl);
-        }
       }
       
       chartInner.appendChild(barArea);
       
-      // Bottom axis line
-      const bottomLine = document.createElement('div');
-      bottomLine.style.cssText = 'position:absolute;left:48px;right:0;bottom:0;border-top:1px solid #d1c9c0;';
-      chartInner.appendChild(bottomLine);
+      // X-axis date labels below bars
+      const xLabelArea = document.createElement('div');
+      xLabelArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:0;display:flex;';
+      for (let i = 0; i < chartDays.length; i++) {
+        const lbl = document.createElement('div');
+        lbl.style.cssText = 'flex:1;font-size:8px;color:#9ca3af;text-align:center;overflow:hidden;';
+        if (i % labelStep === 0) {
+          const d = chartDays[i].dateObj;
+          lbl.textContent = `${d.getDate()}.${d.getMonth() + 1}.`;
+        }
+        xLabelArea.appendChild(lbl);
+      }
+      chartInner.appendChild(xLabelArea);
       
       chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px;">\uD83D\uDCCA Proizvodnja po danu</div>`;
       chartWrap.appendChild(chartInner);
