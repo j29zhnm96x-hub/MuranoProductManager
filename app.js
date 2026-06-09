@@ -3718,61 +3718,74 @@ function renderHistoryPage() {
     
     if (dayMap.size > 2) {
       const days = Array.from(dayMap.entries());
-      days.sort((a, b) => new Date(a[0].split('.').reverse().join('-')) - new Date(b[0].split('.').reverse().join('-')));
+      const dateKey = d => { const p = d[0].split('.'); return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; };
+      days.sort((a, b) => dateKey(a).localeCompare(dateKey(b)));
       const maxVal = Math.max(...days.map(d => d[1]), 1);
       
-      // Show date labels: every ~10th day or less depending on count
-      const labelStep = Math.max(1, Math.floor(days.length / 12));
+      // Y-axis: fixed 3 labels (max, mid, 0)
+      const yLabels = [
+        { val: Math.round(maxVal), pct: 100 },
+        { val: Math.round(maxVal / 2), pct: 50 },
+        { val: 0, pct: 0 }
+      ];
       
       const chartInner = document.createElement('div');
-      chartInner.style.cssText = 'display:grid;grid-template-columns:48px 1fr;gap:2px;';
+      chartInner.style.cssText = 'position:relative;height:100px;';
       
-      // Y-axis labels
-      const yAxis = document.createElement('div');
-      yAxis.style.cssText = 'display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding:0 4px 16px 0;font-size:10px;color:#6b7280;font-weight:600;';
-      yAxis.innerHTML = `${formatCurrency(maxVal)}<br>${formatCurrency(Math.round(maxVal/2))}<br>€0`;
+      // Y-axis background lines + labels
+      for (const yl of yLabels) {
+        const line = document.createElement('div');
+        line.style.cssText = `position:absolute;left:48px;right:0;top:${100 - yl.pct}%;border-top:1px dashed #d1c9c0;pointer-events:none;`;
+        const lbl = document.createElement('div');
+        lbl.style.cssText = `position:absolute;right:100%;top:${100 - yl.pct}%;transform:translateY(-50%);padding-right:6px;font-size:10px;color:#6b7280;font-weight:600;white-space:nowrap;`;
+        lbl.textContent = formatCurrency(yl.val);
+        chartInner.appendChild(lbl);
+        chartInner.appendChild(line);
+      }
       
-      // Bars + X-axis container
-      const rightCol = document.createElement('div');
-      rightCol.style.cssText = 'display:grid;grid-template-rows:1fr auto;';
+      // Bars (absolutely positioned from bottom)
+      const barArea = document.createElement('div');
+      barArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:0;top:0;display:flex;align-items:flex-end;gap:1px;';
       
-      const barsContainer = document.createElement('div');
-      barsContainer.style.cssText = 'display:flex;align-items:flex-end;gap:1px;height:80px;border-left:1px solid #d1c9c0;border-bottom:1px solid #d1c9c0;padding-left:1px;';
+      const labelStep = Math.max(1, Math.floor(days.length / 8));
+      const barWidth = Math.max(3, Math.min(14, 320 / days.length));
+      const dateInputEl = document.getElementById('history-date');
       
       for (let i = 0; i < days.length; i++) {
         const [day, val] = days[i];
-        const pct = Math.max(2, (val / maxVal) * 100);
-        const color = '#16a34a';
+        const pct = Math.max(1, (val / maxVal) * 100);
         const bar = document.createElement('div');
-        bar.style.cssText = `width:${Math.max(2, Math.min(12, 360 / days.length))}px;height:${pct}%;background:${color};border-radius:2px 2px 0 0;min-height:2px;cursor:pointer;transition:opacity 0.15s;flex-shrink:0;`;
+        bar.style.cssText = `width:${barWidth}px;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;`;
         bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
         bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
-        bar.addEventListener('click', () => { showToast(`${day}: ${formatCurrency(val)}`); });
-        bar.title = `${day}: ${formatCurrency(val)}`;
-        barsContainer.appendChild(bar);
-        // Add zero-marker for days without production
-        if (val === 0) bar.style.background = '#e5e7eb'; bar.style.height = '2px';
-      }
-      
-      // X-axis date labels
-      const xLabels = document.createElement('div');
-      xLabels.style.cssText = 'display:flex;align-items:flex-start;border-left:1px solid #d1c9c0;padding-left:1px;font-size:9px;color:#6b7280;';
-      // Create empty flex items to align with bars
-      for (let i = 0; i < days.length; i++) {
-        const lbl = document.createElement('div');
-        lbl.style.cssText = `width:${Math.max(2, Math.min(12, 360 / days.length))}px;flex-shrink:0;text-align:center;overflow:hidden;`;
+        bar.addEventListener('click', () => {
+          // Navigate to that date
+          if (dateInputEl) {
+            const parts = day.split('.');
+            dateInputEl.value = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            renderHistoryPage();
+          }
+        });
+        bar.title = `${day}: ${val > 0 ? formatCurrency(val) : '0 €'}`;
+        barArea.appendChild(bar);
+        
+        // Date label below (only every Nth)
         if (i % labelStep === 0) {
-          lbl.textContent = days[i][0];
+          const lbl = document.createElement('div');
+          lbl.style.cssText = `position:absolute;left:${(i / days.length) * 100}%;top:100%;transform:translateX(-50%);font-size:8px;color:#9ca3af;white-space:nowrap;`;
+          lbl.textContent = day;
+          barArea.appendChild(lbl);
         }
-        xLabels.appendChild(lbl);
       }
       
-      rightCol.appendChild(barsContainer);
-      rightCol.appendChild(xLabels);
-      chartInner.appendChild(yAxis);
-      chartInner.appendChild(rightCol);
+      chartInner.appendChild(barArea);
       
-      chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">\uD83D\uDCCA Proizvodnja po danu <span style="font-weight:400;font-size:12px;color:#9ca3af;">(hover za detalje)</span></div>`;
+      // Bottom axis line
+      const bottomLine = document.createElement('div');
+      bottomLine.style.cssText = 'position:absolute;left:48px;right:0;bottom:0;border-top:1px solid #d1c9c0;';
+      chartInner.appendChild(bottomLine);
+      
+      chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px;">\uD83D\uDCCA Proizvodnja po danu</div>`;
       chartWrap.appendChild(chartInner);
       
       toggleBtn.addEventListener('click', () => {
