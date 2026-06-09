@@ -8028,6 +8028,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const historyNextPeriodBtn = document.getElementById('history-next-period');
   if (historyNextPeriodBtn) historyNextPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(1));
 
+  // Date inputs: re-render on change
+  const histDate = document.getElementById('history-date');
+  if (histDate) histDate.addEventListener('change', () => renderHistoryPage());
+  const histDateTo = document.getElementById('history-date-to');
+  if (histDateTo) histDateTo.addEventListener('change', () => renderHistoryPage());
+
   const historyTotopBtn = document.getElementById('history-totop');
   if (historyTotopBtn) historyTotopBtn.addEventListener('click', () => {
     const page = document.getElementById('history-page');
