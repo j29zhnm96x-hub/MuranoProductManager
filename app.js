@@ -3729,7 +3729,7 @@ function renderHistoryPage() {
       
       chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">\uD83D\uDCCA Proizvodnja po danu</div>`;
       chartWrap.appendChild(barsContainer);
-      summaryEl.parentNode.insertBefore(chartWrap, listEl.parentNode);
+      listEl.parentNode.insertBefore(chartWrap, listEl);
     }
   }
 
