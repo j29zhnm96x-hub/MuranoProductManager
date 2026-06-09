@@ -3690,6 +3690,49 @@ function renderHistoryPage() {
     summaryEl.appendChild(cell);
   });
 
+  /* ── Production chart ──────────────────────────────────── */
+  if (selectedDate && periodEntries.length > 0) {
+    const chartWrap = document.createElement('div');
+    chartWrap.style.cssText = 'margin:8px 0;padding:10px;background:#faf7f2;border:1px solid #d9d0c8;border-radius:10px;';
+    
+    // Group entries by day
+    const dayMap = new Map();
+    for (const entry of periodEntries) {
+      if (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') {
+        const val = safeHistoryNumber(entry.value);
+        if (val <= 0) continue;
+        const day = new Date(entry.ts).toLocaleDateString('hr-HR');
+        dayMap.set(day, (dayMap.get(day) || 0) + val);
+      }
+    }
+    
+    if (dayMap.size > 0) {
+      const days = Array.from(dayMap.entries());
+      const maxVal = Math.max(...days.map(d => d[1]), 1);
+      const avgGoal = maxVal / days.length; // rough goal line
+      
+      const barsContainer = document.createElement('div');
+      barsContainer.style.cssText = 'display:flex;align-items:flex-end;gap:3px;height:100px;padding:4px 0;';
+      
+      for (const [day, val] of days) {
+        const pct = Math.max(3, (val / maxVal) * 100);
+        const color = val >= avgGoal ? '#16a34a' : '#f59e0b';
+        const bar = document.createElement('div');
+        bar.style.cssText = `flex:1;height:${pct}%;background:${color};border-radius:4px 4px 0 0;min-height:3px;position:relative;cursor:pointer;transition:opacity 0.15s;`;
+        bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.7'; });
+        bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
+        bar.addEventListener('click', () => { showToast(`${day}: ${formatCurrency(val)}`); });
+        // Tooltip on hover using title
+        bar.title = `${day}: ${formatCurrency(val)}`;
+        barsContainer.appendChild(bar);
+      }
+      
+      chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">\uD83D\uDCCA Proizvodnja po danu</div>`;
+      chartWrap.appendChild(barsContainer);
+      summaryEl.parentNode.insertBefore(chartWrap, listEl.parentNode);
+    }
+  }
+
   /* ── Entry list ────────────────────────────────────────── */
   listEl.innerHTML = '';
 
@@ -7111,6 +7154,13 @@ function openLegalDocuments() {
     body.appendChild(b);
   };
   
+  /* Print all button */
+  const printAllBtn = document.createElement('button');
+  printAllBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid #2563eb;background:#dbeafe;color:#1d4ed8;font-weight:700;font-size:15px;cursor:pointer;text-align:center;margin-bottom:4px;';
+  printAllBtn.innerHTML = '\uD83D\uDDB1\uFE0F  Ispi\u0161i sve dokumente';
+  printAllBtn.addEventListener('click', () => { closeModal(); generateAllDocuments(year, dateStr); });
+  body.appendChild(printAllBtn);
+
   addDocBtn(`Blagajni\u010Dki maksimum ${year}`, () => generateBlagajnickiMaksimum(year, dateStr));
   addDocBtn(`Blagajni\u010Dki minimum ${year}`, () => generateBlagajnickiMinimum(year));
   addDocBtn(`Interni akt ${year}`, () => generateInterniAkt(year));
@@ -7123,6 +7173,48 @@ function openLegalDocuments() {
     body,
     actions: [{ label: __('Close'), tone: 'secondary' }]
   });
+}
+
+function generateAllDocuments(year, dateStr) {
+  const preview = document.getElementById('doc-preview');
+  const body = document.getElementById('doc-preview-body');
+  if (!preview || !body) return;
+  
+  // Generate each document in sequence, capture HTML
+  preview.classList.add('hidden'); // hide during generation to avoid flashes
+  const docs = [];
+  const gens = [
+    { fn: 'generateBlagajnickiMaksimum', args: [year, dateStr] },
+    { fn: 'generateBlagajnickiMinimum', args: [year] },
+    { fn: 'generateInterniAkt', args: [year] },
+    { fn: 'generateEvidencijaPrigovora', args: [year] },
+    { fn: 'generatePopisRobe', args: [year, dateStr] },
+  ];
+  
+  for (const g of gens) {
+    try {
+      window[g.fn](...g.args);
+      docs.push(body.innerHTML);
+    } catch (e) { /* skip failed doc */ }
+  }
+  
+  const combined = docs.map(html => `<div style="page-break-after:always;">${html}</div>`).join('');
+  body.innerHTML = `<div class="doc-a4" style="padding:0;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;">${combined}</div>`;
+  preview.classList.remove('hidden');
+  document.title = `Svi dokumenti ${year}`;
+  
+  document.getElementById('doc-preview-back').onclick = () => { preview.classList.add('hidden'); document.title = 'Murano Product Manager'; };
+  document.getElementById('doc-actions-btn').onclick = () => {
+    openModal({
+      title: 'Akcije',
+      headerIcon: { symbol: '\uD83D\uDCC4', color: 'slate' },
+      actionsLayout: 'stack',
+      actions: [
+        { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
+        { label: 'Zatvori', tone: 'secondary' }
+      ]
+    });
+  };
 }
 
 function generateBlagajnickiMaksimum(year, dateStr) {
