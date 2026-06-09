@@ -3633,15 +3633,16 @@ function renderHistoryPage() {
   const shownCount = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.delta), 0);
   const shownValue = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.value), 0);
 
-  // Cumulative warehouse value up to the end of the selected period (net of all events)
-  let cumulativeToDate = 0;
+  // Stock value at the end of the selected period (reverse-calculated from current)
+  let stockAtDate = currentStats.totalValue;
   if (selectedDate) {
     const range = getHistoryRange(selectedDate, historyPeriodMode);
     if (range) {
       const endOfPeriod = range.end.getTime();
+      // Subtract all events AFTER the period to get stock at that date
       for (const entry of allEntries) {
-        if (entry.ts <= endOfPeriod) {
-          cumulativeToDate += safeHistoryNumber(entry.value);
+        if (entry.ts > endOfPeriod) {
+          stockAtDate -= safeHistoryNumber(entry.value);
         }
       }
     }
@@ -3650,10 +3651,10 @@ function renderHistoryPage() {
   const row1 = [
     { label: 'Prikazano', value: `${shownCount} kom = ${formatCurrency(shownValue)}`, span: 2 },
     { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode), span: 2 },
-    { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: cumulativeToDate > 0 ? 1 : 2 },
+    { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: selectedDate ? 1 : 2 },
   ];
-  if (cumulativeToDate > 0) {
-    row1.push({ label: 'Vrijednost skladišta do datuma', value: formatCurrency(cumulativeToDate), tone: 'positive', span: 1 });
+  if (selectedDate) {
+    row1.push({ label: 'Proizv. do odabranog datuma', value: formatCurrency(stockAtDate), tone: 'positive', span: 1 });
   }
   row1.forEach(d => {
     const cell = document.createElement('div');
