@@ -3690,10 +3690,22 @@ function renderHistoryPage() {
     summaryEl.appendChild(cell);
   });
 
-  /* ── Production chart ──────────────────────────────────── */
+  /* ── Production chart toggle ──────────────────────────────── */
+  const chartToggleId = 'history-chart-toggle';
+  let oldToggle = document.getElementById(chartToggleId);
+  if (oldToggle) oldToggle.remove();
+  
   if (selectedDate && periodEntries.length > 0) {
+    const toggleRow = document.createElement('div');
+    toggleRow.id = chartToggleId;
+    toggleRow.style.cssText = 'margin:4px 0;display:flex;align-items:center;gap:8px;';
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.textContent = '\uD83D\uDCCA  Prika\u017Ei grafikon';
+    toggleBtn.style.cssText = 'padding:6px 14px;border-radius:8px;border:1px solid #d9d0c8;background:#faf7f2;color:#374151;font-weight:600;font-size:13px;cursor:pointer;';
+    
     const chartWrap = document.createElement('div');
-    chartWrap.style.cssText = 'margin:8px 0;padding:10px;background:#faf7f2;border:1px solid #d9d0c8;border-radius:10px;';
+    chartWrap.style.cssText = 'margin:4px 0 8px;padding:10px;background:#faf7f2;border:1px solid #d9d0c8;border-radius:10px;display:none;';
     
     // Group entries by day
     const dayMap = new Map();
@@ -3706,29 +3718,37 @@ function renderHistoryPage() {
       }
     }
     
-    if (dayMap.size > 0) {
+    if (dayMap.size > 1) {
       const days = Array.from(dayMap.entries());
       const maxVal = Math.max(...days.map(d => d[1]), 1);
-      const avgGoal = maxVal / days.length; // rough goal line
+      const avgGoal = maxVal / days.length;
       
       const barsContainer = document.createElement('div');
-      barsContainer.style.cssText = 'display:flex;align-items:flex-end;gap:3px;height:100px;padding:4px 0;';
+      barsContainer.style.cssText = 'display:flex;align-items:flex-end;gap:3px;height:80px;padding:4px 0;';
       
       for (const [day, val] of days) {
         const pct = Math.max(3, (val / maxVal) * 100);
         const color = val >= avgGoal ? '#16a34a' : '#f59e0b';
         const bar = document.createElement('div');
-        bar.style.cssText = `flex:1;height:${pct}%;background:${color};border-radius:4px 4px 0 0;min-height:3px;position:relative;cursor:pointer;transition:opacity 0.15s;`;
+        bar.style.cssText = `flex:1;height:${pct}%;background:${color};border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity 0.15s;`;
         bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.7'; });
         bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
         bar.addEventListener('click', () => { showToast(`${day}: ${formatCurrency(val)}`); });
-        // Tooltip on hover using title
         bar.title = `${day}: ${formatCurrency(val)}`;
         barsContainer.appendChild(bar);
       }
       
       chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">\uD83D\uDCCA Proizvodnja po danu</div>`;
       chartWrap.appendChild(barsContainer);
+      
+      toggleBtn.addEventListener('click', () => {
+        const hidden = chartWrap.style.display === 'none';
+        chartWrap.style.display = hidden ? 'block' : 'none';
+        toggleBtn.textContent = hidden ? '\uD83D\uDCCA  Sakrij grafikon' : '\uD83D\uDCCA  Prika\u017Ei grafikon';
+      });
+      
+      toggleRow.appendChild(toggleBtn);
+      listEl.parentNode.insertBefore(toggleRow, listEl);
       listEl.parentNode.insertBefore(chartWrap, listEl);
     }
   }
