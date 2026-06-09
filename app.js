@@ -3692,8 +3692,10 @@ function renderHistoryPage() {
   const chartToggleId = 'history-chart-toggle';
   let oldToggle = document.getElementById(chartToggleId);
   if (oldToggle) oldToggle.remove();
+  let oldChart = document.getElementById('history-chart-wrap');
+  if (oldChart) oldChart.remove();
   
-  if (selectedDate && periodEntries.length > 0) {
+  if (periodEntries.length > 0) {
     const toggleRow = document.createElement('div');
     toggleRow.id = chartToggleId;
     toggleRow.style.cssText = 'margin:4px 0;display:flex;align-items:center;gap:8px;';
@@ -3701,9 +3703,6 @@ function renderHistoryPage() {
     toggleBtn.type = 'button';
     toggleBtn.textContent = '\uD83D\uDCCA  Prika\u017Ei grafikon';
     toggleBtn.style.cssText = 'padding:6px 14px;border-radius:8px;border:1px solid #d9d0c8;background:#faf7f2;color:#374151;font-weight:600;font-size:13px;cursor:pointer;';
-    
-    const chartWrap = document.createElement('div');
-    chartWrap.style.cssText = 'margin:4px 0 8px;padding:10px;background:#faf7f2;border:1px solid #d9d0c8;border-radius:10px;display:none;';
     
     // Group entries by day
     const dayMap = new Map();
@@ -3715,6 +3714,10 @@ function renderHistoryPage() {
         dayMap.set(day, (dayMap.get(day) || 0) + val);
       }
     }
+    
+    const chartWrap = document.createElement('div');
+    chartWrap.id = 'history-chart-wrap';
+    chartWrap.style.cssText = 'margin:4px 0 8px;padding:10px;background:#faf7f2;border:1px solid #d9d0c8;border-radius:10px;display:none;';
     
     if (dayMap.size > 2) {
       const days = Array.from(dayMap.entries());
