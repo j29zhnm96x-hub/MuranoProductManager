@@ -3401,15 +3401,6 @@ function formatHistoryPeriodLabel(dateValue, periodMode = historyPeriodMode) {
     return `${startText} - ${endText}`;
   }
 
-  if (periodMode === 'range') {
-    const dt2 = document.getElementById('history-date-to');
-    const to = dt2?.value || '';
-    if (to) {
-      const d1 = new Date(`${dateValue}T00:00:00`).toLocaleDateString('hr-HR');
-      const d2 = new Date(`${to}T00:00:00`).toLocaleDateString('hr-HR');
-      return `${d1} - ${d2}`;
-    }
-  }
   return formatHistoryFilterDate(dateValue);
 }
 
@@ -3624,12 +3615,16 @@ function renderHistoryPage() {
   const dateTo = dateToInput?.value || '';
   const allEntries = getHistoryEntries();
   let periodEntries;
-  if (historyPeriodMode === 'range' && selectedDate && dateTo) {
-    const from = new Date(`${selectedDate}T00:00:00`).getTime();
-    const to = new Date(`${dateTo}T23:59:59`).getTime();
-    periodEntries = allEntries.filter(entry => entry.ts >= from && entry.ts <= to);
+  // Auto-detect range mode when both date inputs have values
+  const isRange = selectedDate && dateTo;
+  if (isRange) {
+    const from = new Date(`${selectedDate}T12:00:00`).getTime();
+    const to = new Date(`${dateTo}T12:00:00`).getTime();
+    periodEntries = allEntries.filter(entry => entry.ts >= from && entry.ts <= to + 86400000);
+  } else if (selectedDate) {
+    periodEntries = allEntries.filter(entry => entryMatchesHistoryPeriod(entry, selectedDate, historyPeriodMode));
   } else {
-    periodEntries = selectedDate ? allEntries.filter(entry => entryMatchesHistoryPeriod(entry, selectedDate, historyPeriodMode)) : allEntries;
+    periodEntries = allEntries;
   }
   const entries = query ? periodEntries.filter(entry => matchesHistoryQuery(entry, query)) : periodEntries;
   const currentStats = getOverallBusinessStats();
@@ -3664,22 +3659,32 @@ function renderHistoryPage() {
 
   // Stock value at the end of the selected period (reverse-calculated from current)
   let stockAtDate = currentStats.totalValue;
-  if (selectedDate) {
+  let periodLabel;
+  if (isRange) {
+    // For range mode: use the "to" date as end point
+    const endMs = new Date(`${dateTo}T12:00:00`).getTime() + 86400000;
+    for (const entry of allEntries) {
+      if (entry.ts > endMs) stockAtDate -= safeHistoryNumber(entry.value);
+    }
+    const d1 = new Date(selectedDate + 'T12:00:00').toLocaleDateString('hr-HR');
+    const d2 = new Date(dateTo + 'T12:00:00').toLocaleDateString('hr-HR');
+    periodLabel = `${d1} - ${d2}`;
+  } else if (selectedDate) {
     const range = getHistoryRange(selectedDate, historyPeriodMode);
     if (range) {
       const endOfPeriod = range.end.getTime();
-      // Subtract all events AFTER the period to get stock at that date
       for (const entry of allEntries) {
-        if (entry.ts > endOfPeriod) {
-          stockAtDate -= safeHistoryNumber(entry.value);
-        }
+        if (entry.ts > endOfPeriod) stockAtDate -= safeHistoryNumber(entry.value);
       }
     }
+    periodLabel = formatHistoryPeriodLabel(selectedDate, historyPeriodMode);
+  } else {
+    periodLabel = formatHistoryPeriodLabel(selectedDate, historyPeriodMode);
   }
 
   const row1 = [
     { label: 'Prikazano', value: `${shownCount} kom = ${formatCurrency(shownValue)}`, span: 2 },
-    { label: __('Period'), value: formatHistoryPeriodLabel(selectedDate, historyPeriodMode), span: 2 },
+    { label: __('Period'), value: periodLabel, span: 2 },
     { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: selectedDate ? 1 : 2 },
   ];
   if (selectedDate) {
@@ -3752,7 +3757,7 @@ function renderHistoryPage() {
     if (dayMap.size > 2) {
       // Get the date range for this period
       let rangeStart = null, rangeEnd = null;
-      if (historyPeriodMode === 'range' && selectedDate && dateTo) {
+      if (isRange) {
         rangeStart = new Date(`${selectedDate}T00:00:00`);
         rangeEnd = new Date(`${dateTo}T23:59:59`);
       } else if (selectedDate) {
@@ -8014,14 +8019,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('history-date');
     if (!dateInput) return;
     dateInput.value = todayStr();
-    renderHistoryPage();
+    document.getElementById('history-date-to').style.display = 'none';
+    document.getElementById('history-date-to').value = '';
+    setHistoryPeriodMode('day');
   });
   const historyClearDateBtn = document.getElementById('history-clear-date');
   if (historyClearDateBtn) historyClearDateBtn.addEventListener('click', () => {
     const dateInput = document.getElementById('history-date');
     if (!dateInput) return;
     dateInput.value = '';
-    renderHistoryPage();
+    document.getElementById('history-date-to').style.display = 'none';
+    document.getElementById('history-date-to').value = '';
+    setHistoryPeriodMode('day');
   });
   const historyPrevPeriodBtn = document.getElementById('history-prev-period');
   if (historyPrevPeriodBtn) historyPrevPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(-1));
@@ -8029,10 +8038,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historyNextPeriodBtn) historyNextPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(1));
 
   // Date inputs: re-render on change
-  const histDate = document.getElementById('history-date');
-  if (histDate) histDate.addEventListener('change', () => renderHistoryPage());
-  const histDateTo = document.getElementById('history-date-to');
-  if (histDateTo) histDateTo.addEventListener('change', () => renderHistoryPage());
+  document.getElementById('history-date')?.addEventListener('change', () => renderHistoryPage());
+  document.getElementById('history-date-to')?.addEventListener('change', () => renderHistoryPage());
+  // Also re-render when the 'Odaberi period' button is clicked (already handled by setHistoryPeriodMode)
 
   const historyTotopBtn = document.getElementById('history-totop');
   if (historyTotopBtn) historyTotopBtn.addEventListener('click', () => {
