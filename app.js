@@ -3401,6 +3401,15 @@ function formatHistoryPeriodLabel(dateValue, periodMode = historyPeriodMode) {
     return `${startText} - ${endText}`;
   }
 
+  if (periodMode === 'range') {
+    const dt2 = document.getElementById('history-date-to');
+    const to = dt2?.value || '';
+    if (to) {
+      const d1 = new Date(`${dateValue}T00:00:00`).toLocaleDateString('hr-HR');
+      const d2 = new Date(`${to}T00:00:00`).toLocaleDateString('hr-HR');
+      return `${d1} - ${d2}`;
+    }
+  }
   return formatHistoryFilterDate(dateValue);
 }
 
@@ -3430,6 +3439,7 @@ function updateHistoryPeriodControls() {
     { id: 'history-period-day', mode: 'day' },
     { id: 'history-period-week', mode: 'week' },
     { id: 'history-period-month', mode: 'month' },
+    { id: 'history-period-range', mode: 'range' },
   ];
 
   periodButtons.forEach(({ id, mode }) => {
@@ -3447,11 +3457,21 @@ function updateHistoryPeriodControls() {
 
 function setHistoryPeriodMode(periodMode) {
   historyPeriodMode = periodMode;
+  const dt = document.getElementById('history-date');
+  const dt2 = document.getElementById('history-date-to');
+  if (periodMode === 'range') {
+    dt2.style.display = 'inline-block';
+    if (!dt.value) dt.value = todayStr();
+    if (!dt2.value) dt2.value = todayStr();
+  } else {
+    dt2.style.display = 'none';
+  }
   updateHistoryPeriodControls();
   renderHistoryPage();
 }
 
 function shiftHistoryDateByPeriod(direction) {
+  if (historyPeriodMode === 'range') return; // no shift for range mode
   const dateInput = document.getElementById('history-date');
   if (!dateInput) return;
 
@@ -3600,8 +3620,17 @@ function renderHistoryPage() {
 
   const query = (searchInput?.value || '').trim().toLowerCase();
   const selectedDate = dateInput?.value || '';
+  const dateToInput = document.getElementById('history-date-to');
+  const dateTo = dateToInput?.value || '';
   const allEntries = getHistoryEntries();
-  const periodEntries = selectedDate ? allEntries.filter(entry => entryMatchesHistoryPeriod(entry, selectedDate, historyPeriodMode)) : allEntries;
+  let periodEntries;
+  if (historyPeriodMode === 'range' && selectedDate && dateTo) {
+    const from = new Date(`${selectedDate}T00:00:00`).getTime();
+    const to = new Date(`${dateTo}T23:59:59`).getTime();
+    periodEntries = allEntries.filter(entry => entry.ts >= from && entry.ts <= to);
+  } else {
+    periodEntries = selectedDate ? allEntries.filter(entry => entryMatchesHistoryPeriod(entry, selectedDate, historyPeriodMode)) : allEntries;
+  }
   const entries = query ? periodEntries.filter(entry => matchesHistoryQuery(entry, query)) : periodEntries;
   const currentStats = getOverallBusinessStats();
   const periodSummary = getHistoryPeriodSummary(periodEntries);
@@ -3722,9 +3751,16 @@ function renderHistoryPage() {
     
     if (dayMap.size > 2) {
       // Get the date range for this period
-      const range = selectedDate ? getHistoryRange(selectedDate, historyPeriodMode) : null;
+      let rangeStart = null, rangeEnd = null;
+      if (historyPeriodMode === 'range' && selectedDate && dateTo) {
+        rangeStart = new Date(`${selectedDate}T00:00:00`);
+        rangeEnd = new Date(`${dateTo}T23:59:59`);
+      } else if (selectedDate) {
+        const r = getHistoryRange(selectedDate, historyPeriodMode);
+        if (r) { rangeStart = r.start; rangeEnd = r.end; }
+      }
       let chartDays = [];
-      if (range) {
+      if (rangeStart && rangeEnd) {
         // Generate ALL days from range start to range end
         const start = new Date(range.start);
         const end = new Date(range.end);
@@ -7971,6 +8007,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historyPeriodWeekBtn) historyPeriodWeekBtn.addEventListener('click', () => { document.getElementById('history-date').value = todayStr(); setHistoryPeriodMode('week'); });
   const historyPeriodMonthBtn = document.getElementById('history-period-month');
   if (historyPeriodMonthBtn) historyPeriodMonthBtn.addEventListener('click', () => { document.getElementById('history-date').value = todayStr(); setHistoryPeriodMode('month'); });
+  const historyPeriodRangeBtn = document.getElementById('history-period-range');
+  if (historyPeriodRangeBtn) historyPeriodRangeBtn.addEventListener('click', () => setHistoryPeriodMode('range'));
   const historyTodayBtn = document.getElementById('history-today');
   if (historyTodayBtn) historyTodayBtn.addEventListener('click', () => {
     const dateInput = document.getElementById('history-date');
