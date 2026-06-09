@@ -3633,16 +3633,14 @@ function renderHistoryPage() {
   const shownCount = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.delta), 0);
   const shownValue = shownProduction.reduce((sum, e) => sum + safeHistoryNumber(e.value), 0);
 
-  // Cumulative production value up to the end of the selected period
+  // Cumulative warehouse value up to the end of the selected period (net of all events)
   let cumulativeToDate = 0;
   if (selectedDate) {
     const range = getHistoryRange(selectedDate, historyPeriodMode);
     if (range) {
       const endOfPeriod = range.end.getTime();
       for (const entry of allEntries) {
-        if (entry.ts <= endOfPeriod &&
-            (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') &&
-            safeHistoryNumber(entry.value) > 0) {
+        if (entry.ts <= endOfPeriod) {
           cumulativeToDate += safeHistoryNumber(entry.value);
         }
       }
@@ -3655,7 +3653,7 @@ function renderHistoryPage() {
     { label: 'Proizvedeno', value: formatCurrency(producedDisplay), tone: 'positive', span: cumulativeToDate > 0 ? 1 : 2 },
   ];
   if (cumulativeToDate > 0) {
-    row1.push({ label: 'Proiz. do nav. datuma', value: formatCurrency(cumulativeToDate), tone: 'positive', span: 1 });
+    row1.push({ label: 'Vrijednost skladišta do datuma', value: formatCurrency(cumulativeToDate), tone: 'positive', span: 1 });
   }
   row1.forEach(d => {
     const cell = document.createElement('div');
@@ -3718,28 +3716,64 @@ function renderHistoryPage() {
       }
     }
     
-    if (dayMap.size > 1) {
+    if (dayMap.size > 2) {
       const days = Array.from(dayMap.entries());
+      days.sort((a, b) => new Date(a[0].split('.').reverse().join('-')) - new Date(b[0].split('.').reverse().join('-')));
       const maxVal = Math.max(...days.map(d => d[1]), 1);
-      const avgGoal = maxVal / days.length;
+      
+      // Show date labels: every ~10th day or less depending on count
+      const labelStep = Math.max(1, Math.floor(days.length / 12));
+      
+      const chartInner = document.createElement('div');
+      chartInner.style.cssText = 'display:grid;grid-template-columns:48px 1fr;gap:2px;';
+      
+      // Y-axis labels
+      const yAxis = document.createElement('div');
+      yAxis.style.cssText = 'display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding:0 4px 16px 0;font-size:10px;color:#6b7280;font-weight:600;';
+      yAxis.innerHTML = `${formatCurrency(maxVal)}<br>${formatCurrency(Math.round(maxVal/2))}<br>€0`;
+      
+      // Bars + X-axis container
+      const rightCol = document.createElement('div');
+      rightCol.style.cssText = 'display:grid;grid-template-rows:1fr auto;';
       
       const barsContainer = document.createElement('div');
-      barsContainer.style.cssText = 'display:flex;align-items:flex-end;gap:3px;height:80px;padding:4px 0;';
+      barsContainer.style.cssText = 'display:flex;align-items:flex-end;gap:1px;height:80px;border-left:1px solid #d1c9c0;border-bottom:1px solid #d1c9c0;padding-left:1px;';
       
-      for (const [day, val] of days) {
-        const pct = Math.max(3, (val / maxVal) * 100);
-        const color = val >= avgGoal ? '#16a34a' : '#f59e0b';
+      for (let i = 0; i < days.length; i++) {
+        const [day, val] = days[i];
+        const pct = Math.max(2, (val / maxVal) * 100);
+        const color = '#16a34a';
         const bar = document.createElement('div');
-        bar.style.cssText = `flex:1;height:${pct}%;background:${color};border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity 0.15s;`;
-        bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.7'; });
+        bar.style.cssText = `width:${Math.max(2, Math.min(12, 360 / days.length))}px;height:${pct}%;background:${color};border-radius:2px 2px 0 0;min-height:2px;cursor:pointer;transition:opacity 0.15s;flex-shrink:0;`;
+        bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
         bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
         bar.addEventListener('click', () => { showToast(`${day}: ${formatCurrency(val)}`); });
         bar.title = `${day}: ${formatCurrency(val)}`;
         barsContainer.appendChild(bar);
+        // Add zero-marker for days without production
+        if (val === 0) bar.style.background = '#e5e7eb'; bar.style.height = '2px';
       }
       
-      chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">\uD83D\uDCCA Proizvodnja po danu</div>`;
-      chartWrap.appendChild(barsContainer);
+      // X-axis date labels
+      const xLabels = document.createElement('div');
+      xLabels.style.cssText = 'display:flex;align-items:flex-start;border-left:1px solid #d1c9c0;padding-left:1px;font-size:9px;color:#6b7280;';
+      // Create empty flex items to align with bars
+      for (let i = 0; i < days.length; i++) {
+        const lbl = document.createElement('div');
+        lbl.style.cssText = `width:${Math.max(2, Math.min(12, 360 / days.length))}px;flex-shrink:0;text-align:center;overflow:hidden;`;
+        if (i % labelStep === 0) {
+          lbl.textContent = days[i][0];
+        }
+        xLabels.appendChild(lbl);
+      }
+      
+      rightCol.appendChild(barsContainer);
+      rightCol.appendChild(xLabels);
+      chartInner.appendChild(yAxis);
+      chartInner.appendChild(rightCol);
+      
+      chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">\uD83D\uDCCA Proizvodnja po danu <span style="font-weight:400;font-size:12px;color:#9ca3af;">(hover za detalje)</span></div>`;
+      chartWrap.appendChild(chartInner);
       
       toggleBtn.addEventListener('click', () => {
         const hidden = chartWrap.style.display === 'none';
