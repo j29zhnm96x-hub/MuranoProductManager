@@ -3464,9 +3464,10 @@ function setHistoryPeriodMode(periodMode) {
     if (!dt2.value) { dt2.value = todayStr(); }
     updateDateDisplay(dt, document.getElementById('history-date-text'));
     updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
-    dt2wrap.style.display = 'flex';
+    dt2wrap.style.display = ''; // ensure no inline display
+    dt2wrap.classList.remove('date-hidden');
   } else {
-    dt2wrap.style.display = 'none';
+    dt2wrap.classList.add('date-hidden');
     dt2.value = '';
     updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
   }
@@ -8033,7 +8034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('history-date');
     if (!dateInput) return;
     dateInput.value = todayStr();
-    document.getElementById('history-date-to-wrap').style.display = 'none';
+    document.getElementById('history-date-to-wrap').classList.add('date-hidden');
     document.getElementById('history-date-to').value = '';
     updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
     setHistoryPeriodMode('day');
@@ -8043,7 +8044,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('history-date');
     if (!dateInput) return;
     dateInput.value = '';
-    document.getElementById('history-date-to-wrap').style.display = 'none';
+    document.getElementById('history-date-to-wrap').classList.add('date-hidden');
     document.getElementById('history-date-to').value = '';
     updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
     setHistoryPeriodMode('day');
