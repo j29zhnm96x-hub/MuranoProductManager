@@ -3799,8 +3799,8 @@ function renderHistoryPage() {
         const start = new Date(rangeStart);
         const end = new Date(rangeEnd);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const dayStr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
-          const val = dayMap.get(dayStr) || 0;
+          const dayStr = d.toLocaleDateString('hr-HR').replace(/\s/g, '');
+          const val = dayMap.has(dayStr) ? dayMap.get(dayStr) : 0;
           chartDays.push({ day: dayStr, val, dateObj: new Date(d) });
         }
       } else {
