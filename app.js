@@ -3460,8 +3460,10 @@ function setHistoryPeriodMode(periodMode) {
   const dt2wrap = document.getElementById('history-date-to-wrap');
   const dt2 = document.getElementById('history-date-to');
   if (periodMode === 'range') {
-    if (!dt.value) { dt.value = todayStr(); updateDateDisplay(dt, document.getElementById('history-date-text')); }
-    dt2wrap.style.display = null; // remove inline style → shows via CSS
+    if (!dt.value) { dt.value = todayStr(); }
+    updateDateDisplay(dt, document.getElementById('history-date-text'));
+    updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
+    dt2wrap.style.display = ''; // remove inline style → shows via CSS
   } else {
     dt2wrap.style.display = 'none';
     dt2.value = '';
