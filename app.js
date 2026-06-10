@@ -3768,14 +3768,15 @@ function renderHistoryPage() {
     toggleBtn.textContent = '\uD83D\uDCCA  Prika\u017Ei grafikon';
     toggleBtn.style.cssText = 'padding:6px 14px;border-radius:8px;border:1px solid #d9d0c8;background:#faf7f2;color:#374151;font-weight:600;font-size:13px;cursor:pointer;';
     
-    // Group entries by day
+    // Group entries by day (using consistent YYYY-MM-DD format)
     const dayMap = new Map();
     for (const entry of periodEntries) {
       if (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production') {
         const val = safeHistoryNumber(entry.value);
         if (val <= 0) continue;
-        const day = new Date(entry.ts).toLocaleDateString('hr-HR');
-        dayMap.set(day, (dayMap.get(day) || 0) + val);
+        const d = new Date(entry.ts);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        dayMap.set(key, (dayMap.get(key) || 0) + val);
       }
     }
     
@@ -3799,15 +3800,16 @@ function renderHistoryPage() {
         const start = new Date(rangeStart);
         const end = new Date(rangeEnd);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const dayStr = d.toLocaleDateString('hr-HR').replace(/\s/g, '');
-          const val = dayMap.has(dayStr) ? dayMap.get(dayStr) : 0;
-          chartDays.push({ day: dayStr, val, dateObj: new Date(d) });
+          const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const val = dayMap.get(key) || 0;
+          const display = `${d.getDate()}.${d.getMonth()+1}.`;
+          chartDays.push({ day: key, val, dateObj: new Date(d), display });
         }
       } else {
         // Svi datumi: use all days from map (sorted)
-        chartDays = Array.from(dayMap.entries()).map(([day, val]) => {
-          const p = day.split('.');
-          return { day, val, dateObj: new Date(`${p[2]}-${p[1]}-${p[0]}`) };
+        chartDays = Array.from(dayMap.entries()).map(([key, val]) => {
+          const p = key.split('-');
+          return { day: key, val, dateObj: new Date(`${key}T12:00:00`), display: `${parseInt(p[2])}.${parseInt(p[1])}.` };
         }).sort((a, b) => a.dateObj - b.dateObj);
       }
       
@@ -3835,7 +3837,7 @@ function renderHistoryPage() {
         const labelStep = Math.max(1, Math.floor(chartDays.length / 8));
         const dateInputEl = document.getElementById('history-date');
         for (let i = 0; i < chartDays.length; i++) {
-          const { day, val, dateObj } = chartDays[i];
+          const { day, val, dateObj, display } = chartDays[i];
           const pct = Math.max(1, (val / maxVal) * 100);
           const bar = document.createElement('div');
           bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;`;
@@ -3843,11 +3845,10 @@ function renderHistoryPage() {
           bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
           bar.addEventListener('click', () => {
             if (dateInputEl && !isAllDates) {
-              const y = dateObj.getFullYear(); const m = String(dateObj.getMonth()+1).padStart(2,'0'); const d = String(dateObj.getDate()).padStart(2,'0');
-              dateInputEl.value = `${y}-${m}-${d}`; renderHistoryPage();
+              dateInputEl.value = day; renderHistoryPage();
             }
           });
-          bar.title = `${day}: ${val > 0 ? formatCurrency(val) : '0 €'}`;
+          bar.title = `${display || day}: ${val > 0 ? formatCurrency(val) : '0 €'}`;
           barArea.appendChild(bar);
         }
         chartInner.appendChild(barArea);
@@ -3857,7 +3858,7 @@ function renderHistoryPage() {
         for (let i = 0; i < chartDays.length; i++) {
           const lbl = document.createElement('div');
           lbl.style.cssText = 'flex:1;font-size:8px;color:#9ca3af;text-align:center;overflow:hidden;';
-          if (i % labelStep === 0) { const d = chartDays[i].dateObj; lbl.textContent = `${d.getDate()}.${d.getMonth()+1}.`; }
+          if (i % labelStep === 0) { lbl.textContent = chartDays[i].display; }
           xLabelArea.appendChild(lbl);
         }
         chartInner.appendChild(xLabelArea);
