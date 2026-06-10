@@ -3457,22 +3457,31 @@ function updateHistoryPeriodControls() {
 function setHistoryPeriodMode(periodMode) {
   historyPeriodMode = periodMode;
   const dt = document.getElementById('history-date');
-  const dt2wrap = document.getElementById('history-date-to-wrap');
-  const dt2 = document.getElementById('history-date-to');
+  // Remove old date-to element if it exists
+  const oldWrap = document.getElementById('history-date-to-wrap');
+  if (oldWrap) oldWrap.remove();
+  
   if (periodMode === 'range') {
-    if (!dt.value) { dt.value = todayStr(); }
-    if (!dt2.value) { dt2.value = todayStr(); }
+    if (!dt.value) dt.value = todayStr();
+    
+    // Create fresh wrapper + input (avoids iOS cached widget issue)
+    const wrap = document.createElement('div');
+    wrap.id = 'history-date-to-wrap';
+    wrap.className = 'history-date-wrap';
+    wrap.innerHTML = '<span id="history-date-to-text"></span><input id="history-date-to" type="date" />';
+    const ref = document.getElementById('history-today');
+    ref.parentNode.insertBefore(wrap, ref);
+    
+    const dt2 = document.getElementById('history-date-to');
+    dt2.value = todayStr();
+    updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
+    dt2.addEventListener('change', () => {
+      updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
+      renderHistoryPage();
+    });
     updateDateDisplay(dt, document.getElementById('history-date-text'));
-    updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
-    dt2wrap.classList.remove('date-hidden');
-    // Force re-init by detaching and re-attaching the input
-    dt2wrap.removeChild(dt2);
-    dt2wrap.appendChild(dt2);
-  } else {
-    dt2wrap.classList.add('date-hidden');
-    dt2.value = '';
-    updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
   }
+  
   updateHistoryPeriodControls();
   renderHistoryPage();
 }
@@ -8033,20 +8042,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historyPeriodRangeBtn) historyPeriodRangeBtn.addEventListener('click', () => setHistoryPeriodMode('range'));
   const historyTodayBtn = document.getElementById('history-today');
   if (historyTodayBtn) historyTodayBtn.addEventListener('click', () => {
-    const dateInput = document.getElementById('history-date');
-    if (!dateInput) return;
-    dateInput.value = todayStr();
-    document.getElementById('history-date-to-wrap').classList.add('date-hidden');
-    document.getElementById('history-date-to').value = '';
-    updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
+    document.getElementById('history-date').value = todayStr();
     setHistoryPeriodMode('day');
   });
   const historyClearDateBtn = document.getElementById('history-clear-date');
   if (historyClearDateBtn) historyClearDateBtn.addEventListener('click', () => {
-    const dateInput = document.getElementById('history-date');
-    if (!dateInput) return;
-    dateInput.value = '';
-    document.getElementById('history-date-to-wrap').classList.add('date-hidden');
+    document.getElementById('history-date').value = '';
+    setHistoryPeriodMode('day');
     document.getElementById('history-date-to').value = '';
     updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
     setHistoryPeriodMode('day');
