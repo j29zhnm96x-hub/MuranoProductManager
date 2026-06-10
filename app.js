@@ -3452,7 +3452,8 @@ function setHistoryPeriodMode(periodMode) {
   const dt2 = document.getElementById('history-date-to');
   if (periodMode === 'range') {
     if (!dt.value) dt.value = todayStr();
-    dt2.style.display = 'inline-block';
+    dt2.style.display = 'block';
+    setTimeout(() => { dt2.style.display = 'block'; }, 50); // iOS relayout fix
   } else {
     dt2.style.display = 'none';
     dt2.value = '';
