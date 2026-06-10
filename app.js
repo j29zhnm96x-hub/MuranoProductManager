@@ -3743,6 +3743,7 @@ function renderHistoryPage() {
   let oldChart = document.getElementById('history-chart-wrap');
   if (oldChart) oldChart.remove();
   
+  try {
   if (periodEntries.length > 0) {
     const toggleRow = document.createElement('div');
     toggleRow.id = chartToggleId;
@@ -3795,89 +3796,72 @@ function renderHistoryPage() {
         }).sort((a, b) => a.dateObj - b.dateObj);
       }
       
-      if (chartDays.length < 3) return; // not enough data
-      
-      const maxVal = Math.max(...chartDays.map(d => d.val), 1);
-      const isAllDates = !selectedDate;
-      
-      // Y-axis: fixed 3 labels (max, mid, 0)
-      const yLabels = [
-        { val: Math.round(maxVal), pct: 100 },
-        { val: Math.round(maxVal / 2), pct: 50 },
-        { val: 0, pct: 0 }
-      ];
-      
-      const chartInner = document.createElement('div');
-      chartInner.style.cssText = 'position:relative;height:100px;';
-      
-      // Y-axis background lines + labels
-      for (const yl of yLabels) {
-        const line = document.createElement('div');
-        line.style.cssText = `position:absolute;left:48px;right:0;top:${100 - yl.pct}%;border-top:1px dashed #d1c9c0;pointer-events:none;`;
-        const lbl = document.createElement('div');
-        lbl.style.cssText = `position:absolute;right:100%;top:${100 - yl.pct}%;transform:translateY(-50%);padding-right:6px;font-size:10px;color:#6b7280;font-weight:600;white-space:nowrap;`;
-        lbl.textContent = formatCurrency(yl.val);
-        chartInner.appendChild(lbl);
-        chartInner.appendChild(line);
-      }
-      
-      // Bars with flex:1 to fill full width
-      const barArea = document.createElement('div');
-      barArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:16px;top:0;display:flex;align-items:flex-end;gap:1px;';
-      
-      const labelStep = Math.max(1, Math.floor(chartDays.length / 8));
-      const dateInputEl = document.getElementById('history-date');
-      
-      for (let i = 0; i < chartDays.length; i++) {
-        const { day, val, dateObj } = chartDays[i];
-        const pct = Math.max(1, (val / maxVal) * 100);
-        const bar = document.createElement('div');
-        bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;transition:opacity 0.15s;`;
-        bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
-        bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
-        bar.addEventListener('click', () => {
-          if (dateInputEl && !isAllDates) {
-            const y = dateObj.getFullYear();
-            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dateObj.getDate()).padStart(2, '0');
-            dateInputEl.value = `${y}-${m}-${d}`;
-            renderHistoryPage();
-          }
+      // Chart title
+      chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px;">📊 Proizvodnja po danu</div>`;
+      if (chartDays.length >= 3) {
+        const maxVal = Math.max(...chartDays.map(d => d.val), 1);
+        const isAllDates = !selectedDate;
+        
+        const chartInner = document.createElement('div');
+        chartInner.style.cssText = 'position:relative;height:100px;';
+        
+        // Y-axis labels
+        [ { val: Math.round(maxVal), pct: 100 }, { val: Math.round(maxVal/2), pct: 50 }, { val: 0, pct: 0 } ].forEach(yl => {
+          const line = document.createElement('div');
+          line.style.cssText = `position:absolute;left:48px;right:0;top:${100-yl.pct}%;border-top:1px dashed #d1c9c0;pointer-events:none;`;
+          const lbl = document.createElement('div');
+          lbl.style.cssText = `position:absolute;right:100%;top:${100-yl.pct}%;transform:translateY(-50%);padding-right:6px;font-size:10px;color:#6b7280;font-weight:600;white-space:nowrap;`;
+          lbl.textContent = formatCurrency(yl.val);
+          chartInner.appendChild(lbl); chartInner.appendChild(line);
         });
-        bar.title = `${day}: ${val > 0 ? formatCurrency(val) : '0 \u20AC'}`;
-        barArea.appendChild(bar);
-      }
-      
-      chartInner.appendChild(barArea);
-      
-      // X-axis date labels below bars
-      const xLabelArea = document.createElement('div');
-      xLabelArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:0;display:flex;';
-      for (let i = 0; i < chartDays.length; i++) {
-        const lbl = document.createElement('div');
-        lbl.style.cssText = 'flex:1;font-size:8px;color:#9ca3af;text-align:center;overflow:hidden;';
-        if (i % labelStep === 0) {
-          const d = chartDays[i].dateObj;
-          lbl.textContent = `${d.getDate()}.${d.getMonth() + 1}.`;
+        
+        const barArea = document.createElement('div');
+        barArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:16px;top:0;display:flex;align-items:flex-end;gap:1px;';
+        const labelStep = Math.max(1, Math.floor(chartDays.length / 8));
+        const dateInputEl = document.getElementById('history-date');
+        for (let i = 0; i < chartDays.length; i++) {
+          const { day, val, dateObj } = chartDays[i];
+          const pct = Math.max(1, (val / maxVal) * 100);
+          const bar = document.createElement('div');
+          bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;`;
+          bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
+          bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
+          bar.addEventListener('click', () => {
+            if (dateInputEl && !isAllDates) {
+              const y = dateObj.getFullYear(); const m = String(dateObj.getMonth()+1).padStart(2,'0'); const d = String(dateObj.getDate()).padStart(2,'0');
+              dateInputEl.value = `${y}-${m}-${d}`; renderHistoryPage();
+            }
+          });
+          bar.title = `${day}: ${val > 0 ? formatCurrency(val) : '0 €'}`;
+          barArea.appendChild(bar);
         }
-        xLabelArea.appendChild(lbl);
+        chartInner.appendChild(barArea);
+        
+        const xLabelArea = document.createElement('div');
+        xLabelArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:0;display:flex;';
+        for (let i = 0; i < chartDays.length; i++) {
+          const lbl = document.createElement('div');
+          lbl.style.cssText = 'flex:1;font-size:8px;color:#9ca3af;text-align:center;overflow:hidden;';
+          if (i % labelStep === 0) { const d = chartDays[i].dateObj; lbl.textContent = `${d.getDate()}.${d.getMonth()+1}.`; }
+          xLabelArea.appendChild(lbl);
+        }
+        chartInner.appendChild(xLabelArea);
+        
+        chartWrap.appendChild(chartInner);
       }
-      chartInner.appendChild(xLabelArea);
-      
-      chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px;">\uD83D\uDCCA Proizvodnja po danu</div>`;
-      chartWrap.appendChild(chartInner);
+    }
       
       toggleBtn.addEventListener('click', () => {
         const hidden = chartWrap.style.display === 'none';
         chartWrap.style.display = hidden ? 'block' : 'none';
-        toggleBtn.textContent = hidden ? '\uD83D\uDCCA  Sakrij grafikon' : '\uD83D\uDCCA  Prika\u017Ei grafikon';
+        toggleBtn.textContent = hidden ? '📊  Sakrij grafikon' : '📊  Prikaži grafikon';
       });
       
       toggleRow.appendChild(toggleBtn);
       listEl.parentNode.insertBefore(toggleRow, listEl);
       listEl.parentNode.insertBefore(chartWrap, listEl);
     }
-  }
+  } catch(e) { /* chart failed, continue with list */ }
 
   /* ── Entry list ────────────────────────────────────────── */
   listEl.innerHTML = '';
