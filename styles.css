@@ -549,7 +549,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .history-search-wrap { background: #ffffff; border: 1px solid #dbe3ec; border-radius: 10px; padding: 8px 10px; }
 .history-search-wrap input { width: 100%; border: 0; outline: 0; background: transparent; color: #111827; font-size: 14px; }
 
-.history-date-input { height: 34px; padding: 0 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; color: #0f172a; font-size: 13px; text-align: center; }
+.history-date-input { height: 34px; padding: 0 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; color: #0f172a; font-size: 13px; text-align: center; text-align: -webkit-center; -webkit-appearance: none; }
 .history-ctrl-btn { height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid #dbe5ef; background: #ffffff; color: #475569; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .history-ctrl-btn:hover { background: #f8fafc; }
 .history-ctrl-btn.secondary { color: #6b7280; }
