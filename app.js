@@ -3464,8 +3464,10 @@ function setHistoryPeriodMode(periodMode) {
     if (!dt2.value) { dt2.value = todayStr(); }
     updateDateDisplay(dt, document.getElementById('history-date-text'));
     updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
-    dt2wrap.style.display = ''; // ensure no inline display
     dt2wrap.classList.remove('date-hidden');
+    // Force re-init by detaching and re-attaching the input
+    dt2wrap.removeChild(dt2);
+    dt2wrap.appendChild(dt2);
   } else {
     dt2wrap.classList.add('date-hidden');
     dt2.value = '';
