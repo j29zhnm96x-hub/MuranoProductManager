@@ -3796,8 +3796,8 @@ function renderHistoryPage() {
       let chartDays = [];
       if (rangeStart && rangeEnd) {
         // Generate ALL days from range start to range end
-        const start = new Date(range.start);
-        const end = new Date(range.end);
+        const start = new Date(rangeStart);
+        const end = new Date(rangeEnd);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const dayStr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
           const val = dayMap.get(dayStr) || 0;
