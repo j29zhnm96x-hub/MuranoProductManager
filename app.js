@@ -3461,9 +3461,10 @@ function setHistoryPeriodMode(periodMode) {
   const dt2 = document.getElementById('history-date-to');
   if (periodMode === 'range') {
     if (!dt.value) { dt.value = todayStr(); }
+    if (!dt2.value) { dt2.value = todayStr(); }
     updateDateDisplay(dt, document.getElementById('history-date-text'));
     updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
-    dt2wrap.style.display = ''; // remove inline style → shows via CSS
+    dt2wrap.style.display = 'flex';
   } else {
     dt2wrap.style.display = 'none';
     dt2.value = '';
