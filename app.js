@@ -3452,8 +3452,13 @@ function setHistoryPeriodMode(periodMode) {
   const dt2 = document.getElementById('history-date-to');
   if (periodMode === 'range') {
     if (!dt.value) dt.value = todayStr();
+    // Force iOS to properly layout the date input text
+    const parent = dt2.parentNode;
+    const next = dt2.nextSibling;
+    parent.removeChild(dt2);
     dt2.style.display = 'block';
-    setTimeout(() => { dt2.style.display = 'block'; }, 50); // iOS relayout fix
+    parent.insertBefore(dt2, next);
+    void dt2.offsetHeight;
   } else {
     dt2.style.display = 'none';
     dt2.value = '';
