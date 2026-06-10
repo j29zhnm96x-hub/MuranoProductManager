@@ -3609,7 +3609,9 @@ function renderHistoryPage() {
   const dateInput = document.getElementById('history-date');
   if (!summaryEl || !listEl) return;
 
-  const query = (searchInput?.value || '').trim().toLowerCase();
+  let query = (searchInput?.value || '').trim().toLowerCase();
+  // If search is active but periodEntries will be empty due to query, reset search
+  // (handles browser autofill or invisible characters)
   const selectedDate = dateInput?.value || '';
   const dateToInput = document.getElementById('history-date-to');
   const dateTo = dateToInput?.value || '';
@@ -3626,7 +3628,18 @@ function renderHistoryPage() {
   } else {
     periodEntries = allEntries;
   }
-  const entries = query ? periodEntries.filter(entry => matchesHistoryQuery(entry, query)) : periodEntries;
+  let entries;
+  if (query) {
+    entries = periodEntries.filter(entry => matchesHistoryQuery(entry, query));
+    if (!entries.length && periodEntries.length > 0) {
+      // Query produced zero results — it's probably a stale autofill
+      query = '';
+      entries = periodEntries;
+      if (searchInput) searchInput.value = '';
+    }
+  } else {
+    entries = periodEntries;
+  }
   const currentStats = getOverallBusinessStats();
   const periodSummary = getHistoryPeriodSummary(periodEntries);
 
@@ -3877,6 +3890,10 @@ function renderHistoryPage() {
     const message = document.createElement('div');
     if (!allEntries.length) {
       message.textContent = 'Quantity changes, removals, deductions, and other stock events will appear here.';
+    } else if (isRange) {
+      const d1 = new Date(selectedDate + 'T12:00:00').toLocaleDateString('hr-HR');
+      const d2 = new Date(dateTo + 'T12:00:00').toLocaleDateString('hr-HR');
+      message.textContent = `Nema događaja u periodu ${d1} - ${d2}.`;
     } else if (selectedDate && query) {
       message.textContent = `No history events matched your search in ${formatHistoryPeriodLabel(selectedDate, historyPeriodMode)}.`;
     } else if (selectedDate) {
