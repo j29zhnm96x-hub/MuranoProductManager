@@ -3451,11 +3451,11 @@ function setHistoryPeriodMode(periodMode) {
   const dt = document.getElementById('history-date');
   const dt2 = document.getElementById('history-date-to');
   if (periodMode === 'range') {
-    dt2.style.display = 'inline-block';
     if (!dt.value) dt.value = todayStr();
-    if (!dt2.value) dt2.value = todayStr();
+    dt2.style.display = 'inline-block';
   } else {
     dt2.style.display = 'none';
+    dt2.value = '';
   }
   updateHistoryPeriodControls();
   renderHistoryPage();
@@ -8004,8 +8004,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historyBackBtn) historyBackBtn.addEventListener('click', closeHistoryPage);
   const historySearch = document.getElementById('history-search');
   if (historySearch) historySearch.addEventListener('input', () => renderHistoryPage());
-  const historyDate = document.getElementById('history-date');
-  if (historyDate) historyDate.addEventListener('input', () => renderHistoryPage());
   const historyPeriodDayBtn = document.getElementById('history-period-day');
   if (historyPeriodDayBtn) historyPeriodDayBtn.addEventListener('click', () => { document.getElementById('history-date').value = todayStr(); setHistoryPeriodMode('day'); });
   const historyPeriodWeekBtn = document.getElementById('history-period-week');
