@@ -3816,28 +3816,32 @@ function renderHistoryPage() {
       // Chart title
       chartWrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px;">📊 Proizvodnja po danu</div>`;
       if (chartDays.length >= 3) {
-        const maxVal = Math.max(...chartDays.map(d => d.val), 1);
+        const rawMax = Math.max(...chartDays.map(d => d.val), 1);
+        const maxVal = rawMax <= 5 ? rawMax : Math.ceil(rawMax / 5) * 5; // round up to nearest 5
         const isAllDates = !selectedDate;
         
         const chartInner = document.createElement('div');
-        chartInner.style.cssText = 'position:relative;height:100px;';
+        chartInner.style.cssText = 'position:relative;height:120px;margin-left:50px;';
         
-        // Y-axis labels
-        [ { val: Math.round(maxVal), pct: 100 }, { val: Math.round(maxVal/2), pct: 50 }, { val: 0, pct: 0 } ].forEach(yl => {
+        // Y-axis labels (positioned absolutely to the left of chartInner)
+        const yVals = [maxVal, Math.round(maxVal / 2), 0];
+        yVals.forEach((val, idx) => {
+          const pct = idx === 0 ? 100 : idx === 1 ? 50 : 0;
           const line = document.createElement('div');
-          line.style.cssText = `position:absolute;left:48px;right:0;top:${100-yl.pct}%;border-top:1px dashed #d1c9c0;pointer-events:none;`;
+          line.style.cssText = `position:absolute;left:0;right:0;top:${100-pct}%;border-top:1px dashed #d1c9c0;pointer-events:none;`;
           const lbl = document.createElement('div');
-          lbl.style.cssText = `position:absolute;right:100%;top:${100-yl.pct}%;transform:translateY(-50%);padding-right:6px;font-size:10px;color:#6b7280;font-weight:600;white-space:nowrap;`;
-          lbl.textContent = formatCurrency(yl.val);
+          lbl.style.cssText = `position:absolute;right:calc(100% + 6px);top:${100-pct}%;transform:translateY(-50%);font-size:11px;color:#6b7280;font-weight:600;white-space:nowrap;`;
+          lbl.textContent = formatCurrency(val);
           chartInner.appendChild(lbl); chartInner.appendChild(line);
         });
         
+        // Bars
         const barArea = document.createElement('div');
-        barArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:16px;top:0;display:flex;align-items:flex-end;gap:1px;';
-        const labelStep = Math.max(1, Math.floor(chartDays.length / 8));
+        barArea.style.cssText = 'position:absolute;left:0;right:0;bottom:18px;top:0;display:flex;align-items:flex-end;gap:1px;';
+        const labelStep = Math.max(1, Math.ceil(chartDays.length / 6));
         const dateInputEl = document.getElementById('history-date');
         for (let i = 0; i < chartDays.length; i++) {
-          const { day, val, dateObj, display } = chartDays[i];
+          const { day, val, display } = chartDays[i];
           const pct = Math.max(1, (val / maxVal) * 100);
           const bar = document.createElement('div');
           bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;`;
@@ -3848,16 +3852,17 @@ function renderHistoryPage() {
               dateInputEl.value = day; renderHistoryPage();
             }
           });
-          bar.title = `${display || day}: ${val > 0 ? formatCurrency(val) : '0 €'}`;
+          bar.title = `${display || day}: ${val > 0 ? formatCurrency(val) : '0 \u20AC'}`;
           barArea.appendChild(bar);
         }
         chartInner.appendChild(barArea);
         
+        // X-axis date labels
         const xLabelArea = document.createElement('div');
-        xLabelArea.style.cssText = 'position:absolute;left:50px;right:4px;bottom:0;display:flex;';
+        xLabelArea.style.cssText = 'position:absolute;left:0;right:0;bottom:0;display:flex;';
         for (let i = 0; i < chartDays.length; i++) {
           const lbl = document.createElement('div');
-          lbl.style.cssText = 'flex:1;font-size:8px;color:#9ca3af;text-align:center;overflow:hidden;';
+          lbl.style.cssText = 'flex:1;font-size:10px;color:#9ca3af;text-align:center;white-space:nowrap;';
           if (i % labelStep === 0) { lbl.textContent = chartDays[i].display; }
           xLabelArea.appendChild(lbl);
         }
