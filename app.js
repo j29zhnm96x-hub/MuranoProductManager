@@ -3286,6 +3286,14 @@ function formatHistoryDayKey(ts) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+function updateDateDisplay(inputEl, textEl) {
+  if (!inputEl || !textEl) return;
+  if (!inputEl.value) { textEl.textContent = '--'; return; }
+  const d = new Date(inputEl.value + 'T12:00:00');
+  if (Number.isNaN(d.getTime())) { textEl.textContent = inputEl.value; return; }
+  textEl.textContent = `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}.`;
+}
+
 function formatHistoryFilterDate(dateValue) {
   if (!dateValue) return __('All dates');
   const date = new Date(`${dateValue}T12:00:00`);
@@ -3449,19 +3457,15 @@ function updateHistoryPeriodControls() {
 function setHistoryPeriodMode(periodMode) {
   historyPeriodMode = periodMode;
   const dt = document.getElementById('history-date');
+  const dt2wrap = document.getElementById('history-date-to-wrap');
   const dt2 = document.getElementById('history-date-to');
   if (periodMode === 'range') {
-    if (!dt.value) dt.value = todayStr();
-    // Force iOS to properly layout the date input text
-    const parent = dt2.parentNode;
-    const next = dt2.nextSibling;
-    parent.removeChild(dt2);
-    dt2.style.display = 'block';
-    parent.insertBefore(dt2, next);
-    void dt2.offsetHeight;
+    if (!dt.value) { dt.value = todayStr(); updateDateDisplay(dt, document.getElementById('history-date-text')); }
+    dt2wrap.style.display = null; // remove inline style → shows via CSS
   } else {
-    dt2.style.display = 'none';
+    dt2wrap.style.display = 'none';
     dt2.value = '';
+    updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
   }
   updateHistoryPeriodControls();
   renderHistoryPage();
@@ -3621,6 +3625,8 @@ function renderHistoryPage() {
   const selectedDate = dateInput?.value || '';
   const dateToInput = document.getElementById('history-date-to');
   const dateTo = dateToInput?.value || '';
+  updateDateDisplay(document.getElementById('history-date'), document.getElementById('history-date-text'));
+  updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
   const allEntries = getHistoryEntries();
   let periodEntries;
   // Auto-detect range mode when both date inputs have values
@@ -8024,8 +8030,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('history-date');
     if (!dateInput) return;
     dateInput.value = todayStr();
-    document.getElementById('history-date-to').style.display = 'none';
+    document.getElementById('history-date-to-wrap').style.display = 'none';
     document.getElementById('history-date-to').value = '';
+    updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
     setHistoryPeriodMode('day');
   });
   const historyClearDateBtn = document.getElementById('history-clear-date');
@@ -8033,8 +8040,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('history-date');
     if (!dateInput) return;
     dateInput.value = '';
-    document.getElementById('history-date-to').style.display = 'none';
+    document.getElementById('history-date-to-wrap').style.display = 'none';
     document.getElementById('history-date-to').value = '';
+    updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
     setHistoryPeriodMode('day');
   });
   const historyPrevPeriodBtn = document.getElementById('history-prev-period');
@@ -8043,8 +8051,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (historyNextPeriodBtn) historyNextPeriodBtn.addEventListener('click', () => shiftHistoryDateByPeriod(1));
 
   // Date inputs: re-render on change
-  document.getElementById('history-date')?.addEventListener('change', () => renderHistoryPage());
-  document.getElementById('history-date-to')?.addEventListener('change', () => renderHistoryPage());
+  document.getElementById('history-date')?.addEventListener('change', () => {
+    updateDateDisplay(document.getElementById('history-date'), document.getElementById('history-date-text'));
+    renderHistoryPage();
+  });
+  document.getElementById('history-date-to')?.addEventListener('change', () => {
+    updateDateDisplay(document.getElementById('history-date-to'), document.getElementById('history-date-to-text'));
+    renderHistoryPage();
+  });
   // Also re-render when the 'Odaberi period' button is clicked (already handled by setHistoryPeriodMode)
 
   const historyTotopBtn = document.getElementById('history-totop');

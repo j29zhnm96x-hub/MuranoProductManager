@@ -107,8 +107,14 @@
             </div>
           </div>
           <div class="history-controls-line2">
-            <input id="history-date" type="date" class="history-date-input" data-i18n-title="Filter history by date" data-i18n-aria="Filter history by date" />
-            <input id="history-date-to" type="date" class="history-date-input" data-i18n-title="End date" />
+            <div class="history-date-wrap">
+              <span id="history-date-text"></span>
+              <input id="history-date" type="date" class="history-date-input-hidden" />
+            </div>
+            <div class="history-date-wrap" id="history-date-to-wrap" style="display:none">
+              <span id="history-date-to-text"></span>
+              <input id="history-date-to" type="date" class="history-date-input-hidden" />
+            </div>
             <button id="history-today" type="button" class="history-ctrl-btn" data-i18n="Today">Today</button>
             <button id="history-clear-date" type="button" class="history-ctrl-btn secondary" data-i18n="All dates">All dates</button>
             <button id="history-period-range" type="button" class="history-ctrl-btn">Odaberi period</button>
