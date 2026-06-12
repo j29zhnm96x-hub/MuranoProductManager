@@ -3468,6 +3468,8 @@ function setHistoryPeriodMode(periodMode) {
     dt2wrap.classList.remove('collapsed');
   } else {
     dt2wrap.classList.add('collapsed');
+    dt2.value = '';
+    updateDateDisplay(dt2, document.getElementById('history-date-to-text'));
   }
   
   updateHistoryPeriodControls();
