@@ -3849,7 +3849,8 @@ function renderHistoryPage() {
           bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
           bar.addEventListener('click', () => {
             if (dateInputEl && !isAllDates) {
-              dateInputEl.value = day; renderHistoryPage();
+              dateInputEl.value = day;
+              setHistoryPeriodMode('day');
             }
           });
           bar.title = `${display || day}: ${val > 0 ? formatCurrency(val) : '0 \u20AC'}`;
