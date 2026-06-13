@@ -2759,8 +2759,14 @@ function openShopCategories() {
     document.getElementById('modal-title').textContent = 'Kategorije prodaje';
     document.getElementById('modal-body').innerHTML = '';
     document.getElementById('modal-body').appendChild(wrap);
+    document.getElementById('modal-actions').innerHTML = '';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = __('Close');
+    closeBtn.classList.add('secondary');
+    closeBtn.addEventListener('click', () => { document.getElementById('modal').classList.add('hidden'); modalStack = 0; document.body.style.overflow = ''; });
+    document.getElementById('modal-actions').appendChild(closeBtn);
     document.getElementById('modal').classList.remove('hidden');
-    modalStack = Math.max(1, modalStack - 1);
+    modalStack = 1;
   }
 
   renderCategories();
