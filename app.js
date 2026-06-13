@@ -2679,8 +2679,26 @@ function openShopCategories() {
           moveBtns.appendChild(downBtn);
         }
         const iPrice = document.createElement('span');
-        iPrice.style.cssText = `color:#6b7280;font-size:13px;font-weight:600;min-width:${priceMinWidth}px;text-align:right;margin-right:4px;`;
+        iPrice.style.cssText = `color:#6b7280;font-size:13px;font-weight:600;min-width:${priceMinWidth}px;text-align:right;margin-right:4px;cursor:pointer;`;
         iPrice.textContent = `${item.price}\u20AC`;
+        iPrice.addEventListener('click', () => {
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.step = '0.01';
+          input.min = '0';
+          input.value = String(item.price);
+          input.style.cssText = `width:${priceMinWidth}px;padding:2px 4px;border-radius:4px;border:1px solid #0ea5e9;font-size:13px;text-align:right;box-sizing:border-box;`;
+          const savePrice = () => {
+            const v = parseFloat(input.value);
+            if (!isNaN(v) && v >= 0) { item.price = v; saveStateDebounced(); renderCategories(); }
+            else { input.replaceWith(iPrice); }
+          };
+          input.addEventListener('blur', savePrice);
+          input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); savePrice(); } });
+          iPrice.replaceWith(input);
+          input.focus();
+          input.select();
+        });
         const delItemBtn = document.createElement('button');
         delItemBtn.textContent = '\u2715';
         delItemBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;';
