@@ -2601,6 +2601,10 @@ function openShopCategories() {
       const itemsDiv = document.createElement('div');
       itemsDiv.style.cssText = 'display:grid;gap:1px;background:#f3f4f6;';
 
+      // Calculate max price width for this group for alignment
+      const maxPrice = cat.items.reduce((m, i) => Math.max(m, Number(i.price || 0)), 0);
+      const priceMinWidth = Math.max(60, String(Math.round(maxPrice)).length * 8 + 15);
+      
       for (let i = 0; i < (cat.items || []).length; i++) {
         const item = cat.items[i];
         const itemRow = document.createElement('div');
@@ -2608,12 +2612,9 @@ function openShopCategories() {
         const iName = document.createElement('span');
         iName.style.cssText = 'flex:1;font-size:14px;';
         iName.textContent = item.name;
-        const iPrice = document.createElement('span');
-        iPrice.style.cssText = 'color:#6b7280;font-size:13px;font-weight:600;margin-right:4px;';
-        iPrice.textContent = `${item.price}\u20AC`;
-        // Move up / down
+        // Move up / down — fixed width for vertical alignment
         const moveBtns = document.createElement('span');
-        moveBtns.style.cssText = 'display:inline-flex;gap:2px;margin-right:10px;';
+        moveBtns.style.cssText = `display:inline-flex;align-items:center;justify-content:center;gap:2px;width:28px;flex-shrink:0;margin:0 4px;`;
         if (i > 0) {
           const upBtn = document.createElement('button');
           upBtn.textContent = '\u25B2';
@@ -2636,6 +2637,9 @@ function openShopCategories() {
           });
           moveBtns.appendChild(downBtn);
         }
+        const iPrice = document.createElement('span');
+        iPrice.style.cssText = `color:#6b7280;font-size:13px;font-weight:600;min-width:${priceMinWidth}px;text-align:right;margin-right:4px;`;
+        iPrice.textContent = `${item.price}\u20AC`;
         const delItemBtn = document.createElement('button');
         delItemBtn.textContent = '\u2715';
         delItemBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;';
@@ -2645,8 +2649,8 @@ function openShopCategories() {
           renderCategories();
         });
         itemRow.appendChild(iName);
-        itemRow.appendChild(iPrice);
         itemRow.appendChild(moveBtns);
+        itemRow.appendChild(iPrice);
         itemRow.appendChild(delItemBtn);
         itemsDiv.appendChild(itemRow);
       }
