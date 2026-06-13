@@ -2601,9 +2601,34 @@ function openShopCategories() {
       const itemsDiv = document.createElement('div');
       itemsDiv.style.cssText = 'display:grid;gap:1px;background:#f3f4f6;';
 
-      for (const item of (cat.items || [])) {
+      for (let i = 0; i < (cat.items || []).length; i++) {
+        const item = cat.items[i];
         const itemRow = document.createElement('div');
-        itemRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px 6px 16px;background:#ffffff;';
+        itemRow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 10px 6px 16px;background:#ffffff;';
+        // Move up
+        if (i > 0) {
+          const upBtn = document.createElement('button');
+          upBtn.textContent = '\u25B2';
+          upBtn.style.cssText = 'border:none;background:transparent;color:#6b7280;cursor:pointer;font-size:10px;padding:2px;border-radius:4px;';
+          upBtn.addEventListener('click', () => {
+            [cat.items[i-1], cat.items[i]] = [cat.items[i], cat.items[i-1]];
+            saveStateDebounced();
+            renderCategories();
+          });
+          itemRow.appendChild(upBtn);
+        }
+        // Move down
+        if (i < cat.items.length - 1) {
+          const downBtn = document.createElement('button');
+          downBtn.textContent = '\u25BC';
+          downBtn.style.cssText = 'border:none;background:transparent;color:#6b7280;cursor:pointer;font-size:10px;padding:2px;border-radius:4px;';
+          downBtn.addEventListener('click', () => {
+            [cat.items[i], cat.items[i+1]] = [cat.items[i+1], cat.items[i]];
+            saveStateDebounced();
+            renderCategories();
+          });
+          itemRow.appendChild(downBtn);
+        }
         const iName = document.createElement('span');
         iName.style.cssText = 'flex:1;font-size:14px;';
         iName.textContent = item.name;
@@ -6297,14 +6322,14 @@ function editPendingTransfer(idx) {
   body.appendChild(qtyInput);
   
   openModal({
-    title: 'Uredi koli\u010Dinu',
+    title: 'Uredi koli\u0107inu',
     headerIcon: { symbol: '\u270E', color: 'blue' },
     size: 'small',
     body,
     actions: [
       { label: 'Spremi', onClick: () => {
         const newQty = Number(qtyInput.value);
-        if (newQty < 1) { showToast('Koli\u010Dina mora biti najmanje 1'); return; }
+        if (newQty < 1) { showToast('Koli\u0107ina mora biti najmanje 1'); return; }
         item.qty = newQty;
         closeModal();
         saveStateDebounced();
