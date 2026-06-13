@@ -2760,6 +2760,8 @@ function openShopCategories() {
     document.getElementById('modal-body').innerHTML = '';
     document.getElementById('modal-body').appendChild(wrap);
     document.getElementById('modal-actions').innerHTML = '';
+    document.getElementById('modal-actions').className = 'modal-actions';
+    document.querySelector('.modal-content').className = 'modal-content';
     const closeBtn = document.createElement('button');
     closeBtn.textContent = __('Close');
     closeBtn.classList.add('secondary');
