@@ -5775,19 +5775,37 @@ function renderShopInventory() {
     pendingList.innerHTML = '';
     // Group pending by category
     const pendingGroups = {};
-    for (const p of pending) {
+    for (let i = 0; i < pending.length; i++) {
+      const p = pending[i];
       const prod = appState.products[p.productId];
       const catInfo = getCategoryItemInfo(p.shopCategory);
       const key = p.shopCategory || '__unknown';
       if (!pendingGroups[key]) pendingGroups[key] = { catName: catInfo ? catInfo.item.name : 'Nepoznato', items: [] };
-      pendingGroups[key].items.push({ name: prod?.name || '?', qty: p.qty });
+      pendingGroups[key].items.push({ index: i, name: prod?.name || '?', qty: p.qty });
     }
     for (const [key, g] of Object.entries(pendingGroups)) {
       const section = document.createElement('div');
-      section.style.cssText = 'background:#ffffff;padding:6px 10px;font-size:13px;';
+      section.style.cssText = 'background:#ffffff;padding:6px 10px;font-size:13px;margin-bottom:4px;border-radius:8px;border:1px solid #e5e7eb;';
       section.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${escapeHtml(g.catName)}</div>`;
       for (const item of g.items) {
-        section.innerHTML += `<div style="padding-left:14px;color:#374151;">${escapeHtml(item.name)}: ${item.qty} kom</div>`;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:2px 0;';
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.className = 'pending-check';
+        chk.dataset.idx = item.index;
+        row.appendChild(chk);
+        const nameSpan = document.createElement('span');
+        nameSpan.style.cssText = 'flex:1;color:#374151;';
+        nameSpan.textContent = `${item.name}: ${item.qty} kom`;
+        row.appendChild(nameSpan);
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.textContent = '✏️';
+        editBtn.style.cssText = 'padding:2px 6px;border:none;border-radius:4px;background:transparent;color:#6b7280;font-size:14px;cursor:pointer;';
+        editBtn.addEventListener('click', () => editPendingTransfer(item.index));
+        row.appendChild(editBtn);
+        section.appendChild(row);
       }
       pendingList.appendChild(section);
     }
@@ -6254,6 +6272,79 @@ function declineAll() {
         renderShopInventory();
         showToast('Transakcije poništene, proizvodi vraćeni u skladište');
         closeModal();
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+function editPendingTransfer(idx) {
+  const pending = appState.pendingTransfers || [];
+  if (idx < 0 || idx >= pending.length) return;
+  const item = pending[idx];
+  const prod = appState.products[item.productId];
+  const name = prod?.name || '?';
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:12px;';
+  body.innerHTML = `<div style="font-weight:700;font-size:15px;">${escapeHtml(name)}</div>`;
+  const qtyInput = document.createElement('input');
+  qtyInput.type = 'number';
+  qtyInput.min = '1';
+  qtyInput.step = '1';
+  qtyInput.value = String(item.qty);
+  qtyInput.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box;';
+  body.appendChild(qtyInput);
+  
+  openModal({
+    title: 'Uredi koli\u010Dinu',
+    headerIcon: { symbol: '\u270E', color: 'blue' },
+    size: 'small',
+    body,
+    actions: [
+      { label: 'Spremi', onClick: () => {
+        const newQty = Number(qtyInput.value);
+        if (newQty < 1) { showToast('Koli\u010Dina mora biti najmanje 1'); return; }
+        item.qty = newQty;
+        closeModal();
+        saveStateDebounced();
+        renderShopInventory();
+        showToast('Koli\u010Dina a\u017Eurirana');
+      }},
+      { label: __('Cancel'), tone: 'secondary' }
+    ]
+  });
+}
+
+function declineSelected() {
+  const checkboxes = document.querySelectorAll('.pending-check:checked');
+  const indices = Array.from(checkboxes).map(cb => Number(cb.dataset.idx));
+  if (!indices.length) { showToast('Ozna\u010Dite stavke za odustajanje'); return; }
+  
+  const pending = appState.pendingTransfers || [];
+  const items = indices.map(i => pending[i]);
+  
+  openModal({
+    title: 'Odustani od ozna\u010Denih',
+    headerIcon: { symbol: '\u26A0', color: 'amber' },
+    size: 'small',
+    body: `Odustajete od ${indices.length} ozna\u010Dene stavke. Proizvodi \u0107e se vratiti u skladi\u0161te.`,
+    actions: [
+      { label: 'Odustani od ozna\u010Denih', tone: 'danger', onClick: () => {
+        // Remove selected from bottom-up to preserve indices
+        indices.sort((a, b) => b - a);
+        for (const idx of indices) {
+          const p = pending[idx];
+          const prod = appState.products[p.productId];
+          if (prod) {
+            prod.quantity = Number(prod.quantity || 0) + p.qty;
+          }
+        }
+        for (const idx of indices) pending.splice(idx, 1);
+        closeModal();
+        saveStateDebounced();
+        renderShopInventory();
+        showToast(`${indices.length} stavki poni\u0161teno`);
       }},
       { label: __('Cancel'), tone: 'secondary' }
     ]
@@ -8020,6 +8111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (shopConfirmBtn) shopConfirmBtn.addEventListener('click', masterConfirm);
   const shopDeclineBtn = document.getElementById('shop-decline-btn');
   if (shopDeclineBtn) shopDeclineBtn.addEventListener('click', declineAll);
+  const shopDeclineSelBtn = document.getElementById('shop-decline-selected-btn');
+  if (shopDeclineSelBtn) shopDeclineSelBtn.addEventListener('click', declineSelected);
   // Season management buttons (added to Settings)
   const seasonReportBtn = document.getElementById('season-report-btn');
   if (seasonReportBtn) seasonReportBtn.addEventListener('click', showEndSeasonReport);
