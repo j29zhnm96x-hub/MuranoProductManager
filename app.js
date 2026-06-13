@@ -3850,14 +3850,12 @@ function renderHistoryPage() {
           bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
           bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
           const goToDay = () => {
-            if (dateInputEl && !isAllDates) {
+            if (dateInputEl) {
               dateInputEl.value = day;
               setHistoryPeriodMode('day');
             }
           };
-          bar.setAttribute('onclick', ''); // iOS Safari: mark as interactive
-          bar.addEventListener('click', goToDay);
-          bar.addEventListener('touchend', goToDay);
+          bar.addEventListener('pointerup', goToDay);
           bar.title = `${display || day}: ${val > 0 ? formatCurrency(val) : '0 \u20AC'}`;
           barArea.appendChild(bar);
         }
