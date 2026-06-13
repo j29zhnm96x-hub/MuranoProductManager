@@ -2709,13 +2709,13 @@ function openShopCategories() {
             size: 'small',
             body: `Izbrisati "${escapeHtml(item.name)}"?`,
             actions: [
-              { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
+              { label: 'Izbri\u0161i', tone: 'danger', keepOpen: true, onClick: () => {
                 cat.items = cat.items.filter(i => i.id !== item.id);
                 saveStateDebounced();
                 renderCategories();
-                closeModal();
+                showCategoriesModal();
               }},
-              { label: __('Cancel'), tone: 'secondary' }
+              { label: __('Cancel'), tone: 'secondary', keepOpen: true, onClick: showCategoriesModal }
             ]
           });
           saveStateDebounced();
@@ -2741,6 +2741,14 @@ function openShopCategories() {
         if (e.key === 'Enter') addItemBtn.click();
       });
     }
+  }
+
+  function showCategoriesModal() {
+    document.getElementById('modal-title').textContent = 'Kategorije prodaje';
+    document.getElementById('modal-body').innerHTML = '';
+    document.getElementById('modal-body').appendChild(wrap);
+    document.getElementById('modal').classList.remove('hidden');
+    modalStack = Math.max(1, modalStack - 1);
   }
 
   renderCategories();
