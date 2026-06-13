@@ -3849,12 +3849,15 @@ function renderHistoryPage() {
           bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;touch-action:manipulation;`;
           bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
           bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
-          bar.addEventListener('click', () => {
+          const goToDay = () => {
             if (dateInputEl && !isAllDates) {
               dateInputEl.value = day;
               setHistoryPeriodMode('day');
             }
-          });
+          };
+          bar.setAttribute('onclick', ''); // iOS Safari: mark as interactive
+          bar.addEventListener('click', goToDay);
+          bar.addEventListener('touchend', goToDay);
           bar.title = `${display || day}: ${val > 0 ? formatCurrency(val) : '0 \u20AC'}`;
           barArea.appendChild(bar);
         }
