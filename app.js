@@ -2703,7 +2703,21 @@ function openShopCategories() {
         delItemBtn.textContent = '\u2715';
         delItemBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;';
         delItemBtn.addEventListener('click', () => {
-          cat.items = cat.items.filter(i => i.id !== item.id);
+          openModal({
+            title: 'Izbri\u0161i stavku',
+            headerIcon: { symbol: '\u26A0', color: 'red' },
+            size: 'small',
+            body: `Izbrisati "${escapeHtml(item.name)}"?`,
+            actions: [
+              { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
+                cat.items = cat.items.filter(i => i.id !== item.id);
+                saveStateDebounced();
+                renderCategories();
+                closeModal();
+              }},
+              { label: __('Cancel'), tone: 'secondary' }
+            ]
+          });
           saveStateDebounced();
           renderCategories();
         });
