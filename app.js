@@ -2604,8 +2604,16 @@ function openShopCategories() {
       for (let i = 0; i < (cat.items || []).length; i++) {
         const item = cat.items[i];
         const itemRow = document.createElement('div');
-        itemRow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 10px 6px 16px;background:#ffffff;';
-        // Move up
+        itemRow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 10px 6px 12px;background:#ffffff;';
+        const iName = document.createElement('span');
+        iName.style.cssText = 'flex:1;font-size:14px;';
+        iName.textContent = item.name;
+        const iPrice = document.createElement('span');
+        iPrice.style.cssText = 'color:#6b7280;font-size:13px;font-weight:600;margin-right:4px;';
+        iPrice.textContent = `${item.price}\u20AC`;
+        // Move up / down
+        const moveBtns = document.createElement('span');
+        moveBtns.style.cssText = 'display:inline-flex;gap:2px;margin-right:10px;';
         if (i > 0) {
           const upBtn = document.createElement('button');
           upBtn.textContent = '\u25B2';
@@ -2615,9 +2623,8 @@ function openShopCategories() {
             saveStateDebounced();
             renderCategories();
           });
-          itemRow.appendChild(upBtn);
+          moveBtns.appendChild(upBtn);
         }
-        // Move down
         if (i < cat.items.length - 1) {
           const downBtn = document.createElement('button');
           downBtn.textContent = '\u25BC';
@@ -2627,14 +2634,8 @@ function openShopCategories() {
             saveStateDebounced();
             renderCategories();
           });
-          itemRow.appendChild(downBtn);
+          moveBtns.appendChild(downBtn);
         }
-        const iName = document.createElement('span');
-        iName.style.cssText = 'flex:1;font-size:14px;';
-        iName.textContent = item.name;
-        const iPrice = document.createElement('span');
-        iPrice.style.cssText = 'color:#6b7280;font-size:13px;font-weight:600;';
-        iPrice.textContent = `${item.price}\u20AC`;
         const delItemBtn = document.createElement('button');
         delItemBtn.textContent = '\u2715';
         delItemBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;';
@@ -2645,6 +2646,7 @@ function openShopCategories() {
         });
         itemRow.appendChild(iName);
         itemRow.appendChild(iPrice);
+        itemRow.appendChild(moveBtns);
         itemRow.appendChild(delItemBtn);
         itemsDiv.appendChild(itemRow);
       }
