@@ -3846,7 +3846,7 @@ function renderHistoryPage() {
           const { day, val, display } = chartDays[i];
           const pct = Math.max(1, (val / maxVal) * 100);
           const bar = document.createElement('div');
-          bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;`;
+          bar.style.cssText = `flex:1;height:${pct}%;background:${val > 0 ? '#16a34a' : '#e5e7eb'};border-radius:2px 2px 0 0;min-height:1px;cursor:pointer;touch-action:manipulation;`;
           bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.6'; });
           bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; });
           bar.addEventListener('click', () => {
