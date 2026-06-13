@@ -2546,6 +2546,26 @@ function openShopCategories() {
     wrap.innerHTML = '';
     const cats = appState.shopCategories || [];
 
+    // Build autocomplete datalist from all existing item names
+    let dl = document.getElementById('shop-cat-suggestions');
+    if (!dl) {
+      dl = document.createElement('datalist');
+      dl.id = 'shop-cat-suggestions';
+      document.body.appendChild(dl);
+    }
+    dl.innerHTML = '';
+    const seen = new Set();
+    for (const cat of cats) {
+      for (const item of (cat.items || [])) {
+        if (!seen.has(item.name)) {
+          seen.add(item.name);
+          const opt = document.createElement('option');
+          opt.value = item.name;
+          dl.appendChild(opt);
+        }
+      }
+    }
+
     // Add new group
     const addGroupRow = document.createElement('div');
     addGroupRow.style.cssText = 'display:flex;gap:6px;align-items:center;';
@@ -2605,6 +2625,27 @@ function openShopCategories() {
       const maxPrice = cat.items.reduce((m, i) => Math.max(m, Number(i.price || 0)), 0);
       const priceMinWidth = Math.max(60, String(Math.round(maxPrice)).length * 8 + 15);
       
+      // Add item row
+      const addRow = document.createElement('div');
+      addRow.style.cssText = 'display:flex;gap:6px;align-items:center;padding:6px 10px 6px 16px;background:#ffffff;';
+      const itemInput = document.createElement('input');
+      itemInput.placeholder = 'Ogrlica 06';
+      itemInput.style.cssText = 'flex:1;padding:5px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;';
+      itemInput.setAttribute('list', 'shop-cat-suggestions');
+      const addItemBtn = document.createElement('button');
+      addItemBtn.textContent = '+';
+      addItemBtn.style.cssText = 'padding:4px 12px;border-radius:6px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-weight:700;cursor:pointer;font-size:14px;';
+      addItemBtn.addEventListener('click', () => {
+        const name = itemInput.value.trim();
+        if (!name) return;
+        const nums = name.match(/\d+/g);
+        const price = nums ? parseInt(nums[nums.length - 1], 10) : 0;
+        cat.items.push({ id: uuid(), name, price });
+        itemInput.value = '';
+        saveStateDebounced();
+        renderCategories();
+      });
+      
       for (let i = 0; i < (cat.items || []).length; i++) {
         const item = cat.items[i];
         const itemRow = document.createElement('div');
@@ -2655,26 +2696,7 @@ function openShopCategories() {
         itemsDiv.appendChild(itemRow);
       }
 
-      // Add item row
-      const addRow = document.createElement('div');
-      addRow.style.cssText = 'display:flex;gap:6px;align-items:center;padding:6px 10px 6px 16px;background:#ffffff;';
-      const itemInput = document.createElement('input');
-      itemInput.placeholder = 'Ogrlica 06';
-      itemInput.style.cssText = 'flex:1;padding:5px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;';
-      const addItemBtn = document.createElement('button');
-      addItemBtn.textContent = '+';
-      addItemBtn.style.cssText = 'padding:4px 12px;border-radius:6px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-weight:700;cursor:pointer;font-size:14px;';
-      addItemBtn.addEventListener('click', () => {
-        const name = itemInput.value.trim();
-        if (!name) return;
-        // Extract price from last number in name
-        const nums = name.match(/\d+/g);
-        const price = nums ? parseInt(nums[nums.length - 1], 10) : 0;
-        cat.items.push({ id: uuid(), name, price });
-        itemInput.value = '';
-        saveStateDebounced();
-        renderCategories();
-      });
+      // Append addRow (declared above)  
       addRow.appendChild(itemInput);
       addRow.appendChild(addItemBtn);
       itemsDiv.appendChild(addRow);
