@@ -2603,8 +2603,24 @@ function openShopCategories() {
       const header = document.createElement('div');
       header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f9fafb;border-bottom:1px solid #e5e7eb;';
       const hTitle = document.createElement('span');
-      hTitle.style.cssText = 'font-weight:700;font-size:14px;flex:1;';
+      hTitle.style.cssText = 'font-weight:700;font-size:14px;flex:1;cursor:pointer;';
       hTitle.textContent = cat.name;
+      hTitle.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = cat.name;
+        input.style.cssText = 'flex:1;padding:2px 4px;border-radius:4px;border:1px solid #0ea5e9;font-size:14px;font-weight:700;';
+        const saveName = () => {
+          const v = input.value.trim();
+          if (v) { cat.name = v; saveStateDebounced(); renderCategories(); }
+          else { input.replaceWith(hTitle); }
+        };
+        input.addEventListener('blur', saveName);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveName(); } if (e.key === 'Escape') { input.replaceWith(hTitle); renderCategories(); } });
+        hTitle.replaceWith(input);
+        input.focus();
+        input.select();
+      });
       const delGroupBtn = document.createElement('button');
       delGroupBtn.textContent = '\u2715';
       delGroupBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;';
@@ -2663,8 +2679,24 @@ function openShopCategories() {
         const itemRow = document.createElement('div');
         itemRow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 10px 6px 12px;background:#ffffff;';
         const iName = document.createElement('span');
-        iName.style.cssText = 'flex:1;font-size:14px;';
+        iName.style.cssText = 'flex:1;font-size:14px;cursor:pointer;';
         iName.textContent = item.name;
+        iName.addEventListener('click', () => {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = item.name;
+          input.style.cssText = 'flex:1;padding:2px 4px;border-radius:4px;border:1px solid #0ea5e9;font-size:14px;';
+          const saveName = () => {
+            const v = input.value.trim();
+            if (v) { item.name = v; saveStateDebounced(); renderCategories(); }
+            else { input.replaceWith(iName); }
+          };
+          input.addEventListener('blur', saveName);
+          input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveName(); } if (e.key === 'Escape') { input.replaceWith(iName); renderCategories(); } });
+          iName.replaceWith(input);
+          input.focus();
+          input.select();
+        });
         // Move up / down — fixed width for vertical alignment
         const moveBtns = document.createElement('span');
         moveBtns.style.cssText = `display:inline-flex;align-items:center;justify-content:center;gap:2px;width:28px;flex-shrink:0;margin:0 4px;`;
