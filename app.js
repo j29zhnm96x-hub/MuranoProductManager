@@ -2756,18 +2756,12 @@ function openShopCategories() {
   }
 
   function showCategoriesModal() {
-    document.getElementById('modal-title').textContent = 'Kategorije prodaje';
-    document.getElementById('modal-body').innerHTML = '';
-    document.getElementById('modal-body').appendChild(wrap);
-    document.getElementById('modal-actions').innerHTML = '';
-    document.getElementById('modal-actions').className = 'modal-actions';
-    document.querySelector('.modal-content').className = 'modal-content';
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = __('Close');
-    closeBtn.classList.add('secondary');
-    closeBtn.addEventListener('click', () => { document.getElementById('modal').classList.add('hidden'); modalStack = 0; document.body.style.overflow = ''; });
-    document.getElementById('modal-actions').appendChild(closeBtn);
-    document.getElementById('modal').classList.remove('hidden');
+    openModal({
+      title: __('Shop Categories'),
+      headerIcon: { symbol: '\uD83C\uDFEA', color: 'slate' },
+      body: wrap,
+      actions: [{ label: __('Close'), tone: 'secondary' }]
+    });
     modalStack = 1;
   }
 
