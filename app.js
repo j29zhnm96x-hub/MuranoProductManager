@@ -2609,9 +2609,21 @@ function openShopCategories() {
       delGroupBtn.textContent = '\u2715';
       delGroupBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;';
       delGroupBtn.addEventListener('click', () => {
-        appState.shopCategories = appState.shopCategories.filter(c => c.id !== cat.id);
-        saveStateDebounced();
-        renderCategories();
+        openModal({
+          title: 'Izbri\u0161i grupu',
+          headerIcon: { symbol: '\u26A0', color: 'red' },
+          size: 'small',
+          body: `Izbrisati grupu "${escapeHtml(cat.name)}" sa svim stavkama?`,
+          actions: [
+            { label: 'Izbri\u0161i', tone: 'danger', keepOpen: true, onClick: () => {
+              appState.shopCategories = appState.shopCategories.filter(c => c.id !== cat.id);
+              saveStateDebounced();
+              renderCategories();
+              showCategoriesModal();
+            }},
+            { label: __('Cancel'), tone: 'secondary', keepOpen: true, onClick: showCategoriesModal }
+          ]
+        });
       });
       header.appendChild(hTitle);
       header.appendChild(delGroupBtn);
