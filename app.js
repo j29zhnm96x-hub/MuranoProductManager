@@ -6503,6 +6503,7 @@ function openShopActionsMenu() {
       { label: '\uD83D\uDCE6  Prijenos iz skladi\u0161ta', onClick: () => { closeModal(); transferFromWarehouse(); } },
       { label: '\uD83C\uDFF7  Proizvodnja na licu mjesta', onClick: () => { closeModal(); openInSeasonProduction(); } },
       { label: '\uD83D\uDCC4  Dokumenti', onClick: () => { closeModal(); openDocumentList(); } },
+      { label: '\uD83D\uDCCB  Pregled transfera', onClick: () => { closeModal(); openTransferHistory(); } },
       { label: '\uD83D\uDD04  Povrat iz prodaje', onClick: () => { closeModal(); returnFromShop(); } },
       { label: '\uD83D\uDDD1\uFE0F  Isprazni prodaju', tone: 'danger', onClick: () => { closeModal(); clearShopAll(); } },
       { label: __('Cancel'), tone: 'secondary' }
@@ -6511,6 +6512,97 @@ function openShopActionsMenu() {
 }
 
 // ── On-Site Production Page ─────────────────────────────────────
+
+function openTransferHistory() {
+  const tLog = appState.transferLog || [];
+  if (!tLog.length) { showToast('Nema transfera'); return; }
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  
+  for (let i = tLog.length - 1; i >= 0; i--) {
+    const t = tLog[i];
+    const date = new Date(t.date).toLocaleDateString('hr-HR');
+    const time = new Date(t.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+    const totalQty = t.items.reduce((s, it) => s + it.qty, 0);
+    
+    // Group by category for display
+    const catMap = {};
+    for (const it of t.items) {
+      const prod = appState.products[it.productId];
+      const catName = it.shopCategory || 'Nepoznato';
+      if (!catMap[catName]) catMap[catName] = { name: catName, items: [] };
+      catMap[catName].items.push({ pName: prod?.name || '?', qty: it.qty });
+    }
+    
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1px solid #e5e7eb;border-radius:10px;background:#ffffff;overflow:hidden;';
+    
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px;cursor:pointer;background:#f9fafb;';
+    header.innerHTML = `<span style="flex:1;font-weight:700;font-size:14px;">${date} ${time}</span><span style="color:#6b7280;font-size:13px;">${totalQty} kom</span><span style="color:#ef4444;font-size:12px;cursor:pointer;">Poni\u0161ti</span>`;
+    
+    const details = document.createElement('div');
+    details.style.cssText = 'display:none;padding:6px 10px;';
+    
+    let detailsHTML = '';
+    for (const cat of Object.values(catMap)) {
+      detailsHTML += `<div style="font-weight:600;font-size:13px;margin:4px 0 2px;">${cat.name}</div>`;
+      for (const it of cat.items) {
+        detailsHTML += `<div style="padding-left:12px;font-size:12px;color:#374151;">${it.pName}: ${it.qty} kom</div>`;
+      }
+    }
+    details.innerHTML = detailsHTML;
+    
+    // Toggle details
+    header.querySelector('span:first-child').addEventListener('click', () => {
+      details.style.display = details.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    // Reverse transfer
+    header.querySelector('span:last-child').addEventListener('click', () => {
+      const tId = t.id;
+      const docId = t.documentId;
+      openModal({
+        title: 'Poni\u0161ti transfer',
+        headerIcon: { symbol: '\u26A0', color: 'red' },
+        size: 'small',
+        body: `Poništiti transfer od ${date} (${totalQty} kom)? Proizvodi će se vratiti u skladište.`,
+        actions: [
+          { label: 'Poni\u0161ti', tone: 'danger', onClick: () => {
+            // Restore warehouse quantities
+            for (const it of t.items) {
+              const prod = appState.products[it.productId];
+              if (prod) prod.quantity = Number(prod.quantity || 0) + it.qty;
+            }
+            // Remove transfer log
+            appState.transferLog = appState.transferLog.filter(x => x.id !== tId);
+            // Remove associated document
+            appState.documents = (appState.documents || []).filter(d => d.id !== docId);
+            closeModal();
+            saveStateDebounced();
+            renderAll();
+            renderShopInventory();
+            openTransferHistory();
+            showToast('Transfer poništen, proizvodi vraćeni u skladište');
+          }},
+          { label: __('Cancel'), tone: 'secondary' }
+        ]
+      });
+    });
+    
+    card.appendChild(header);
+    card.appendChild(details);
+    body.appendChild(card);
+  }
+  
+  openModal({
+    title: 'Pregled transfera',
+    headerIcon: { symbol: '\uD83D\uDCCB', color: 'slate' },
+    body,
+    actions: [{ label: __('Close'), tone: 'secondary' }]
+  });
+}
 
 let _onsitePick = null; // { productId, productName, shopCategory, price }
 
