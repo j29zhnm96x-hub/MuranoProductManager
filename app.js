@@ -2935,12 +2935,6 @@ function openSettings() {
   legalGroup.appendChild(makeBtn('Zakonski dokumenti', '', openLegalDocuments));
   wrap.appendChild(legalGroup);
   
-  // ── Shop Categories ────────────────────────────────────────
-  const catGroup = document.createElement('div');
-  catGroup.style.cssText = 'padding:4px 0;';
-  catGroup.appendChild(makeBtn('Kategorije prodaje', '', () => { closeModal(); openShopCategories(); }));
-  wrap.appendChild(catGroup);
-  
   // ── Test data ──────────────────────────────────────────────
   const testGroup = document.createElement('div');
   testGroup.style.cssText = 'padding:4px 0;';
