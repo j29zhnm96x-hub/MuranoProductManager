@@ -5747,15 +5747,17 @@ function calculateShopInventory() {
   // Calculate shop qty per category (category = shopCategory string from transfers/returns/production)
   const catQtys = {}; // { catName: { qty, maxPrice } }
   
+  function isUUID(str) { return typeof str === 'string' && str.indexOf('-') > 0; }
+  
   function addToCat(key, qty) {
-    if (!key || qty <= 0) return;
+    if (!key || qty <= 0 || isUUID(key)) return;
     const price = extractPriceFromName(key);
     if (!catQtys[key]) catQtys[key] = { qty: 0, price };
     catQtys[key].qty += qty;
   }
   
   function removeFromCat(key, qty) {
-    if (!key || qty <= 0) return;
+    if (!key || qty <= 0 || isUUID(key)) return;
     if (catQtys[key]) catQtys[key].qty -= qty;
   }
   
@@ -5900,7 +5902,7 @@ function renderShopInventory() {
       const prod = appState.products[p.productId];
       const catInfo = getCategoryItemInfo(p.shopCategory);
       const key = p.shopCategory || '__unknown';
-      if (!pendingGroups[key]) pendingGroups[key] = { catName: catInfo ? catInfo.item.name : 'Nepoznato', items: [] };
+      if (!pendingGroups[key]) pendingGroups[key] = { catName: catInfo ? catInfo.item.name : p.shopCategory || 'Nepoznato', items: [] };
       pendingGroups[key].items.push({ index: i, name: prod?.name || '?', qty: p.qty });
     }
     for (const [key, g] of Object.entries(pendingGroups)) {
@@ -8312,6 +8314,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (shopDeclineBtn) shopDeclineBtn.addEventListener('click', declineAll);
   const shopDeclineSelBtn = document.getElementById('shop-decline-selected-btn');
   if (shopDeclineSelBtn) shopDeclineSelBtn.addEventListener('click', declineSelected);
+  const shopAddItemsBtn = document.getElementById('shop-add-items-btn');
+  if (shopAddItemsBtn) shopAddItemsBtn.addEventListener('click', transferFromWarehouse);
   // Season management buttons (added to Settings)
   const seasonReportBtn = document.getElementById('season-report-btn');
   if (seasonReportBtn) seasonReportBtn.addEventListener('click', showEndSeasonReport);
