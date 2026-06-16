@@ -6286,7 +6286,7 @@ function masterConfirm() {
   });
 }
 
-function executeConfirm(docType) {
+async function executeConfirm(docType) {
   const pending = appState.pendingTransfers || [];
   if (!pending.length) return;
   
@@ -6305,7 +6305,7 @@ function executeConfirm(docType) {
   
   // Save document
   appState.documents = appState.documents || [];
-  const docItems = buildDocumentItems();
+  const docItems = buildDocumentItems(pending);
   const doc = {
     id: logEntry.documentId,
     date: new Date().toISOString(),
@@ -6318,16 +6318,34 @@ function executeConfirm(docType) {
   // Clear pending
   appState.pendingTransfers = [];
   
-  saveStateDebounced();
+  try {
+    await writeState(appState);
+    setSyncStatus('synced');
+  } catch {}
+  
   renderAll();
   renderShopInventory();
   
   // Show document preview
-  showDocumentPreview(docItems, docType);
+  if (docItems.length > 0) showDocumentPreview(docItems, docType);
+  else showToast('Dokument je prazan - provjerite kategorije proizvoda');
 }
 
-function buildDocumentItems() {
-  // Group current shop inventory by category
+function buildDocumentItems(directItems) {
+  // If directItems provided (from pending), use them directly — more reliable
+  if (directItems && directItems.length > 0) {
+    const groups = {};
+    for (const item of directItems) {
+      const name = item.shopCategory || 'Nepoznato';
+      const price = extractPriceFromName(name);
+      if (!groups[name]) groups[name] = { name, price, qty: 0, value: 0 };
+      groups[name].qty += item.qty;
+      groups[name].value += item.qty * price;
+    }
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  // Fallback: group current shop inventory by category
   const inventory = calculateShopInventory();
   const groups = {};
   for (const g of Object.values(inventory.byGroup)) {
