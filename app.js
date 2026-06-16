@@ -6358,20 +6358,22 @@ function executeConfirm(docType) {
 }
 
 function buildDocumentItems() {
-  // Calculate current full shop inventory for the document
+  // Group current shop inventory by category
   const inventory = calculateShopInventory();
-  const items = [];
+  const groups = {};
   for (const g of Object.values(inventory.byGroup)) {
-    for (const item of g.items) {
-      items.push({
-        name: item.name,
-        price: item.price,
-        qty: item.qty,
-        value: item.value
-      });
+    const catName = g.name;
+    const totalQty = g.items.reduce((s, i) => s + i.qty, 0);
+    const catPrice = g.items.length > 0 ? g.items[0].price : 0;
+    const totalValue = totalQty * catPrice;
+    if (!groups[catName]) {
+      groups[catName] = { name: catName, price: catPrice, qty: totalQty, value: totalValue };
+    } else {
+      groups[catName].qty += totalQty;
+      groups[catName].value += totalValue;
     }
   }
-  return items;
+  return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function declineAll() {
