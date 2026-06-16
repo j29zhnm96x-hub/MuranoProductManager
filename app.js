@@ -5373,6 +5373,7 @@ function openProductMenu(productId) {
       { label: (() => { const p = appState.products[productId]; return p?.priority ? __('Unmark priority') : __('Mark as priority'); })(), onClick: () => {
           const p = appState.products[productId]; if (!p) return; p.priority = !p.priority; saveStateDebounced(); renderAll();
         } },
+      { label: __('Move to...'), onClick: () => { closeModal(); openMoveDialog('product', productId); } },
       { label: __('Delete'), onClick: () => confirmDeleteProduct(productId) }
     ]
   });
