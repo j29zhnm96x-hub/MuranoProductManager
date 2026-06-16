@@ -5740,73 +5740,53 @@ function closeShopPage() {
 }
 
 function calculateShopInventory() {
-  // Returns { byCategory: { catItemId: { item, qty, totalValue } }, byGroup: { groupId: { name, totalQty, items: [...] } } }
-  const result = { byItem: {}, byGroup: {} };
-  const cats = appState.shopCategories || [];
+  // Returns { byGroup: { catName: { name, items: [...] } } }
+  const result = { byGroup: {} };
   
-  // Build lookup from cat item id to its group
-  const itemToGroup = {};
-  for (const cat of cats) {
-    for (const item of (cat.items || [])) {
-      itemToGroup[item.id] = { groupName: cat.name, groupId: cat.id, item };
-    }
+  // Calculate shop qty per category (category = shopCategory string from transfers/returns/production)
+  const catQtys = {}; // { catName: { qty, maxPrice } }
+  
+  function addToCat(key, qty) {
+    if (!key || qty <= 0) return;
+    const price = extractPriceFromName(key);
+    if (!catQtys[key]) catQtys[key] = { qty: 0, price };
+    catQtys[key].qty += qty;
   }
   
-  // Calculate what's in the shop (transfers - returns + on-site productions)
-  // Shop qty for each product variant = sum of transfers - sum of returns + sum of on-site additions
-  const variantQtys = {}; // { catItemId: qty }
+  function removeFromCat(key, qty) {
+    if (!key || qty <= 0) return;
+    if (catQtys[key]) catQtys[key].qty -= qty;
+  }
   
-  // Transfers (master confirmed only)
+  // Transfers
   for (const t of (appState.transferLog || [])) {
     if (t.masterConfirmDate) {
-      for (const item of (t.items || [])) {
-        const key = item.shopCategory;
-        if (!key) continue;
-        variantQtys[key] = (variantQtys[key] || 0) + item.qty;
-      }
+      for (const item of (t.items || [])) addToCat(item.shopCategory, item.qty);
     }
   }
   
   // Returns
   for (const r of (appState.returnLog || [])) {
-    for (const item of (r.items || [])) {
-      const key = item.shopCategory;
-      if (!key) continue;
-      variantQtys[key] = (variantQtys[key] || 0) - item.qty;
-    }
+    for (const item of (r.items || [])) removeFromCat(item.shopCategory, item.qty);
   }
   
   // On-site productions added to shop
   for (const o of (appState.onSiteProduction || [])) {
     if (o.addedToShop) {
-      for (const item of (o.items || [])) {
-        const key = item.shopCategory;
-        if (!key) continue;
-        variantQtys[key] = (variantQtys[key] || 0) + item.qty;
-      }
+      for (const item of (o.items || [])) addToCat(item.shopCategory, item.qty);
     }
   }
   
-  // Build grouped result
-  const groups = {};
-  for (const [itemId, qty] of Object.entries(variantQtys)) {
-    if (qty <= 0) continue;
-    const info = itemToGroup[itemId];
-    if (!info) continue;
-    const gId = info.groupId;
-    if (!groups[gId]) {
-      groups[gId] = { name: info.groupName, items: [] };
-    }
-    groups[gId].items.push({
-      itemId,
-      name: info.item.name,
-      price: info.item.price,
-      qty,
-      value: qty * info.item.price
-    });
+  // Build result
+  for (const [name, data] of Object.entries(catQtys)) {
+    if (data.qty <= 0) continue;
+    result.byGroup[name] = {
+      name,
+      items: [{ name, qty: data.qty, price: data.price, value: data.qty * data.price, itemId: name }]
+    };
   }
   
-  return { byGroup: groups, itemToGroup };
+  return result;
 }
 
 function renderShopInventory() {
@@ -6214,37 +6194,22 @@ function openTransferQtyModal(productId) {
   const p = appState.products[productId];
   if (!p) return;
   const maxQty = Number(p.quantity || 0);
-  _transferCatId = p.shopCategory || '';
+  // Auto-detect category from product's parent folder
+  const folderName = getProductParentFolder(productId)?.name || '';
+  _transferCatId = folderName;
   
   const body = document.createElement('div');
   body.style.cssText = 'display:grid;gap:12px;max-width:400px;';
   
-  // Find default category name
-  let defaultCatName = '';
-  if (_transferCatId) {
-    const ci = getCategoryItemInfo(_transferCatId);
-    if (ci) defaultCatName = `${ci.group.name} / ${ci.item.name} (${ci.item.price}\u20AC)`;
-  }
-  
   body.innerHTML = `
     <div style="font-weight:700;font-size:16px;">${escapeHtml(p.name)}</div>
-    <div style="color:#6b7280;font-size:14px;">Dostupno u skladištu: <strong>${maxQty} kom</strong></div>
+    <div style="color:#6b7280;font-size:14px;">Dostupno u skladi\u0161tu: <strong>${maxQty} kom</strong></div>
+    <div style="color:#0ea5e9;font-size:13px;background:#e0f2fe;padding:6px 10px;border-radius:6px;">Kategorija: ${escapeHtml(folderName)}</div>
     <label style="display:grid;gap:4px;">
-      <span style="font-weight:600;font-size:13px;">Količina za prijenos</span>
+      <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
       <input id="transfer-qty" type="number" min="1" max="${maxQty}" step="1" value="${Math.min(maxQty, 1)}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
-    <label style="display:grid;gap:4px;">
-      <span style="font-weight:600;font-size:13px;">Kategorija prodaje</span>
-      <button id="transfer-cat-btn" type="button" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;font-size:14px;cursor:pointer;text-align:left;">
-        <span id="transfer-cat-label" style="flex:1;color:${defaultCatName ? '#111827' : '#9ca3af'};">${defaultCatName || 'Odaberi kategoriju'}</span>
-        <span style="color:#6b7280;">\u25BC</span>
-      </button>
-    </label>
   `;
-  
-  setTimeout(() => {
-    body.querySelector('#transfer-cat-btn')?.addEventListener('click', () => openTransferCategoryPicker(productId));
-  }, 50);
   
   openModal({
     title: 'Prijenos u prodaju',
@@ -6254,8 +6219,8 @@ function openTransferQtyModal(productId) {
       { label: 'Dodaj u prijenos', onClick: () => {
         const qty = parseInt(body.querySelector('#transfer-qty')?.value || '0', 10);
         const catId = _transferCatId;
-        if (qty <= 0 || qty > maxQty) { showToast('Neispravna količina'); return; }
-        if (!catId) { showToast('Odaberite kategoriju prodaje'); return; }
+        if (qty <= 0 || qty > maxQty) { showToast('Neispravna koli\u010Dina'); return; }
+        if (!catId) { showToast('Proizvod nema mapu'); return; }
         
         // Decrease warehouse immediately
         p.quantity = maxQty - qty;
