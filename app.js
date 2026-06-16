@@ -5741,36 +5741,43 @@ function calculateShopInventory() {
   // Calculate shop qty per category (category = shopCategory string from transfers/returns/production)
   const catQtys = {}; // { catName: { qty, maxPrice } }
   
-  function isUUID(str) { return typeof str === 'string' && str.indexOf('-') > 0; }
+  function resolveCatName(item) {
+    if (!item.shopCategory || item.shopCategory.indexOf('-') > 0) {
+      const prod = appState.products[item.productId];
+      if (!prod) return null;
+      return getProductParentFolder(item.productId)?.name || null;
+    }
+    return item.shopCategory;
+  }
   
   function addToCat(key, qty) {
-    if (!key || qty <= 0 || isUUID(key)) return;
+    if (!key || qty <= 0) return;
     const price = extractPriceFromName(key);
     if (!catQtys[key]) catQtys[key] = { qty: 0, price };
     catQtys[key].qty += qty;
   }
   
   function removeFromCat(key, qty) {
-    if (!key || qty <= 0 || isUUID(key)) return;
+    if (!key || qty <= 0) return;
     if (catQtys[key]) catQtys[key].qty -= qty;
   }
   
   // Transfers
   for (const t of (appState.transferLog || [])) {
     if (t.masterConfirmDate) {
-      for (const item of (t.items || [])) addToCat(item.shopCategory, item.qty);
+      for (const item of (t.items || [])) addToCat(resolveCatName(item), item.qty);
     }
   }
   
   // Returns
   for (const r of (appState.returnLog || [])) {
-    for (const item of (r.items || [])) removeFromCat(item.shopCategory, item.qty);
+      for (const item of (r.items || [])) removeFromCat(resolveCatName(item), item.qty);
   }
   
   // On-site productions added to shop
   for (const o of (appState.onSiteProduction || [])) {
     if (o.addedToShop) {
-      for (const item of (o.items || [])) addToCat(item.shopCategory, item.qty);
+      for (const item of (o.items || [])) addToCat(resolveCatName(item), item.qty);
     }
   }
   
