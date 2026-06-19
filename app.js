@@ -6562,6 +6562,18 @@ function openTransferHistory() {
               const prod = appState.products[it.productId];
               if (prod) prod.quantity = Number(prod.quantity || 0) + it.qty;
             }
+            // Remove history entries for this transfer
+            if (appState.productionLog) {
+              const transferTs = new Date(t.date).getTime();
+              for (const it of t.items) {
+                appState.productionLog = appState.productionLog.filter(h => {
+                  if (h.eventType !== 'transfer_to_shop') return true;
+                  if (h.productId !== it.productId) return true;
+                  if (Math.abs(h.ts - transferTs) > 60000) return true;
+                  return false;
+                });
+              }
+            }
             // Remove transfer log
             appState.transferLog = appState.transferLog.filter(x => x.id !== tId);
             // Remove associated document
