@@ -6796,6 +6796,63 @@ function getFirstProductId(productIds) {
   return null;
 }
 
+function ensureWarehouseCategory(groupFolderId, categoryName, price) {
+  const groupFolder = appState.folders[groupFolderId];
+  if (!groupFolder) return null;
+
+  // Check if category folder already exists
+  for (const sfId of (groupFolder.subfolders || [])) {
+    const sf = appState.folders[sfId];
+    if (sf && sf.name === categoryName) {
+      if (sf.products && sf.products.length > 0) {
+        return sf.products[0];
+      }
+      // Folder exists but empty: create product inside
+      const pid = uuid();
+      appState.products[pid] = {
+        id: pid,
+        name: categoryName,
+        quantity: 0,
+        price,
+        note: '',
+        targetQuantity: 0,
+        priority: false,
+        shopCategory: ''
+      };
+      sf.products.push(pid);
+      return pid;
+    }
+  }
+
+  // Create new category folder
+  const fid = uuid();
+  appState.folders[fid] = {
+    id: fid,
+    name: categoryName,
+    parentId: groupFolderId,
+    imageUrl: null,
+    subfolders: [],
+    products: []
+  };
+  groupFolder.subfolders.push(fid);
+
+  // Create product inside
+  const pid = uuid();
+  appState.products[pid] = {
+    id: pid,
+    name: categoryName,
+    quantity: 0,
+    price,
+    note: '',
+    targetQuantity: 0,
+    priority: false,
+    shopCategory: ''
+  };
+  appState.folders[fid].products.push(pid);
+
+  return pid;
+}
+
 function openOnsiteProductPicker() {
   const body = document.createElement('div');
   body.style.cssText = 'display:grid;gap:8px;';
@@ -6803,48 +6860,153 @@ function openOnsiteProductPicker() {
   const rootFolder = appState.folders['root'];
   if (!rootFolder) { showToast('Nema mapa'); return; }
 
-  function calcAvailable(categoryName, productIds) {
-    let totalQty = 0;
-    for (const pid of productIds) {
-      const p = appState.products[pid];
-      if (p) totalQty += Number(p.quantity || 0);
-    }
-    let alreadyTransferred = 0;
-    for (const t of (appState.transferLog || [])) {
-      if (t.masterConfirmDate) {
-        for (const item of (t.items || [])) {
-          if (item.shopCategory === categoryName) alreadyTransferred += item.qty;
-        }
-      }
-    }
-    return Math.max(0, totalQty - alreadyTransferred);
-  }
-
-  function selectCategory(cat) {
+  function selectProduct(categoryName, categoryPrice, product) {
     _onsitePick = {
-      shopCategory: cat.name,
-      price: cat.price,
-      productId: getFirstProductId(cat.productIds) || null,
-      productName: cat.name
+      shopCategory: categoryName,
+      price: categoryPrice,
+      productId: product.id,
+      productName: product.name
     };
     closeModal();
     updateOnsitePickDisplay();
   }
 
-  function renderStandaloneRow(sub) {
-    const productIds = Array.from(sub.productIds);
-    const available = calcAvailable(sub.name, productIds);
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
-    row.innerHTML = `
-      <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(sub.name)}</span>
-      <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom raspolo\u017Eivo</span>
-      <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
+  function selectNewCategory(groupFolderId, name, price) {
+    _onsitePick = {
+      shopCategory: name.trim(),
+      price: parseInt(price, 10),
+      productId: null,
+      productName: name.trim(),
+      isNew: true,
+      groupFolderId
+    };
+    closeModal();
+    updateOnsitePickDisplay();
+  }
+
+  function createInlineNewCategoryForm(groupFolderId) {
+    const form = document.createElement('div');
+    form.className = 'onsite-new-cat-form';
+    form.style.cssText = 'display:grid;gap:8px;padding:10px 12px 10px 28px;background:#ffffff;border-top:1px solid #f3f4f6;';
+    form.innerHTML = `
+      <input class="new-onsite-cat-name" placeholder="Naziv kategorije" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+      <input class="new-onsite-cat-price" placeholder="Cijena (€)" type="number" min="1" step="1" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+      <div style="display:flex;gap:8px;">
+        <button class="new-onsite-cat-add" style="flex:1;padding:8px;border-radius:8px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Dodaj</button>
+        <button class="new-onsite-cat-cancel" style="flex:1;padding:8px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;font-weight:700;font-size:14px;cursor:pointer;">Odustani</button>
+      </div>
     `;
+    const nameInput = form.querySelector('.new-onsite-cat-name');
+    const priceInput = form.querySelector('.new-onsite-cat-price');
+    nameInput.focus();
+
+    const doAdd = () => {
+      const name = nameInput.value.trim();
+      const price = parseInt(priceInput.value || '0', 10);
+      if (!name || price <= 0) { showToast('Unesite naziv i cijenu veću od 0'); return; }
+      selectNewCategory(groupFolderId, name, price);
+    };
+
+    form.querySelector('.new-onsite-cat-add').addEventListener('click', doAdd);
+    form.querySelector('.new-onsite-cat-cancel').addEventListener('click', () => form.remove());
+    priceInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') priceInput.focus(); });
+    return form;
+  }
+
+  function createNewCategoryButton(groupFolderId) {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'width:100%;padding:10px 12px 10px 28px;border:1px dashed #0ea5e9;border-radius:0;background:transparent;color:#0ea5e9;font-weight:700;font-size:14px;cursor:pointer;text-align:left;';
+    btn.textContent = '\u2795  Nova kategorija';
+    btn.addEventListener('click', () => {
+      if (btn.nextElementSibling && btn.nextElementSibling.classList && btn.nextElementSibling.classList.contains('onsite-new-cat-form')) return;
+      const form = createInlineNewCategoryForm(groupFolderId);
+      btn.parentNode.insertBefore(form, btn.nextSibling);
+    });
+    return btn;
+  }
+
+  function renderCategoryRow(category, groupFolderId) {
+    const productIds = Array.from(category.productIds || []);
+    const productCount = productIds.length;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
+    row.innerHTML = `
+      <span style="color:#6b7280;font-size:12px;">▶</span>
+      <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(category.name)}</span>
+      <span style="color:#6b7280;font-size:12px;">${productCount} proizvod${productCount === 1 ? '' : 'a'}</span>
+      <span style="color:#6b7280;font-size:12px;">${category.price}€</span>
+    `;
+
+    const productsDiv = document.createElement('div');
+    productsDiv.style.cssText = 'display:none;';
+
+    for (const pid of productIds) {
+      const p = appState.products[pid];
+      if (!p) continue;
+      const pRow = document.createElement('div');
+      pRow.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 12px 6px 44px;cursor:pointer;transition:background 0.15s;border-top:1px solid #f3f4f6;';
+      pRow.innerHTML = `
+        <span style="font-size:13px;flex:1;">${escapeHtml(p.name)}</span>
+        <span style="color:#16a34a;font-size:12px;font-weight:600;">${Number(p.quantity || 0)} kom</span>
+      `;
+      pRow.addEventListener('mouseenter', () => { pRow.style.background = '#f9fafb'; });
+      pRow.addEventListener('mouseleave', () => { pRow.style.background = ''; });
+      pRow.addEventListener('click', () => selectProduct(category.name, category.price, p));
+      productsDiv.appendChild(pRow);
+    }
+
+    if (!productsDiv.children.length) {
+      const emptyRow = document.createElement('div');
+      emptyRow.style.cssText = 'padding:6px 12px 6px 44px;color:#9ca3af;font-size:12px;border-top:1px solid #f3f4f6;';
+      emptyRow.textContent = 'Nema proizvoda u kategoriji';
+      productsDiv.appendChild(emptyRow);
+    }
+
     row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
-    row.addEventListener('mouseleave', () => { row.style.background = '#ffffff'; });
-    row.addEventListener('click', () => selectCategory(sub));
-    body.appendChild(row);
+    row.addEventListener('mouseleave', () => { row.style.background = ''; });
+    row.addEventListener('click', () => {
+      const hidden = productsDiv.style.display === 'none';
+      productsDiv.style.display = hidden ? 'grid' : 'none';
+      row.querySelector('span:first-child').textContent = hidden ? '▼' : '▶';
+    });
+
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(row);
+    wrapper.appendChild(productsDiv);
+    return wrapper;
+  }
+
+  function renderGroupSection(groupFolder, groupFolderId) {
+    const categories = collectTransferCategories(groupFolderId);
+    const catList = Object.values(categories).sort((a, b) => a.name.localeCompare(b.name));
+
+    const groupDiv = document.createElement('div');
+    groupDiv.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:#f9fafb;';
+    header.innerHTML = `<span style="color:#6b7280;font-size:12px;">▶</span><span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(groupFolder.name)}</span><span style="color:#6b7280;font-size:12px;">${catList.length} kategorija</span>`;
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.style.cssText = 'display:none;';
+
+    for (const sub of catList) {
+      itemsDiv.appendChild(renderCategoryRow(sub, groupFolderId));
+    }
+
+    itemsDiv.appendChild(createNewCategoryButton(groupFolderId));
+
+    header.addEventListener('click', () => {
+      const hidden = itemsDiv.style.display === 'none';
+      itemsDiv.style.display = hidden ? 'grid' : 'none';
+      header.querySelector('span:first-child').textContent = hidden ? '▼' : '▶';
+    });
+
+    groupDiv.appendChild(header);
+    groupDiv.appendChild(itemsDiv);
+    return groupDiv;
   }
 
   // 1. Group folders (no price) with collected categories
@@ -6855,56 +7017,21 @@ function openOnsiteProductPicker() {
     if (extractPriceFromName(groupFolder.name) > 0) continue;
 
     const categories = collectTransferCategories(sfId);
-    const catList = Object.values(categories).sort((a, b) => a.name.localeCompare(b.name));
+    const catList = Object.values(categories);
     if (catList.length === 0) continue;
 
-    const groupDiv = document.createElement('div');
-    groupDiv.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
-
-    const header = document.createElement('div');
-    header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:#f9fafb;';
-    header.innerHTML = `<span style="color:#6b7280;font-size:12px;">\u25B6</span><span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(groupFolder.name)}</span><span style="color:#6b7280;font-size:12px;">${catList.length} kategorija</span>`;
-
-    const itemsDiv = document.createElement('div');
-    itemsDiv.style.cssText = 'display:none;';
-
-    for (const sub of catList) {
-      const productIds = Array.from(sub.productIds);
-      const available = calcAvailable(sub.name, productIds);
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
-      row.innerHTML = `
-        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(sub.name)}</span>
-        <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom</span>
-        <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
-      `;
-      row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
-      row.addEventListener('mouseleave', () => { row.style.background = ''; });
-      row.addEventListener('click', () => selectCategory(sub));
-      itemsDiv.appendChild(row);
-    }
-
-    header.addEventListener('click', () => {
-      const hidden = itemsDiv.style.display === 'none';
-      itemsDiv.style.display = hidden ? 'grid' : 'none';
-      header.querySelector('span:first-child').textContent = hidden ? '\u25BC' : '\u25B6';
-    });
-
-    groupDiv.appendChild(header);
-    groupDiv.appendChild(itemsDiv);
-    body.appendChild(groupDiv);
+    body.appendChild(renderGroupSection(groupFolder, sfId));
   }
 
-  // 2. Standalone price-category folders
+  // 2. Standalone price-category folders and root products -> group them under "Ostale kategorije"
+  const standaloneCats = [];
   for (const sfId of (rootFolder.subfolders || [])) {
     const priceFolder = appState.folders[sfId];
     if (!priceFolder || priceFolder.isIndependent) continue;
     const price = extractPriceFromName(priceFolder.name);
     if (price <= 0) continue;
-    renderStandaloneRow({ name: priceFolder.name, price, productIds: getAllProductIdsInFolder(sfId) });
+    standaloneCats.push({ name: priceFolder.name, price, productIds: getAllProductIdsInFolder(sfId) });
   }
-
-  // 3. Products directly in root
   const rootProductCats = {};
   for (const pid of (rootFolder.products || [])) {
     const p = appState.products[pid];
@@ -6915,65 +7042,55 @@ function openOnsiteProductPicker() {
     if (!rootProductCats[catName]) rootProductCats[catName] = { name: catName, price, productIds: new Set() };
     rootProductCats[catName].productIds.add(pid);
   }
-  const rootCatList = Object.values(rootProductCats).sort((a, b) => a.name.localeCompare(b.name));
-  for (const sub of rootCatList) {
-    renderStandaloneRow(sub);
+  for (const sub of Object.values(rootProductCats).sort((a, b) => a.name.localeCompare(b.name))) {
+    standaloneCats.push(sub);
+  }
+
+  if (standaloneCats.length > 0) {
+    const groupDiv = document.createElement('div');
+    groupDiv.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:#f9fafb;';
+    header.innerHTML = `<span style="color:#6b7280;font-size:12px;">▶</span><span style="font-weight:700;font-size:14px;flex:1;">Ostale kategorije</span><span style="color:#6b7280;font-size:12px;">${standaloneCats.length} kategorija</span>`;
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.style.cssText = 'display:none;';
+
+    for (const sub of standaloneCats) {
+      itemsDiv.appendChild(renderCategoryRow(sub, 'root'));
+    }
+
+    itemsDiv.appendChild(createNewCategoryButton('root'));
+
+    header.addEventListener('click', () => {
+      const hidden = itemsDiv.style.display === 'none';
+      itemsDiv.style.display = hidden ? 'grid' : 'none';
+      header.querySelector('span:first-child').textContent = hidden ? '▼' : '▶';
+    });
+
+    groupDiv.appendChild(header);
+    groupDiv.appendChild(itemsDiv);
+    body.appendChild(groupDiv);
   }
 
   if (!body.children.length) {
     body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema cjenovnih kategorija</div>';
   }
 
-  // New ad-hoc category
-  const newBtn = document.createElement('button');
-  newBtn.style.cssText = 'width:100%;padding:10px;border:1px dashed #0ea5e9;border-radius:8px;background:transparent;color:#0ea5e9;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;';
-  newBtn.textContent = '\u2795  Nova kategorija';
-  body.appendChild(newBtn);
-
-  newBtn.addEventListener('click', () => {
-    newBtn.style.display = 'none';
-    const form = document.createElement('div');
-    form.style.cssText = 'display:grid;gap:10px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:6px;';
-    form.innerHTML = `
-      <div style="font-weight:700;font-size:14px;">Nova kategorija</div>
-      <input id="new-onsite-cat-name" placeholder="Naziv kategorije (npr. Figurica 40)" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
-      <input id="new-onsite-cat-price" placeholder="Cijena (\u20AC)" type="number" min="1" step="1" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
-      <div style="display:flex;gap:8px;">
-        <button id="new-onsite-cat-add" style="flex:1;padding:8px;border-radius:8px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Dodaj</button>
-        <button id="new-onsite-cat-cancel" style="flex:1;padding:8px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;font-weight:700;font-size:14px;cursor:pointer;">Odustani</button>
-      </div>
-    `;
-    body.appendChild(form);
-
-    const nameInput = form.querySelector('#new-onsite-cat-name');
-    const priceInput = form.querySelector('#new-onsite-cat-price');
-    nameInput.focus();
-
-    const doAdd = () => {
-      const name = nameInput.value.trim();
-      const price = parseInt(priceInput.value || '0', 10);
-      if (!name || price <= 0) { showToast('Unesite naziv i cijenu veću od 0'); return; }
-      _onsitePick = {
-        shopCategory: name,
-        price,
-        productId: null,
-        productName: name,
-        isNew: true
-      };
-      closeModal();
-      updateOnsitePickDisplay();
-    };
-
-    form.querySelector('#new-onsite-cat-add').addEventListener('click', doAdd);
-    form.querySelector('#new-onsite-cat-cancel').addEventListener('click', () => {
-      form.remove();
-      newBtn.style.display = '';
-    });
-    priceInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+  // Global root-level new category
+  const globalNewBtn = document.createElement('button');
+  globalNewBtn.style.cssText = 'width:100%;padding:10px;border:1px dashed #0ea5e9;border-radius:8px;background:transparent;color:#0ea5e9;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;';
+  globalNewBtn.textContent = '\u2795  Nova kategorija';
+  globalNewBtn.addEventListener('click', () => {
+    if (globalNewBtn.nextElementSibling && globalNewBtn.nextElementSibling.classList && globalNewBtn.nextElementSibling.classList.contains('onsite-new-cat-form')) return;
+    const form = createInlineNewCategoryForm('root');
+    body.insertBefore(form, globalNewBtn.nextSibling);
   });
+  body.appendChild(globalNewBtn);
 
   openModal({
-    title: 'Odaberi kategoriju',
+    title: 'Odaberi proizvod',
     headerIcon: { symbol: '\uD83D\uDCCB', color: 'indigo' },
     body,
     actions: [
@@ -6994,8 +7111,9 @@ function renderOnSiteItems() {
   
   list.innerHTML = '';
   for (const item of items) {
-    const catInfo = getCategoryItemInfo(item.shopCategory);
-    const displayName = catInfo ? `${catInfo.item.name} (${catInfo.item.price}\u20AC)` : item.name || 'Nepoznato';
+    const displayName = item.productName && item.productName !== item.name
+      ? `${item.name} \u2014 ${item.productName}`
+      : (item.name || 'Nepoznato');
     
     const row = document.createElement('div');
     row.className = 'onsite-item';
@@ -7045,7 +7163,11 @@ function addOnSiteItem() {
   appState.pendingOnSite = appState.pendingOnSite || [];
   
   // If same product category already exists, increment qty
-  const existing = appState.pendingOnSite.find(i => i.shopCategory === _onsitePick.shopCategory);
+  // New ad-hoc categories must not merge with existing categories of the same name.
+  const isNew = !!_onsitePick.isNew;
+  const existing = appState.pendingOnSite.find(i =>
+    i.shopCategory === _onsitePick.shopCategory && !!i.isNew === isNew
+  );
   if (existing) {
     existing.qty += qty;
   } else {
@@ -7056,7 +7178,9 @@ function addOnSiteItem() {
       shopCategory: _onsitePick.shopCategory,
       name: catName,
       qty,
-      price: extractPriceFromName(catName)
+      price: extractPriceFromName(catName),
+      isNew,
+      groupFolderId: _onsitePick.groupFolderId || null
     });
   }
   
@@ -7098,9 +7222,13 @@ function executeOnSiteConfirm() {
     const catName = item.shopCategory || 'Nepoznato';
     const price = extractPriceFromName(catName);
     
-    // Add quantity to warehouse (skip for new ad-hoc categories without a product)
-    if (item.productId) {
-      const p = appState.products[item.productId];
+    // Add quantity to warehouse (create warehouse entry for new categories first)
+    let productId = item.productId;
+    if (item.isNew && item.groupFolderId) {
+      productId = ensureWarehouseCategory(item.groupFolderId, item.shopCategory, item.price);
+    }
+    if (productId) {
+      const p = appState.products[productId];
       if (p) p.quantity = Number(p.quantity || 0) + item.qty;
     }
     
