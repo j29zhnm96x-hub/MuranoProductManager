@@ -6790,82 +6790,190 @@ function updateOnsitePickDisplay() {
   }
 }
 
+function getFirstProductId(productIds) {
+  if (!productIds) return null;
+  for (const pid of productIds) return pid;
+  return null;
+}
+
 function openOnsiteProductPicker() {
   const body = document.createElement('div');
-  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
-  
-  function renderTree(folderId, depth) {
-    const folder = appState.folders[folderId];
-    if (!folder) return '';
-    let html = '';
-    
-    for (const pid of (folder.products || [])) {
+  body.style.cssText = 'display:grid;gap:8px;';
+
+  const rootFolder = appState.folders['root'];
+  if (!rootFolder) { showToast('Nema mapa'); return; }
+
+  function calcAvailable(categoryName, productIds) {
+    let totalQty = 0;
+    for (const pid of productIds) {
       const p = appState.products[pid];
-      if (!p) continue;
-      const catInfo = getCategoryItemInfo(p.shopCategory);
-      const catTag = catInfo ? `${catInfo.item.name} (${catInfo.item.price}\u20AC)` : '';
-      html += `<div class="onsite-pick-product" data-pid="${pid}" style="padding:6px 8px 6px ${depth * 16 + 16}px;display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;margin:2px 0;border-bottom:1px solid #f3f4f6;">`;
-      html += `<span style="flex:1;font-size:14px;font-weight:600;">${escapeHtml(p.name)}</span>`;
-      html += `<span style="color:#6b7280;font-size:12px;">${Number(p.quantity || 0)} kom</span>`;
-      if (catTag) html += `<span style="color:#6366f1;font-size:11px;background:#eef2ff;padding:2px 6px;border-radius:4px;">${escapeHtml(catTag)}</span>`;
-      html += `</div>`;
+      if (p) totalQty += Number(p.quantity || 0);
     }
-    
-    for (const sfId of (folder.subfolders || [])) {
-      const sf = appState.folders[sfId];
-      if (!sf) continue;
-      if (!sf.products?.length && !sf.subfolders?.length) continue;
-      html += `<div class="onsite-pick-folder" data-fid="${sfId}" style="padding:6px 8px 6px ${depth * 16}px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;font-size:14px;border-bottom:1px solid #f3f4f6;border-radius:6px;margin:2px 0;">`;
-      html += `<span style="color:#6b7280;">\u25B6</span>`;
-      html += `<span>${escapeHtml(sf.name)}</span>`;
-      html += `</div>`;
-      html += `<div class="onsite-pick-children" style="display:none;">${renderTree(sfId, depth + 1)}</div>`;
+    let alreadyTransferred = 0;
+    for (const t of (appState.transferLog || [])) {
+      if (t.masterConfirmDate) {
+        for (const item of (t.items || [])) {
+          if (item.shopCategory === categoryName) alreadyTransferred += item.qty;
+        }
+      }
     }
-    return html;
+    return Math.max(0, totalQty - alreadyTransferred);
   }
-  
-  body.innerHTML = `<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite proizvod za unos:</div>`;
-  body.innerHTML += renderTree('root', 0);
-  
-  setTimeout(() => {
-    body.querySelectorAll('.onsite-pick-folder').forEach(el => {
-      el.addEventListener('click', () => {
-        const children = el.nextElementSibling;
-        if (children && children.classList.contains('onsite-pick-children')) {
-          const hidden = children.style.display === 'none';
-          children.style.display = hidden ? 'block' : 'none';
-          const arrow = el.querySelector('span:first-child');
-          if (arrow) arrow.textContent = hidden ? '\u25BC' : '\u25B6';
-        }
-      });
+
+  function selectCategory(cat) {
+    _onsitePick = {
+      shopCategory: cat.name,
+      price: cat.price,
+      productId: getFirstProductId(cat.productIds) || null,
+      productName: cat.name
+    };
+    closeModal();
+    updateOnsitePickDisplay();
+  }
+
+  function renderStandaloneRow(sub) {
+    const productIds = Array.from(sub.productIds);
+    const available = calcAvailable(sub.name, productIds);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
+    row.innerHTML = `
+      <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(sub.name)}</span>
+      <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom raspolo\u017Eivo</span>
+      <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
+    `;
+    row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
+    row.addEventListener('mouseleave', () => { row.style.background = '#ffffff'; });
+    row.addEventListener('click', () => selectCategory(sub));
+    body.appendChild(row);
+  }
+
+  // 1. Group folders (no price) with collected categories
+  for (const sfId of (rootFolder.subfolders || [])) {
+    const groupFolder = appState.folders[sfId];
+    if (!groupFolder) continue;
+    if (groupFolder.isIndependent) continue;
+    if (extractPriceFromName(groupFolder.name) > 0) continue;
+
+    const categories = collectTransferCategories(sfId);
+    const catList = Object.values(categories).sort((a, b) => a.name.localeCompare(b.name));
+    if (catList.length === 0) continue;
+
+    const groupDiv = document.createElement('div');
+    groupDiv.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:#f9fafb;';
+    header.innerHTML = `<span style="color:#6b7280;font-size:12px;">\u25B6</span><span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(groupFolder.name)}</span><span style="color:#6b7280;font-size:12px;">${catList.length} kategorija</span>`;
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.style.cssText = 'display:none;';
+
+    for (const sub of catList) {
+      const productIds = Array.from(sub.productIds);
+      const available = calcAvailable(sub.name, productIds);
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
+      row.innerHTML = `
+        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(sub.name)}</span>
+        <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom</span>
+        <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
+      `;
+      row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
+      row.addEventListener('mouseleave', () => { row.style.background = ''; });
+      row.addEventListener('click', () => selectCategory(sub));
+      itemsDiv.appendChild(row);
+    }
+
+    header.addEventListener('click', () => {
+      const hidden = itemsDiv.style.display === 'none';
+      itemsDiv.style.display = hidden ? 'grid' : 'none';
+      header.querySelector('span:first-child').textContent = hidden ? '\u25BC' : '\u25B6';
     });
-    body.querySelectorAll('.onsite-pick-product').forEach(el => {
-      el.addEventListener('click', () => {
-        const pid = el.dataset.pid;
-        if (!pid) return;
-        const p = appState.products[pid];
-        if (!p) return;
-        
-        // Use folder name as category (same as transfer)
-        const folderName = getProductParentFolder(pid)?.name || '';
-        if (folderName) {
-          _onsitePick = {
-            productId: pid,
-            productName: p.name,
-            shopCategory: folderName,
-            price: extractPriceFromName(folderName)
-          };
-          closeModal();
-          updateOnsitePickDisplay();
-        } else {
-          showToast('Proizvod mora biti u mapi');
-        }
-      });
+
+    groupDiv.appendChild(header);
+    groupDiv.appendChild(itemsDiv);
+    body.appendChild(groupDiv);
+  }
+
+  // 2. Standalone price-category folders
+  for (const sfId of (rootFolder.subfolders || [])) {
+    const priceFolder = appState.folders[sfId];
+    if (!priceFolder || priceFolder.isIndependent) continue;
+    const price = extractPriceFromName(priceFolder.name);
+    if (price <= 0) continue;
+    renderStandaloneRow({ name: priceFolder.name, price, productIds: getAllProductIdsInFolder(sfId) });
+  }
+
+  // 3. Products directly in root
+  const rootProductCats = {};
+  for (const pid of (rootFolder.products || [])) {
+    const p = appState.products[pid];
+    if (!p) continue;
+    const catName = extractCategoryBaseName(p.name);
+    const price = extractPriceFromName(catName);
+    if (price <= 0) continue;
+    if (!rootProductCats[catName]) rootProductCats[catName] = { name: catName, price, productIds: new Set() };
+    rootProductCats[catName].productIds.add(pid);
+  }
+  const rootCatList = Object.values(rootProductCats).sort((a, b) => a.name.localeCompare(b.name));
+  for (const sub of rootCatList) {
+    renderStandaloneRow(sub);
+  }
+
+  if (!body.children.length) {
+    body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema cjenovnih kategorija</div>';
+  }
+
+  // New ad-hoc category
+  const newBtn = document.createElement('button');
+  newBtn.style.cssText = 'width:100%;padding:10px;border:1px dashed #0ea5e9;border-radius:8px;background:transparent;color:#0ea5e9;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;';
+  newBtn.textContent = '\u2795  Nova kategorija';
+  body.appendChild(newBtn);
+
+  newBtn.addEventListener('click', () => {
+    newBtn.style.display = 'none';
+    const form = document.createElement('div');
+    form.style.cssText = 'display:grid;gap:10px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:6px;';
+    form.innerHTML = `
+      <div style="font-weight:700;font-size:14px;">Nova kategorija</div>
+      <input id="new-onsite-cat-name" placeholder="Naziv kategorije (npr. Figurica 40)" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+      <input id="new-onsite-cat-price" placeholder="Cijena (\u20AC)" type="number" min="1" step="1" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+      <div style="display:flex;gap:8px;">
+        <button id="new-onsite-cat-add" style="flex:1;padding:8px;border-radius:8px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Dodaj</button>
+        <button id="new-onsite-cat-cancel" style="flex:1;padding:8px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;font-weight:700;font-size:14px;cursor:pointer;">Odustani</button>
+      </div>
+    `;
+    body.appendChild(form);
+
+    const nameInput = form.querySelector('#new-onsite-cat-name');
+    const priceInput = form.querySelector('#new-onsite-cat-price');
+    nameInput.focus();
+
+    const doAdd = () => {
+      const name = nameInput.value.trim();
+      const price = parseInt(priceInput.value || '0', 10);
+      if (!name || price <= 0) { showToast('Unesite naziv i cijenu veću od 0'); return; }
+      _onsitePick = {
+        shopCategory: name,
+        price,
+        productId: null,
+        productName: name,
+        isNew: true
+      };
+      closeModal();
+      updateOnsitePickDisplay();
+    };
+
+    form.querySelector('#new-onsite-cat-add').addEventListener('click', doAdd);
+    form.querySelector('#new-onsite-cat-cancel').addEventListener('click', () => {
+      form.remove();
+      newBtn.style.display = '';
     });
-  }, 0);
-  
+    priceInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+  });
+
   openModal({
-    title: 'Odaberi proizvod',
+    title: 'Odaberi kategoriju',
     headerIcon: { symbol: '\uD83D\uDCCB', color: 'indigo' },
     body,
     actions: [
@@ -6990,9 +7098,11 @@ function executeOnSiteConfirm() {
     const catName = item.shopCategory || 'Nepoznato';
     const price = extractPriceFromName(catName);
     
-    // Add quantity to warehouse
-    const p = appState.products[item.productId];
-    if (p) p.quantity = Number(p.quantity || 0) + item.qty;
+    // Add quantity to warehouse (skip for new ad-hoc categories without a product)
+    if (item.productId) {
+      const p = appState.products[item.productId];
+      if (p) p.quantity = Number(p.quantity || 0) + item.qty;
+    }
     
     recordInventoryEvent({
       eventType: 'onsite_production',
