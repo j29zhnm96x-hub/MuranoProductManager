@@ -4649,7 +4649,7 @@ function renderFolderList(folderId = currentFolderId) {
       const name = document.createElement('span'); name.className = 'name'; name.textContent = f.name;
       name.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
       const meta = document.createElement('div'); meta.className = 'meta';
-      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `${__('Qty:')} ${stats.totalQty}`;
+      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `Stvarno stanje: ${stats.totalQty} kom`;
       const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(stats.totalValue);
       meta.appendChild(qtyLine); meta.appendChild(valueLine);
       textCol.appendChild(name); textCol.appendChild(meta);
