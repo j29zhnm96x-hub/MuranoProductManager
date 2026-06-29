@@ -5977,35 +5977,103 @@ function getCategoryItemInfo(itemId) {
 
 function transferFromWarehouse() {
   const body = document.createElement('div');
-  body.style.cssText = 'display:grid;gap:8px;';
+  body.style.cssText = 'display:grid;gap:4px;';
   
-  body.innerHTML = '<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite kategoriju za prijenos:</div>';
+  const rootFolder = appState.folders['root'];
+  if (!rootFolder) { showToast('Nema mapa'); return; }
   
-  // Find all folders that have a price in the name (cjenovna kategorija)
-  for (const folder of Object.values(appState.folders || {})) {
-    if (folder.isIndependent) continue;
-    const price = extractPriceFromName(folder.name);
-    if (price <= 0) continue;
-    
-    // Calculate total qty in this folder + all subfolders
-    const productIds = getAllProductIdsInFolder(folder.id);
+  // Helper to calculate available for a folder
+  function calcAvailable(folderName, folderId) {
+    const prodIds = getAllProductIdsInFolder(folderId);
     let totalQty = 0;
-    for (const pid of productIds) {
-      const p = appState.products[pid];
-      if (p) totalQty += Number(p.quantity || 0);
-    }
-    if (totalQty <= 0) continue;
-    
-    // Calculate available (total - already transferred)
+    for (const pid of prodIds) { const p = appState.products[pid]; if (p) totalQty += Number(p.quantity || 0); }
     let alreadyTransferred = 0;
     for (const t of (appState.transferLog || [])) {
       if (t.masterConfirmDate) {
         for (const item of (t.items || [])) {
-          if (item.shopCategory === folder.name) alreadyTransferred += item.qty;
+          if (item.shopCategory === folderName) alreadyTransferred += item.qty;
         }
       }
     }
-    const available = Math.max(0, totalQty - alreadyTransferred);
+    return Math.max(0, totalQty - alreadyTransferred);
+  }
+  
+  // 1. Show group folders (no price) that contain price-category subfolders
+  for (const sfId of (rootFolder.subfolders || [])) {
+    const groupFolder = appState.folders[sfId];
+    if (!groupFolder) continue;
+    if (groupFolder.isIndependent) continue;
+    const directPrice = extractPriceFromName(groupFolder.name);
+    if (directPrice > 0) continue; // This IS a price category — skip
+    
+    // Check for price-category subfolders
+    const priceSubs = [];
+    for (const childId of (groupFolder.subfolders || [])) {
+      const child = appState.folders[childId];
+      if (!child) continue;
+      const price = extractPriceFromName(child.name);
+      if (price <= 0) continue;
+      const available = calcAvailable(child.name, childId);
+      priceSubs.push({ name: child.name, price, available, id: childId });
+    }
+    if (priceSubs.length === 0) continue;
+    
+    const groupDiv = document.createElement('div');
+    groupDiv.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
+    
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:#f9fafb;';
+    header.innerHTML = `<span style="color:#6b7280;font-size:12px;">\u25B6</span><span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(groupFolder.name)}</span><span style="color:#6b7280;font-size:12px;">${priceSubs.length} kategorija</span>`;
+    
+    const itemsDiv = document.createElement('div');
+    itemsDiv.style.cssText = 'display:none;';
+    
+    for (const sub of priceSubs) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
+      row.innerHTML = `
+        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(sub.name)}</span>
+        <span style="color:#16a34a;font-size:12px;font-weight:600;">${sub.available} kom</span>
+        <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
+      `;
+      row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
+      row.addEventListener('mouseleave', () => { row.style.background = ''; });
+      row.addEventListener('click', () => openTransferQtyModalForCategory(sub.name, sub.available));
+      itemsDiv.appendChild(row);
+    }
+    
+    header.addEventListener('click', () => {
+      const hidden = itemsDiv.style.display === 'none';
+      itemsDiv.style.display = hidden ? 'grid' : 'none';
+      header.querySelector('span:first-child').textContent = hidden ? '\u25BC' : '\u25B6';
+    });
+    
+    groupDiv.appendChild(header);
+    groupDiv.appendChild(itemsDiv);
+    body.appendChild(groupDiv);
+  }
+  
+  // 2. Show price-category folders directly at root level (not in a group)
+  for (const sfId of (rootFolder.subfolders || [])) {
+    const folder = appState.folders[sfId];
+    if (!folder) continue;
+    if (folder.isIndependent) continue;
+    const price = extractPriceFromName(folder.name);
+    if (price <= 0) continue; // Not a price category
+    
+    // Check if this is nested in a group folder that was already shown
+    let isInGroup = false;
+    for (const gfId of (rootFolder.subfolders || [])) {
+      const gf = appState.folders[gfId];
+      if (gf && gf.subfolders?.includes(sfId) && extractPriceFromName(gf.name) === 0) {
+        isInGroup = true;
+        break;
+      }
+    }
+    if (isInGroup) continue; // Already shown under a group
+    
+    const available = calcAvailable(folder.name, sfId);
+    if (available <= 0) continue;
     
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
@@ -6020,7 +6088,7 @@ function transferFromWarehouse() {
     body.appendChild(row);
   }
   
-  if (!body.querySelector('div[style*="border"]')) {
+  if (!body.children.length) {
     body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema cjenovnih kategorija za prijenos</div>';
   }
   
