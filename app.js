@@ -4656,14 +4656,6 @@ function renderFolderList(folderId = currentFolderId) {
       name.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
       const meta = document.createElement('div'); meta.className = 'meta';
       
-      // Ukupno proizvedeno (total ever produced from history)
-      const folderProductIds = getAllProductIdsInFolder ? getAllProductIdsInFolder(fid) : new Set((f.products || []).map(id => id));
-      let ukProizvedeno = 0;
-      for (const entry of (appState.productionLog || [])) {
-        if (folderProductIds.has(entry.productId) && (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production')) {
-          ukProizvedeno += safeHistoryNumber(entry.delta);
-        }
-      }
       // Raspoloživo = ukupno u mapi - već prebačeno u prodaju
       let alreadyTransferred = 0;
       for (const t of (appState.transferLog || [])) {
@@ -4674,6 +4666,8 @@ function renderFolderList(folderId = currentFolderId) {
         }
       }
       const raspolozivo = Math.max(0, stats.totalQty - alreadyTransferred);
+      // Ukupno proizvedeno = real total ever in warehouse = current stock + confirmed transfers out
+      const ukProizvedeno = stats.totalQty + alreadyTransferred;
       
       const ukLine = document.createElement('div'); ukLine.className = 'meta-qty'; ukLine.textContent = `Uk. proizvedeno: ${ukProizvedeno} kom`;
       const razLine = document.createElement('div'); razLine.className = 'meta-qty'; razLine.textContent = `Raspoloživo: ${raspolozivo} kom`;
@@ -5975,13 +5969,30 @@ function getCategoryItemInfo(itemId) {
 
 // ── Transfer from Warehouse ────────────────────────────────────
 
+function findPriceCategoriesRecursive(folderId) {
+  const results = [];
+  const folder = appState.folders[folderId];
+  if (!folder || folder.isIndependent) return results;
+
+  for (const sfId of (folder.subfolders || [])) {
+    const sub = appState.folders[sfId];
+    if (!sub || sub.isIndependent) continue;
+    const price = extractPriceFromName(sub.name);
+    if (price > 0) {
+      results.push({ id: sfId, name: sub.name, price });
+    }
+    results.push(...findPriceCategoriesRecursive(sfId));
+  }
+  return results;
+}
+
 function transferFromWarehouse() {
   const body = document.createElement('div');
   body.style.cssText = 'display:grid;gap:4px;';
-  
+
   const rootFolder = appState.folders['root'];
   if (!rootFolder) { showToast('Nema mapa'); return; }
-  
+
   // Helper to calculate available for a folder
   function calcAvailable(folderName, folderId) {
     const prodIds = getAllProductIdsInFolder(folderId);
@@ -5997,101 +6008,93 @@ function transferFromWarehouse() {
     }
     return Math.max(0, totalQty - alreadyTransferred);
   }
-  
-  // 1. Show group folders (no price) that contain price-category subfolders
+
+  // Helper: is a folder nested under a non-price (group) root subfolder?
+  function isUnderGroupFolder(folderId) {
+    let cur = folderId;
+    while (cur && cur !== 'root') {
+      const f = appState.folders[cur];
+      const parentId = f?.parentId;
+      if (parentId === 'root') {
+        const rootChild = appState.folders[cur];
+        if (rootChild && !rootChild.isIndependent && extractPriceFromName(rootChild.name) === 0) {
+          return true;
+        }
+        return false;
+      }
+      cur = parentId;
+    }
+    return false;
+  }
+
+  // 1. Show group folders (no price) that contain price-category subfolders at any depth
   for (const sfId of (rootFolder.subfolders || [])) {
     const groupFolder = appState.folders[sfId];
     if (!groupFolder) continue;
     if (groupFolder.isIndependent) continue;
-    const directPrice = extractPriceFromName(groupFolder.name);
-    if (directPrice > 0) continue; // This IS a price category — skip
-    
-    // Check for price-category subfolders
-    const priceSubs = [];
-    for (const childId of (groupFolder.subfolders || [])) {
-      const child = appState.folders[childId];
-      if (!child) continue;
-      const price = extractPriceFromName(child.name);
-      if (price <= 0) continue;
-      const available = calcAvailable(child.name, childId);
-      priceSubs.push({ name: child.name, price, available, id: childId });
-    }
+    if (extractPriceFromName(groupFolder.name) > 0) continue; // This IS a price category — handled below
+
+    const priceSubs = findPriceCategoriesRecursive(sfId);
     if (priceSubs.length === 0) continue;
-    
+
     const groupDiv = document.createElement('div');
     groupDiv.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
-    
+
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:#f9fafb;';
     header.innerHTML = `<span style="color:#6b7280;font-size:12px;">\u25B6</span><span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(groupFolder.name)}</span><span style="color:#6b7280;font-size:12px;">${priceSubs.length} kategorija</span>`;
-    
+
     const itemsDiv = document.createElement('div');
     itemsDiv.style.cssText = 'display:none;';
-    
+
     for (const sub of priceSubs) {
+      const available = calcAvailable(sub.name, sub.id);
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
       row.innerHTML = `
         <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(sub.name)}</span>
-        <span style="color:#16a34a;font-size:12px;font-weight:600;">${sub.available} kom</span>
+        <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom</span>
         <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
       `;
       row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
       row.addEventListener('mouseleave', () => { row.style.background = ''; });
-      row.addEventListener('click', () => openTransferQtyModalForCategory(sub.name, sub.available));
+      row.addEventListener('click', () => openTransferQtyModalForCategory(sub.name, available));
       itemsDiv.appendChild(row);
     }
-    
+
     header.addEventListener('click', () => {
       const hidden = itemsDiv.style.display === 'none';
       itemsDiv.style.display = hidden ? 'grid' : 'none';
       header.querySelector('span:first-child').textContent = hidden ? '\u25BC' : '\u25B6';
     });
-    
+
     groupDiv.appendChild(header);
     groupDiv.appendChild(itemsDiv);
     body.appendChild(groupDiv);
   }
-  
-  // 2. Show price-category folders directly at root level (not in a group)
-  for (const sfId of (rootFolder.subfolders || [])) {
-    const folder = appState.folders[sfId];
-    if (!folder) continue;
-    if (folder.isIndependent) continue;
-    const price = extractPriceFromName(folder.name);
-    if (price <= 0) continue; // Not a price category
-    
-    // Check if this is nested in a group folder that was already shown
-    let isInGroup = false;
-    for (const gfId of (rootFolder.subfolders || [])) {
-      const gf = appState.folders[gfId];
-      if (gf && gf.subfolders?.includes(sfId) && extractPriceFromName(gf.name) === 0) {
-        isInGroup = true;
-        break;
-      }
-    }
-    if (isInGroup) continue; // Already shown under a group
-    
-    const available = calcAvailable(folder.name, sfId);
-    if (available <= 0) continue;
-    
+
+  // 2. Show price-category folders not already shown under a group folder
+  const standalonePriceCats = findPriceCategoriesRecursive('root').filter(cat => !isUnderGroupFolder(cat.id));
+  for (const sub of standalonePriceCats) {
+    const available = calcAvailable(sub.name, sub.id);
+
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
     row.innerHTML = `
-      <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(folder.name)}</span>
+      <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(sub.name)}</span>
       <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom raspolo\u017Eivo</span>
-      <span style="color:#6b7280;font-size:12px;">${price}\u20AC</span>
+      <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
     `;
     row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
     row.addEventListener('mouseleave', () => { row.style.background = '#ffffff'; });
-    row.addEventListener('click', () => openTransferQtyModalForCategory(folder.name, available));
+    row.addEventListener('click', () => openTransferQtyModalForCategory(sub.name, available));
     body.appendChild(row);
   }
-  
+
   if (!body.children.length) {
     body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema cjenovnih kategorija za prijenos</div>';
   }
-  
+
   openModal({
     title: 'Prijenos u prodaju',
     headerIcon: { symbol: '\uD83D\uDCE6', color: 'blue' },
