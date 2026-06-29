@@ -5927,11 +5927,10 @@ function renderShopInventory() {
     const pendingGroups = {};
     for (let i = 0; i < pending.length; i++) {
       const p = pending[i];
-      const prod = appState.products[p.productId];
-      const catInfo = getCategoryItemInfo(p.shopCategory);
+      const catName = p.shopCategory || 'Nepoznato';
       const key = p.shopCategory || '__unknown';
-      if (!pendingGroups[key]) pendingGroups[key] = { catName: catInfo ? catInfo.item.name : p.shopCategory || 'Nepoznato', items: [] };
-      pendingGroups[key].items.push({ index: i, name: prod?.name || '?', qty: p.qty });
+      if (!pendingGroups[key]) pendingGroups[key] = { catName, items: [] };
+      pendingGroups[key].items.push({ index: i, name: p.productName || catName, qty: p.qty });
     }
     for (const [key, g] of Object.entries(pendingGroups)) {
       const section = document.createElement('div');
@@ -5980,76 +5979,107 @@ function transferFromWarehouse() {
   const body = document.createElement('div');
   body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
   
-  // Folder tree
-  function renderTree(folderId, depth) {
-    const folder = appState.folders[folderId];
-    if (!folder) return '';
-    let html = '';
+  body.innerHTML = '<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite kategoriju za prijenos:</div>';
+  
+  // Collect all non-independent folders with products
+  const allFolders = Object.values(appState.folders || {}).filter(f => !f.isIndependent && f.products?.length);
+  
+  for (const folder of allFolders) {
+    const stats = computeStats(folder.id);
+    if (stats.totalQty <= 0) continue;
     
-    // Products in this folder
-    for (const pid of (folder.products || [])) {
-      const p = appState.products[pid];
-      if (!p || Number(p.quantity || 0) <= 0) continue;
-      if (isProductInIndependentFolder(pid)) continue;
-      const catInfo = getCategoryItemInfo(p.shopCategory);
-      const catName = catInfo ? `${catInfo.group.name} / ${catInfo.item.name}` : '';
-      html += `<div class="transfer-product" data-pid="${pid}" style="padding:6px 8px 6px ${depth * 16 + 16}px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;margin:2px 0;">`;
-      html += `<span style="flex:1;font-size:14px;">${escapeHtml(p.name)}</span>`;
-      html += `<span style="color:#6b7280;font-size:12px;font-weight:600;">${Number(p.quantity || 0)} kom</span>`;
-      if (catName) html += `<span style="color:#0ea5e9;font-size:11px;background:#e0f2fe;padding:2px 6px;border-radius:4px;">${escapeHtml(catName)}</span>`;
-      html += `<span style="color:#9ca3af;font-size:12px;">${formatCurrency(Number(p.price || 0) * Number(p.quantity || 0))}</span>`;
-      html += '</div>';
+    // Calculate available (total - already transferred)
+    let alreadyTransferred = 0;
+    for (const t of (appState.transferLog || [])) {
+      if (t.masterConfirmDate) {
+        for (const item of (t.items || [])) {
+          if (item.shopCategory === folder.name) alreadyTransferred += item.qty;
+        }
+      }
     }
+    const available = Math.max(0, stats.totalQty - alreadyTransferred);
     
-    // Subfolders
-    for (const sfId of (folder.subfolders || [])) {
-      const sf = appState.folders[sfId];
-      if (!sf) continue;
-      if (sf.isIndependent) continue;
-      if (!sf.products?.length && !sf.subfolders?.length) continue;
-      html += `<div class="transfer-folder" data-fid="${sfId}" style="padding:6px 8px 6px ${depth * 16}px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:14px;border-bottom:1px solid #f3f4f6;border-radius:6px;margin:2px 0;">`;
-      html += `<span style="color:#6b7280;">\u25B6</span>`;
-      html += `<span>${escapeHtml(sf.name)}</span>`;
-      html += `</div>`;
-      // Child products
-      html += `<div class="transfer-children" style="display:none;">${renderTree(sfId, depth + 1)}</div>`;
-    }
-    
-    return html;
+    const price = extractPriceFromName(folder.name);
+    const row = document.createElement('div');
+    row.className = 'transfer-folder-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
+    row.innerHTML = `
+      <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(folder.name)}</span>
+      <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom raspolo\u017Eivo</span>
+      ${price > 0 ? `<span style="color:#6b7280;font-size:12px;">${price}\u20AC</span>` : ''}
+    `;
+    row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
+    row.addEventListener('mouseleave', () => { row.style.background = '#ffffff'; });
+    row.addEventListener('click', () => openTransferQtyModalForCategory(folder.name, available));
+    body.appendChild(row);
   }
   
-  body.innerHTML = `<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite proizvod za prijenos:</div>` + renderTree('root', 0);
-  
-  // Add click handlers
-  setTimeout(() => {
-    body.querySelectorAll('.transfer-folder').forEach(el => {
-      el.addEventListener('click', () => {
-        const children = el.nextElementSibling;
-        if (children && children.classList.contains('transfer-children')) {
-          const isHidden = children.style.display === 'none';
-          children.style.display = isHidden ? 'block' : 'none';
-          const arrow = el.querySelector('span:first-child');
-          if (arrow) arrow.textContent = isHidden ? '\u25BC' : '\u25B6';
-        }
-      });
-    });
-    
-    body.querySelectorAll('.transfer-product').forEach(el => {
-      el.addEventListener('click', () => {
-        const pid = el.dataset.pid;
-        if (!pid) return;
-        const p = appState.products[pid];
-        if (!p) return;
-        openTransferQtyModal(pid);
-      });
-    });
-  }, 0);
+  if (!body.querySelector('.transfer-folder-row')) {
+    body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema proizvoda za prijenos</div>';
+  }
   
   openModal({
-    title: __('Transfer from Warehouse') || 'Prijenos iz skladišta',
+    title: 'Prijenos u prodaju',
+    headerIcon: { symbol: '\uD83D\uDCE6', color: 'blue' },
+    body,
+    actions: [{ label: __('Cancel'), tone: 'secondary' }]
+  });
+}
+
+function openTransferQtyModalForCategory(catName, available) {
+  if (available <= 0) { showToast('Nema raspolo\u017Eive koli\u010Dine'); return; }
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:12px;max-width:400px;';
+  
+  const price = extractPriceFromName(catName);
+  body.innerHTML = `
+    <div style="font-weight:700;font-size:16px;">${escapeHtml(catName)}</div>
+    <div style="color:#16a34a;font-size:14px;background:#f0fdf4;padding:6px 10px;border-radius:6px;">Raspolo\u017Eivo: <strong>${available} kom</strong></div>
+    ${price > 0 ? `<div style="color:#6b7280;font-size:13px;">Cijena: <strong>${price}\u20AC</strong></div>` : ''}
+    <label style="display:grid;gap:4px;">
+      <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
+      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" value="${Math.min(available, 1)}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+    </label>
+  `;
+  
+  openModal({
+    title: 'Prijenos u prodaju',
     headerIcon: { symbol: '\uD83D\uDCE6', color: 'blue' },
     body,
     actions: [
+      { label: 'Dodaj u prijenos', onClick: () => {
+        const qty = parseInt(body.querySelector('#transfer-qty')?.value || '0', 10);
+        if (qty <= 0 || qty > available) { showToast('Neispravna koli\u010Dina'); return; }
+        
+        // Add to pending transfers (no warehouse deduction)
+        appState.pendingTransfers = appState.pendingTransfers || [];
+        appState.pendingOnSite = appState.pendingOnSite || [];
+        appState.pendingTransfers.push({
+          productId: null,
+          qty,
+          shopCategory: catName,
+          addedAt: Date.now()
+        });
+        
+        // Log in history
+        recordInventoryEvent({
+          eventType: 'transfer_to_shop',
+          productId: null,
+          productName: catName,
+          delta: -qty,
+          price,
+          value: -qty * price,
+          source: 'transfer',
+          note: `Transferred ${qty} kom: ${catName}`
+        });
+        
+        saveStateDebounced();
+        renderAll();
+        renderShopInventory();
+        showToast(`Preneseno ${qty} kom: ${catName}`);
+        closeModal();
+      }},
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
