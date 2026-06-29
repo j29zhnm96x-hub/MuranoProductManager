@@ -1919,6 +1919,12 @@ function confirmDeleteFolder(folderId) {
 }
 
 // ---------------------------- Dynamic Link Helpers ----------------------------
+function extractPriceFromName(name) {
+  if (!name) return 0;
+  const nums = name.match(/\d+/g);
+  return nums ? parseInt(nums[nums.length - 1], 10) : 0;
+}
+
 function getProductParentFolder(productId) {
   for (const fid in appState.folders) {
     const f = appState.folders[fid];
@@ -4649,9 +4655,30 @@ function renderFolderList(folderId = currentFolderId) {
       const name = document.createElement('span'); name.className = 'name'; name.textContent = f.name;
       name.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
       const meta = document.createElement('div'); meta.className = 'meta';
-      const qtyLine = document.createElement('div'); qtyLine.className = 'meta-qty'; qtyLine.textContent = `Stvarno stanje: ${stats.totalQty} kom`;
+      
+      // Ukupno proizvedeno (total ever produced from history)
+      const folderProductIds = getAllProductIdsInFolder ? getAllProductIdsInFolder(fid) : new Set((f.products || []).map(id => id));
+      let ukProizvedeno = 0;
+      for (const entry of (appState.productionLog || [])) {
+        if (folderProductIds.has(entry.productId) && (entry.eventType === 'manual_add' || entry.eventType === 'onsite_production')) {
+          ukProizvedeno += safeHistoryNumber(entry.delta);
+        }
+      }
+      // Raspoloživo = ukupno u mapi - već prebačeno u prodaju
+      let alreadyTransferred = 0;
+      for (const t of (appState.transferLog || [])) {
+        if (t.masterConfirmDate) {
+          for (const item of (t.items || [])) {
+            if (item.shopCategory === f.name) alreadyTransferred += item.qty;
+          }
+        }
+      }
+      const raspolozivo = Math.max(0, stats.totalQty - alreadyTransferred);
+      
+      const ukLine = document.createElement('div'); ukLine.className = 'meta-qty'; ukLine.textContent = `Uk. proizvedeno: ${ukProizvedeno} kom`;
+      const razLine = document.createElement('div'); razLine.className = 'meta-qty'; razLine.textContent = `Raspoloživo: ${raspolozivo} kom`;
       const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(stats.totalValue);
-      meta.appendChild(qtyLine); meta.appendChild(valueLine);
+      meta.appendChild(ukLine); meta.appendChild(razLine); meta.appendChild(valueLine);
       textCol.appendChild(name); textCol.appendChild(meta);
       left.appendChild(icon); left.appendChild(textCol);
       left.style.cursor = 'pointer'; left.addEventListener('click', () => { currentFolderId = fid; renderAll(); });
