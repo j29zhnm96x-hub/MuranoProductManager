@@ -5969,21 +5969,45 @@ function getCategoryItemInfo(itemId) {
 
 // ── Transfer from Warehouse ────────────────────────────────────
 
-function findPriceCategoriesRecursive(folderId) {
-  const results = [];
-  const folder = appState.folders[folderId];
-  if (!folder || folder.isIndependent) return results;
+function extractCategoryBaseName(name) {
+  if (!name) return '';
+  const match = name.match(/^(.*?\d+)/);
+  return match ? match[0].trim() : name;
+}
 
-  for (const sfId of (folder.subfolders || [])) {
-    const sub = appState.folders[sfId];
-    if (!sub || sub.isIndependent) continue;
-    const price = extractPriceFromName(sub.name);
-    if (price > 0) {
-      results.push({ id: sfId, name: sub.name, price });
+function collectTransferCategories(folderId) {
+  const folder = appState.folders[folderId];
+  if (!folder || folder.isIndependent) return {};
+  const folderPrice = extractPriceFromName(folder.name);
+  const result = {};
+
+  if (folderPrice > 0) {
+    // This folder itself is a price category
+    const catName = folder.name;
+    const ids = getAllProductIdsInFolder(folderId);
+    result[catName] = { name: catName, price: folderPrice, productIds: ids };
+  } else {
+    // Direct products in this folder become product-based categories
+    for (const pid of (folder.products || [])) {
+      const p = appState.products[pid];
+      if (!p) continue;
+      const catName = extractCategoryBaseName(p.name);
+      const price = extractPriceFromName(catName);
+      if (price <= 0) continue;
+      if (!result[catName]) result[catName] = { name: catName, price, productIds: new Set() };
+      result[catName].productIds.add(pid);
     }
-    results.push(...findPriceCategoriesRecursive(sfId));
+    // Recurse into subfolders and merge results
+    for (const sfId of (folder.subfolders || [])) {
+      const sub = collectTransferCategories(sfId);
+      for (const [name, data] of Object.entries(sub)) {
+        if (!result[name]) result[name] = { name, price: data.price, productIds: new Set() };
+        data.productIds.forEach(id => result[name].productIds.add(id));
+      }
+    }
   }
-  return results;
+
+  return result;
 }
 
 function transferFromWarehouse() {
@@ -5993,62 +6017,63 @@ function transferFromWarehouse() {
   const rootFolder = appState.folders['root'];
   if (!rootFolder) { showToast('Nema mapa'); return; }
 
-  // Helper to calculate available for a folder
-  function calcAvailable(folderName, folderId) {
-    const prodIds = getAllProductIdsInFolder(folderId);
+  function calcAvailable(categoryName, productIds) {
     let totalQty = 0;
-    for (const pid of prodIds) { const p = appState.products[pid]; if (p) totalQty += Number(p.quantity || 0); }
+    for (const pid of productIds) {
+      const p = appState.products[pid];
+      if (p) totalQty += Number(p.quantity || 0);
+    }
     let alreadyTransferred = 0;
     for (const t of (appState.transferLog || [])) {
       if (t.masterConfirmDate) {
         for (const item of (t.items || [])) {
-          if (item.shopCategory === folderName) alreadyTransferred += item.qty;
+          if (item.shopCategory === categoryName) alreadyTransferred += item.qty;
         }
       }
     }
     return Math.max(0, totalQty - alreadyTransferred);
   }
 
-  // Helper: is a folder nested under a non-price (group) root subfolder?
-  function isUnderGroupFolder(folderId) {
-    let cur = folderId;
-    while (cur && cur !== 'root') {
-      const f = appState.folders[cur];
-      const parentId = f?.parentId;
-      if (parentId === 'root') {
-        const rootChild = appState.folders[cur];
-        if (rootChild && !rootChild.isIndependent && extractPriceFromName(rootChild.name) === 0) {
-          return true;
-        }
-        return false;
-      }
-      cur = parentId;
-    }
-    return false;
+  function renderStandaloneRow(sub) {
+    const productIds = Array.from(sub.productIds);
+    const available = calcAvailable(sub.name, productIds);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
+    row.innerHTML = `
+      <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(sub.name)}</span>
+      <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom raspolo\u017Eivo</span>
+      <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
+    `;
+    row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
+    row.addEventListener('mouseleave', () => { row.style.background = '#ffffff'; });
+    row.addEventListener('click', () => openTransferQtyModalForCategory(sub.name, available));
+    body.appendChild(row);
   }
 
-  // 1. Show group folders (no price) that contain price-category subfolders at any depth
+  // 1. Group folders (no price) with collected categories
   for (const sfId of (rootFolder.subfolders || [])) {
     const groupFolder = appState.folders[sfId];
     if (!groupFolder) continue;
     if (groupFolder.isIndependent) continue;
-    if (extractPriceFromName(groupFolder.name) > 0) continue; // This IS a price category — handled below
+    if (extractPriceFromName(groupFolder.name) > 0) continue;
 
-    const priceSubs = findPriceCategoriesRecursive(sfId);
-    if (priceSubs.length === 0) continue;
+    const categories = collectTransferCategories(sfId);
+    const catList = Object.values(categories).sort((a, b) => a.name.localeCompare(b.name));
+    if (catList.length === 0) continue;
 
     const groupDiv = document.createElement('div');
     groupDiv.style.cssText = 'background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;';
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:#f9fafb;';
-    header.innerHTML = `<span style="color:#6b7280;font-size:12px;">\u25B6</span><span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(groupFolder.name)}</span><span style="color:#6b7280;font-size:12px;">${priceSubs.length} kategorija</span>`;
+    header.innerHTML = `<span style="color:#6b7280;font-size:12px;">\u25B6</span><span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(groupFolder.name)}</span><span style="color:#6b7280;font-size:12px;">${catList.length} kategorija</span>`;
 
     const itemsDiv = document.createElement('div');
     itemsDiv.style.cssText = 'display:none;';
 
-    for (const sub of priceSubs) {
-      const available = calcAvailable(sub.name, sub.id);
+    for (const sub of catList) {
+      const productIds = Array.from(sub.productIds);
+      const available = calcAvailable(sub.name, productIds);
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
       row.innerHTML = `
@@ -6073,22 +6098,29 @@ function transferFromWarehouse() {
     body.appendChild(groupDiv);
   }
 
-  // 2. Show price-category folders not already shown under a group folder
-  const standalonePriceCats = findPriceCategoriesRecursive('root').filter(cat => !isUnderGroupFolder(cat.id));
-  for (const sub of standalonePriceCats) {
-    const available = calcAvailable(sub.name, sub.id);
+  // 2. Standalone price-category folders
+  for (const sfId of (rootFolder.subfolders || [])) {
+    const priceFolder = appState.folders[sfId];
+    if (!priceFolder || priceFolder.isIndependent) continue;
+    const price = extractPriceFromName(priceFolder.name);
+    if (price <= 0) continue;
+    renderStandaloneRow({ name: priceFolder.name, price, productIds: getAllProductIdsInFolder(sfId) });
+  }
 
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
-    row.innerHTML = `
-      <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(sub.name)}</span>
-      <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom raspolo\u017Eivo</span>
-      <span style="color:#6b7280;font-size:12px;">${sub.price}\u20AC</span>
-    `;
-    row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
-    row.addEventListener('mouseleave', () => { row.style.background = '#ffffff'; });
-    row.addEventListener('click', () => openTransferQtyModalForCategory(sub.name, available));
-    body.appendChild(row);
+  // 3. Products directly in root
+  const rootProductCats = {};
+  for (const pid of (rootFolder.products || [])) {
+    const p = appState.products[pid];
+    if (!p) continue;
+    const catName = extractCategoryBaseName(p.name);
+    const price = extractPriceFromName(catName);
+    if (price <= 0) continue;
+    if (!rootProductCats[catName]) rootProductCats[catName] = { name: catName, price, productIds: new Set() };
+    rootProductCats[catName].productIds.add(pid);
+  }
+  const rootCatList = Object.values(rootProductCats).sort((a, b) => a.name.localeCompare(b.name));
+  for (const sub of rootCatList) {
+    renderStandaloneRow(sub);
   }
 
   if (!body.children.length) {
