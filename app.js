@@ -6707,70 +6707,19 @@ function openOnsiteProductPicker() {
         const p = appState.products[pid];
         if (!p) return;
         
-        // Find best matching category
-        let targetCat = p.shopCategory;
-        if (!targetCat) {
-          // Auto-match by price
-          const prodPrice = Number(p.price || 0);
-          for (const cat of (appState.shopCategories || [])) {
-            for (const item of (cat.items || [])) {
-              if (item.price === prodPrice) {
-                targetCat = item.id;
-                break;
-              }
-            }
-            if (targetCat) break;
-          }
-        }
-        
-        if (targetCat) {
-          const catInfo = getCategoryItemInfo(targetCat);
+        // Use folder name as category (same as transfer)
+        const folderName = getProductParentFolder(pid)?.name || '';
+        if (folderName) {
           _onsitePick = {
             productId: pid,
             productName: p.name,
-            shopCategory: targetCat,
-            price: catInfo ? catInfo.item.price : Number(p.price || 0)
+            shopCategory: folderName,
+            price: extractPriceFromName(folderName)
           };
           closeModal();
           updateOnsitePickDisplay();
         } else {
-          // No matching category found - let user pick
-          closeModal();
-          const pickBody = document.createElement('div');
-          pickBody.style.cssText = 'display:grid;gap:10px;';
-          pickBody.innerHTML = `<div style="font-size:14px;">Proizvod <strong>${escapeHtml(p.name)}</strong> (${Number(p.price || 0)}\u20AC) nema kategoriju prodaje. Odaberite:</div>`;
-          const catSelect = document.createElement('select');
-          catSelect.style.cssText = 'padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;';
-          catSelect.innerHTML = '<option value="">-- odaberite --</option>';
-          for (const cat of (appState.shopCategories || [])) {
-            for (const item of (cat.items || [])) {
-              const opt = document.createElement('option');
-              opt.value = item.id;
-              opt.textContent = `${cat.name} / ${item.name} (${item.price}\u20AC)`;
-              catSelect.appendChild(opt);
-            }
-          }
-          pickBody.appendChild(catSelect);
-          openModal({
-            title: 'Odaberi kategoriju',
-            headerIcon: { symbol: '\uD83C\uDFEA', color: 'slate' },
-            body: pickBody,
-            actions: [
-              { label: 'Potvrdi', onClick: () => {
-                  if (!catSelect.value) { showToast('Odaberite kategoriju'); return; }
-                  const ci = getCategoryItemInfo(catSelect.value);
-                  _onsitePick = {
-                    productId: pid,
-                    productName: p.name,
-                    shopCategory: catSelect.value,
-                    price: ci ? ci.item.price : Number(p.price || 0)
-                  };
-                  closeModal();
-                  updateOnsitePickDisplay();
-              }},
-              { label: __('Cancel'), tone: 'secondary' }
-            ]
-          });
+          showToast('Proizvod mora biti u mapi');
         }
       });
     });
@@ -6844,8 +6793,7 @@ function addOnSiteItem() {
   const qty = parseInt(qtyInput.value || '0', 10);
   if (qty <= 0) { showToast('Unesite ispravnu koli\u010dinu'); return; }
   
-  const catInfo = getCategoryItemInfo(_onsitePick.shopCategory);
-  const catName = catInfo ? catInfo.item.name : 'Nepoznato';
+  const catName = _onsitePick.shopCategory || 'Nepoznato';
   
   appState.pendingOnSite = appState.pendingOnSite || [];
   
@@ -6861,7 +6809,7 @@ function addOnSiteItem() {
       shopCategory: _onsitePick.shopCategory,
       name: catName,
       qty,
-      price: _onsitePick.price
+      price: extractPriceFromName(catName)
     });
   }
   
@@ -6900,23 +6848,27 @@ function executeOnSiteConfirm() {
   // Log each item in productionLog and add to onSiteProduction
   const logItems = [];
   for (const item of items) {
-    const catInfo = getCategoryItemInfo(item.shopCategory);
-    const itemName = catInfo ? catInfo.item.name : 'Nepoznato';
+    const catName = item.shopCategory || 'Nepoznato';
+    const price = extractPriceFromName(catName);
+    
+    // Add quantity to warehouse
+    const p = appState.products[item.productId];
+    if (p) p.quantity = Number(p.quantity || 0) + item.qty;
     
     recordInventoryEvent({
       eventType: 'onsite_production',
       delta: item.qty,
-      price: catInfo ? catInfo.item.price : 0,
-      value: item.qty * (catInfo ? catInfo.item.price : 0),
+      price,
+      value: item.qty * price,
       source: 'onsite',
-      note: `On-site production: ${item.qty} x ${itemName}`
+      note: `On-site production: ${item.qty} x ${catName}`
     });
     
     logItems.push({
       shopCategory: item.shopCategory,
       qty: item.qty,
-      name: itemName,
-      price: catInfo ? catInfo.item.price : 0
+      name: catName,
+      price
     });
   }
   
