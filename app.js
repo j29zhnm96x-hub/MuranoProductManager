@@ -5977,16 +5977,24 @@ function getCategoryItemInfo(itemId) {
 
 function transferFromWarehouse() {
   const body = document.createElement('div');
-  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  body.style.cssText = 'display:grid;gap:8px;';
   
   body.innerHTML = '<div style="padding:4px 0;font-weight:600;font-size:14px;color:#374151;">Odaberite kategoriju za prijenos:</div>';
   
-  // Collect all non-independent folders with products
-  const allFolders = Object.values(appState.folders || {}).filter(f => !f.isIndependent && f.products?.length);
-  
-  for (const folder of allFolders) {
-    const stats = computeStats(folder.id);
-    if (stats.totalQty <= 0) continue;
+  // Find all folders that have a price in the name (cjenovna kategorija)
+  for (const folder of Object.values(appState.folders || {})) {
+    if (folder.isIndependent) continue;
+    const price = extractPriceFromName(folder.name);
+    if (price <= 0) continue;
+    
+    // Calculate total qty in this folder + all subfolders
+    const productIds = getAllProductIdsInFolder(folder.id);
+    let totalQty = 0;
+    for (const pid of productIds) {
+      const p = appState.products[pid];
+      if (p) totalQty += Number(p.quantity || 0);
+    }
+    if (totalQty <= 0) continue;
     
     // Calculate available (total - already transferred)
     let alreadyTransferred = 0;
@@ -5997,16 +6005,14 @@ function transferFromWarehouse() {
         }
       }
     }
-    const available = Math.max(0, stats.totalQty - alreadyTransferred);
+    const available = Math.max(0, totalQty - alreadyTransferred);
     
-    const price = extractPriceFromName(folder.name);
     const row = document.createElement('div');
-    row.className = 'transfer-folder-row';
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background 0.15s;';
     row.innerHTML = `
       <span style="font-weight:700;font-size:14px;flex:1;">${escapeHtml(folder.name)}</span>
       <span style="color:#16a34a;font-size:12px;font-weight:600;">${available} kom raspolo\u017Eivo</span>
-      ${price > 0 ? `<span style="color:#6b7280;font-size:12px;">${price}\u20AC</span>` : ''}
+      <span style="color:#6b7280;font-size:12px;">${price}\u20AC</span>
     `;
     row.addEventListener('mouseenter', () => { row.style.background = '#f9fafb'; });
     row.addEventListener('mouseleave', () => { row.style.background = '#ffffff'; });
@@ -6014,8 +6020,8 @@ function transferFromWarehouse() {
     body.appendChild(row);
   }
   
-  if (!body.querySelector('.transfer-folder-row')) {
-    body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema proizvoda za prijenos</div>';
+  if (!body.querySelector('div[style*="border"]')) {
+    body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;">Nema cjenovnih kategorija za prijenos</div>';
   }
   
   openModal({
