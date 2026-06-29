@@ -6197,21 +6197,41 @@ function restoreTransferModal(productId) {
 function openTransferQtyModal(productId) {
   const p = appState.products[productId];
   if (!p) return;
-  const maxQty = Number(p.quantity || 0);
+  const currentQty = Number(p.quantity || 0);
   // Auto-detect category from product's parent folder
   const folderName = getProductParentFolder(productId)?.name || '';
   _transferCatId = folderName;
+  
+  // Calculate "available" = total in folder - already transferred to shop
+  const folder = getProductParentFolder(productId);
+  let totalInFolder = 0;
+  if (folder) {
+    for (const pid of (folder.products || [])) {
+      const fp = appState.products[pid];
+      if (fp) totalInFolder += Number(fp.quantity || 0);
+    }
+  }
+  let alreadyTransferred = 0;
+  for (const t of (appState.transferLog || [])) {
+    if (t.masterConfirmDate) {
+      for (const item of (t.items || [])) {
+        if (item.shopCategory === folderName) alreadyTransferred += item.qty;
+      }
+    }
+  }
+  const available = Math.max(0, totalInFolder - alreadyTransferred);
   
   const body = document.createElement('div');
   body.style.cssText = 'display:grid;gap:12px;max-width:400px;';
   
   body.innerHTML = `
     <div style="font-weight:700;font-size:16px;">${escapeHtml(p.name)}</div>
-    <div style="color:#6b7280;font-size:14px;">Dostupno u skladi\u0161tu: <strong>${maxQty} kom</strong></div>
+    <div style="color:#6b7280;font-size:14px;">U skladi\u0161tu: <strong>${currentQty} kom</strong></div>
+    <div style="color:#16a34a;font-size:14px;background:#f0fdf4;padding:6px 10px;border-radius:6px;">Raspolo\u017Eivo za prodaju: <strong>${available} kom</strong></div>
     <div style="color:#0ea5e9;font-size:13px;background:#e0f2fe;padding:6px 10px;border-radius:6px;">Kategorija: ${escapeHtml(folderName)}</div>
     <label style="display:grid;gap:4px;">
       <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
-      <input id="transfer-qty" type="number" min="1" max="${maxQty}" step="1" value="${Math.min(maxQty, 1)}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" value="${Math.min(available, 1)}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
   `;
   
@@ -6223,15 +6243,14 @@ function openTransferQtyModal(productId) {
       { label: 'Dodaj u prijenos', onClick: () => {
         const qty = parseInt(body.querySelector('#transfer-qty')?.value || '0', 10);
         const catId = _transferCatId;
-        if (qty <= 0 || qty > maxQty) { showToast('Neispravna koli\u010Dina'); return; }
+        if (qty <= 0 || qty > available) { showToast('Neispravna koli\u010Dina'); return; }
         if (!catId) { showToast('Proizvod nema mapu'); return; }
         
-        // Decrease warehouse immediately
-        p.quantity = maxQty - qty;
+        // NO warehouse deduction — just record the transfer
         
         // Add to pending transfers
-  appState.pendingTransfers = appState.pendingTransfers || [];
-  appState.pendingOnSite = appState.pendingOnSite || [];
+        appState.pendingTransfers = appState.pendingTransfers || [];
+        appState.pendingOnSite = appState.pendingOnSite || [];
         appState.pendingTransfers.push({
           productId,
           qty,
@@ -6376,29 +6395,12 @@ function declineAll() {
     body: `Odustajete od ${totalItems} transakcija. Svi proizvodi će se vratiti u skladište. Nastaviti?`,
     actions: [
       { label: 'Odustani od svega', tone: 'danger', onClick: () => {
-        // Restore warehouse quantities
-        for (const p of pending) {
-          const prod = appState.products[p.productId];
-          if (prod) {
-            prod.quantity = Number(prod.quantity || 0) + p.qty;
-            // Log reversal in history
-            recordInventoryEvent({
-              eventType: 'transfer_reversal',
-              productId: p.productId,
-              productName: prod.name || 'Product',
-              delta: p.qty,
-              price: Number(prod.price || 0),
-              value: p.qty * Number(prod.price || 0),
-              source: 'transfer_reversal',
-              note: `Transfer of ${p.qty} pc was cancelled`
-            });
-          }
-        }
+        // No warehouse quantities to restore (transfer doesn't deduct from warehouse)
         appState.pendingTransfers = [];
         saveStateDebounced();
         renderAll();
         renderShopInventory();
-        showToast('Transakcije poništene, proizvodi vraćeni u skladište');
+        showToast('Transakcije poništene');
         closeModal();
       }},
       { label: __('Cancel'), tone: 'secondary' }
@@ -6461,13 +6463,6 @@ function declineSelected() {
       { label: 'Odustani od ozna\u010Denih', tone: 'danger', onClick: () => {
         // Remove selected from bottom-up to preserve indices
         indices.sort((a, b) => b - a);
-        for (const idx of indices) {
-          const p = pending[idx];
-          const prod = appState.products[p.productId];
-          if (prod) {
-            prod.quantity = Number(prod.quantity || 0) + p.qty;
-          }
-        }
         for (const idx of indices) pending.splice(idx, 1);
         closeModal();
         saveStateDebounced();
@@ -6554,14 +6549,10 @@ function openTransferHistory() {
         title: 'Poni\u0161ti transfer',
         headerIcon: { symbol: '\u26A0', color: 'red' },
         size: 'small',
-        body: `Poništiti transfer od ${date} (${totalQty} kom)? Proizvodi će se vratiti u skladište.`,
+        body: `Poništiti transfer od ${date} (${totalQty} kom)?`,
         actions: [
           { label: 'Poni\u0161ti', tone: 'danger', onClick: () => {
-            // Restore warehouse quantities
-            for (const it of t.items) {
-              const prod = appState.products[it.productId];
-              if (prod) prod.quantity = Number(prod.quantity || 0) + it.qty;
-            }
+            // No warehouse quantities to restore (transfer doesn't deduct from warehouse)
             // Remove history entries for this transfer
             if (appState.productionLog) {
               const transferTs = new Date(t.date).getTime();
