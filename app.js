@@ -7812,12 +7812,12 @@ function openDocumentEditor(doc, docTitle) {
         <span style="color:#6b7280;font-size:12px;min-width:50px;text-align:right;">${item.price || 0}\u20AC</span>
       `;
 
-      const minusBtn = document.createElement('button');
-      minusBtn.textContent = '\u22121';
-      minusBtn.style.cssText = 'padding:4px 10px;border-radius:6px;border:1px solid #ef4444;background:#fef2f2;color:#ef4444;font-weight:700;font-size:13px;cursor:pointer;';
-      minusBtn.addEventListener('click', () => {
-        if (hasVariations) {
-          // Show product picker for variations
+      if (hasVariations) {
+        // For variations: one at a time with product picker
+        const minusBtn = document.createElement('button');
+        minusBtn.textContent = '\u22121';
+        minusBtn.style.cssText = 'padding:4px 10px;border-radius:6px;border:1px solid #ef4444;background:#fef2f2;color:#ef4444;font-weight:700;font-size:13px;cursor:pointer;';
+        minusBtn.addEventListener('click', () => {
           const pickerBody = document.createElement('div');
           pickerBody.style.cssText = 'display:grid;gap:4px;max-height:50vh;overflow:auto;';
           pickerBody.innerHTML = `<div style="font-size:13px;color:#6b7280;padding:4px 0;">Odaberite varijaciju za uklanjanje:</div>`;
@@ -7830,7 +7830,7 @@ function openDocumentEditor(doc, docTitle) {
             pRow.addEventListener('mouseleave', () => pRow.style.background = '');
             pRow.addEventListener('click', () => {
               closeModal();
-              doRemoveOne(doc, item, idx, p);
+              doRemove(doc, item, idx, p, 1);
             });
             pickerBody.appendChild(pRow);
           }
@@ -7843,13 +7843,35 @@ function openDocumentEditor(doc, docTitle) {
             body: pickerBody,
             actions: [{ label: 'Odustani', tone: 'secondary' }]
           });
-        } else {
-          // Single product or empty — remove directly
-          const product = products[0];
-          doRemoveOne(doc, item, idx, product || null);
-        }
-      });
-      row.appendChild(minusBtn);
+        });
+        row.appendChild(minusBtn);
+      } else {
+        // No variations: allow removing multiple pieces at once
+        const product = products[0];
+        const maxQty = item.qty || 0;
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.min = '1';
+        qtyInput.max = String(maxQty);
+        qtyInput.value = '1';
+        qtyInput.style.cssText = 'width:50px;padding:4px 6px;border-radius:6px;border:1px solid #d1d5db;font-size:13px;text-align:center;';
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Ukloni';
+        removeBtn.style.cssText = 'padding:4px 8px;border-radius:6px;border:1px solid #ef4444;background:#fef2f2;color:#ef4444;font-weight:700;font-size:13px;cursor:pointer;';
+        removeBtn.addEventListener('click', () => {
+          const count = parseInt(qtyInput.value, 10);
+          if (!count || count <= 0 || count > maxQty) {
+            showToast(`Unesite broj 1-${maxQty}`);
+            return;
+          }
+          doRemove(doc, item, idx, product || null, count);
+        });
+        const wrap = document.createElement('span');
+        wrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        wrap.appendChild(qtyInput);
+        wrap.appendChild(removeBtn);
+        row.appendChild(wrap);
+      }
       body.appendChild(row);
     }
 
@@ -7859,20 +7881,23 @@ function openDocumentEditor(doc, docTitle) {
     body.appendChild(totalEl);
   }
 
-  function doRemoveOne(doc, item, idx, product) {
-    if (!item || (item.qty || 0) <= 0) {
-      showToast('Stavka već ima 0 komada');
+  function doRemove(doc, item, idx, product, count) {
+    count = count || 1;
+    if (!item || (item.qty || 0) < count) {
+      showToast(`Nedovoljno komada (max ${item.qty || 0})`);
       return;
     }
 
     // Reduce warehouse if product exists and has stock
-    if (product && Number(product.quantity || 0) > 0) {
-      product.quantity = Number(product.quantity || 0) - 1;
+    if (product && Number(product.quantity || 0) >= count) {
+      product.quantity = Number(product.quantity || 0) - count;
+    } else if (product) {
+      product.quantity = 0;
     }
 
     // Reduce document item
-    item.qty = (item.qty || 0) - 1;
-    if (item.price) item.value = (item.value || 0) - (item.price || 0);
+    item.qty = (item.qty || 0) - count;
+    if (item.price) item.value = (item.value || 0) - (item.price || 0) * count;
     if (item.qty <= 0) {
       doc.items = (doc.items || []).filter((_, i) => i !== idx);
     }
@@ -7884,7 +7909,7 @@ function openDocumentEditor(doc, docTitle) {
       if (t.documentId === doc.id) {
         const tItem = (t.items || []).find(it => it.shopCategory === item.name);
         if (tItem) {
-          tItem.qty = Math.max(0, (tItem.qty || 0) - 1);
+          tItem.qty = Math.max(0, (tItem.qty || 0) - count);
         }
         break;
       }
@@ -7897,16 +7922,16 @@ function openDocumentEditor(doc, docTitle) {
       eventType: 'manual_remove',
       productId: product?.id || null,
       productName: prodName,
-      delta: -1,
+      delta: -count,
       price: Number(prodPrice),
-      value: -1 * Number(prodPrice),
+      value: -count * Number(prodPrice),
       source: 'gift',
-      note: `Poklon/uklanjanje: 1 x ${prodName}`
+      note: `Poklon/uklanjanje: ${count} x ${prodName}`
     });
 
     saveStateDebounced();
     renderItems();
-    showToast(`Uklonjeno: 1 x ${prodName}`);
+    showToast(`Uklonjeno: ${count} x ${prodName}`);
   }
 
   renderItems();
