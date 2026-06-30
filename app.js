@@ -7704,6 +7704,17 @@ function openDocumentList() {
     });
     delRow.appendChild(editBtn);
     
+    // Edit items button
+    const editItemsBtn = document.createElement('button');
+    editItemsBtn.textContent = 'Uredi stavke';
+    editItemsBtn.style.cssText = 'padding:2px 10px;border-radius:4px;border:none;background:transparent;color:#0ea5e9;font-size:12px;cursor:pointer;';
+    editItemsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeModal();
+      openDocumentEditor(doc, docTitle);
+    });
+    delRow.appendChild(editItemsBtn);
+    
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Izbri\u0161i';
     delBtn.style.cssText = 'padding:2px 10px;border-radius:4px;border:none;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;';
@@ -7738,6 +7749,177 @@ function openDocumentList() {
     body,
     actions: [
       { label: __('Close'), tone: 'secondary' }
+    ]
+  });
+}
+
+function getAllCategoriesForEdit() {
+  const root = appState.folders['root'];
+  if (!root) return [];
+  const all = [];
+  const seen = new Set();
+  for (const sfId of (root.subfolders || [])) {
+    const folder = appState.folders[sfId];
+    if (!folder || folder.isIndependent) continue;
+    const cats = collectTransferCategories(sfId);
+    for (const [name, data] of Object.entries(cats)) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      all.push({ name: data.name, price: data.price, productIds: Array.from(data.productIds) });
+    }
+  }
+  for (const sfId of (root.subfolders || [])) {
+    const folder = appState.folders[sfId];
+    if (!folder || folder.isIndependent) continue;
+    const price = extractPriceFromName(folder.name);
+    if (price > 0 && !seen.has(folder.name)) {
+      seen.add(folder.name);
+      all.push({ name: folder.name, price, productIds: Array.from(getAllProductIdsInFolder(sfId)) });
+    }
+  }
+  return all;
+}
+
+function openDocumentEditor(doc, docTitle) {
+  if (!doc || !(doc.items || []).length) {
+    showToast('Dokument nema stavki');
+    return;
+  }
+
+  const allCats = getAllCategoriesForEdit();
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:8px;';
+
+  function renderItems() {
+    body.innerHTML = '';
+    const items = doc.items || [];
+    if (!items.length) {
+      body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:12px;">Dokument je prazan</div>';
+      return;
+    }
+
+    for (let idx = 0; idx < items.length; idx++) {
+      const item = items[idx];
+      const cat = allCats.find(c => c.name === item.name);
+      const products = (cat?.productIds || []).map(pid => appState.products[pid]).filter(Boolean);
+      const hasVariations = products.length > 1;
+
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;';
+      row.innerHTML = `
+        <span style="flex:1;font-size:13px;font-weight:600;">${escapeHtml(item.name)}</span>
+        <span style="color:#c2410c;font-weight:700;font-size:13px;min-width:50px;text-align:right;">${item.qty || 0} kom</span>
+        <span style="color:#6b7280;font-size:12px;min-width:50px;text-align:right;">${item.price || 0}\u20AC</span>
+      `;
+
+      const minusBtn = document.createElement('button');
+      minusBtn.textContent = '\u22121';
+      minusBtn.style.cssText = 'padding:4px 10px;border-radius:6px;border:1px solid #ef4444;background:#fef2f2;color:#ef4444;font-weight:700;font-size:13px;cursor:pointer;';
+      minusBtn.addEventListener('click', () => {
+        if (hasVariations) {
+          // Show product picker for variations
+          const pickerBody = document.createElement('div');
+          pickerBody.style.cssText = 'display:grid;gap:4px;max-height:50vh;overflow:auto;';
+          pickerBody.innerHTML = `<div style="font-size:13px;color:#6b7280;padding:4px 0;">Odaberite varijaciju za uklanjanje:</div>`;
+          for (const p of products) {
+            if (Number(p.quantity || 0) <= 0) continue;
+            const pRow = document.createElement('div');
+            pRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:6px;';
+            pRow.innerHTML = `<span style="flex:1;font-size:13px;">${escapeHtml(p.name)}</span><span style="color:#c2410c;font-size:12px;">${Number(p.quantity || 0)} kom</span>`;
+            pRow.addEventListener('mouseenter', () => pRow.style.background = '#f9fafb');
+            pRow.addEventListener('mouseleave', () => pRow.style.background = '');
+            pRow.addEventListener('click', () => {
+              closeModal();
+              doRemoveOne(doc, item, idx, p);
+            });
+            pickerBody.appendChild(pRow);
+          }
+          if (!pickerBody.children.length) {
+            pickerBody.innerHTML += '<div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px;">Nema proizvoda na skladištu za ovu kategoriju</div>';
+          }
+          openModal({
+            title: `Ukloni iz ${escapeHtml(item.name)}`,
+            size: 'small',
+            body: pickerBody,
+            actions: [{ label: 'Odustani', tone: 'secondary' }]
+          });
+        } else {
+          // Single product or empty — remove directly
+          const product = products[0];
+          doRemoveOne(doc, item, idx, product || null);
+        }
+      });
+      row.appendChild(minusBtn);
+      body.appendChild(row);
+    }
+
+    const totalEl = document.createElement('div');
+    totalEl.style.cssText = 'text-align:right;font-size:13px;color:#6b7280;padding:4px 8px 0;';
+    totalEl.textContent = `Ukupno: ${doc.totalCount || 0} kom`;
+    body.appendChild(totalEl);
+  }
+
+  function doRemoveOne(doc, item, idx, product) {
+    if (!item || (item.qty || 0) <= 0) {
+      showToast('Stavka već ima 0 komada');
+      return;
+    }
+
+    // Reduce warehouse if product exists and has stock
+    if (product && Number(product.quantity || 0) > 0) {
+      product.quantity = Number(product.quantity || 0) - 1;
+    }
+
+    // Reduce document item
+    item.qty = (item.qty || 0) - 1;
+    if (item.price) item.value = (item.value || 0) - (item.price || 0);
+    if (item.qty <= 0) {
+      doc.items = (doc.items || []).filter((_, i) => i !== idx);
+    }
+    doc.totalCount = (doc.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+
+    // Reduce matching transfer log item
+    const tLog = appState.transferLog || [];
+    for (const t of tLog) {
+      if (t.documentId === doc.id) {
+        const tItem = (t.items || []).find(it => it.shopCategory === item.name);
+        if (tItem) {
+          tItem.qty = Math.max(0, (tItem.qty || 0) - 1);
+        }
+        break;
+      }
+    }
+
+    // Record event
+    const prodName = product?.name || item.name;
+    const prodPrice = product?.price || item.price || 0;
+    recordInventoryEvent({
+      eventType: 'manual_remove',
+      productId: product?.id || null,
+      productName: prodName,
+      delta: -1,
+      price: Number(prodPrice),
+      value: -1 * Number(prodPrice),
+      source: 'gift',
+      note: `Poklon/uklanjanje: 1 x ${prodName}`
+    });
+
+    saveStateDebounced();
+    renderItems();
+    showToast(`Uklonjeno: 1 x ${prodName}`);
+  }
+
+  renderItems();
+
+  openModal({
+    title: `Uredi stavke — ${escapeHtml(docTitle)}`,
+    headerIcon: { symbol: '\u270F', color: 'sky' },
+    body,
+    actions: [
+      { label: 'Gotovo', tone: 'secondary', onClick: () => {
+        closeModal();
+        openDocumentList();
+      }}
     ]
   });
 }
