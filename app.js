@@ -6581,7 +6581,7 @@ async function executeConfirm(docType, customDateStr) {
   renderShopInventory();
   
   // Show document preview
-  if (docItems.length > 0) showDocumentPreview(docItems, docType);
+  if (docItems.length > 0) showDocumentPreview(docItems, docType, null, confirmISO);
   else showToast('Dokument je prazan - provjerite kategorije proizvoda');
 }
 
@@ -7515,19 +7515,18 @@ function returnFromShop() {
 
 // ── Document Preview ────────────────────────────────────────────
 
-function showDocumentPreview(items, docType, customTitle) {
+function showDocumentPreview(items, docType, customTitle, docDate) {
   const preview = document.getElementById('doc-preview');
   const body = document.getElementById('doc-preview-body');
   if (!preview || !body) return;
   
   const co = appState.companyInfo || {};
-  const now = new Date();
-  const date = formatDateHR(now);
-  const timeStr = now.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+  const docDateObj = docDate ? new Date(docDate) : new Date();
+  const date = formatDateHR(docDateObj);
+  const timeStr = docDateObj.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
   const title = customTitle || (docType === 'onsite' ? 'Popis izrađenih proizvoda na prodajnom mjestu' : 'Popis proizvoda na prodajnom mjestu');
   
-  const docFilename = `${title}_${now.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
-  // Set page title immediately so iOS picks it up for PDF filename
+  const docFilename = `${title}_${docDateObj.toISOString().slice(0,10)}_${timeStr.replace(':','-')}`;
   document.title = docFilename;
   
   let tableRows = '';
@@ -7647,7 +7646,7 @@ function openDocumentList() {
     mainRow.addEventListener('click', () => {
       const items = (doc.items || []).map(i => ({ name: i.name, price: i.price || 0, qty: i.qty || 0, value: (i.price || 0) * (i.qty || 0) }));
       closeModal();
-      showDocumentPreview(items, doc.type, docTitle);
+      showDocumentPreview(items, doc.type, docTitle, doc.date);
     });
     card.appendChild(mainRow);
     
