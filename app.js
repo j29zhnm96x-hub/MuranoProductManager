@@ -6507,6 +6507,9 @@ function masterConfirm() {
     </label>
   `;
 
+  // Store reference before openModal closes the DOM on click
+  const dateInput = body.querySelector('#confirm-date');
+
   // Ask user what to do with document
   openModal({
     title: 'Potvrdi sve',
@@ -6515,11 +6518,11 @@ function masterConfirm() {
     body,
     actions: [
       { label: 'Novi dokument', onClick: () => {
-        const dateStr = document.getElementById('confirm-date')?.value || today;
+        const dateStr = dateInput?.value || today;
         executeConfirm('new', dateStr);
       }},
       { label: 'A\u017Euriraj zadnji', onClick: () => {
-        const dateStr = document.getElementById('confirm-date')?.value || today;
+        const dateStr = dateInput?.value || today;
         executeConfirm('update', dateStr);
       }},
       { label: __('Cancel'), tone: 'secondary' }
@@ -6531,7 +6534,14 @@ async function executeConfirm(docType, customDateStr) {
   const pending = appState.pendingTransfers || [];
   if (!pending.length) return;
 
-  const confirmDate = customDateStr ? new Date(customDateStr + 'T00:00:00') : new Date();
+  // Parse date safely (YYYY-MM-DD) avoiding timezone shifts
+  let confirmDate;
+  if (customDateStr) {
+    const [y, m, d] = customDateStr.split('-').map(Number);
+    confirmDate = new Date(y, m - 1, d, 12, 0, 0);
+  } else {
+    confirmDate = new Date();
+  }
   const confirmISO = confirmDate.toISOString();
 
   // Move pending to transferLog with master confirm date
