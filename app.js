@@ -7873,7 +7873,7 @@ function openDocumentEditor(doc, docTitle) {
       price: Number(prodPrice),
       value: -count * Number(prodPrice),
       source: 'gift',
-      note: `Poklon/uklanjanje: ${count} x ${prodName}`
+      note: `poklon/razbijeno: ${count} x ${prodName}`
     });
 
     saveStateDebounced();
