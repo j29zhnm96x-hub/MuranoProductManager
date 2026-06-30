@@ -6152,7 +6152,7 @@ function openTransferQtyModalForCategory(catName, available) {
     ${price > 0 ? `<div style="color:#6b7280;font-size:13px;">Cijena: <strong>${price}\u20AC</strong></div>` : ''}
     <label style="display:grid;gap:4px;">
       <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
-      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" placeholder="Unesite koli\u010Dinu" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" inputmode="numeric" placeholder="Unesite koli\u010Dinu" autofocus style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
   `;
   
@@ -6196,6 +6196,12 @@ function openTransferQtyModalForCategory(catName, available) {
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
+  
+  // Force focus after modal renders
+  setTimeout(() => {
+    const input = document.getElementById('transfer-qty');
+    if (input) input.focus();
+  }, 100);
 }
 
 let _transferCatId = ''; // Selected category for current transfer
@@ -6405,7 +6411,7 @@ function openTransferQtyModal(productId) {
     <div style="color:#0ea5e9;font-size:13px;background:#e0f2fe;padding:6px 10px;border-radius:6px;">Kategorija: ${escapeHtml(folderName)}</div>
     <label style="display:grid;gap:4px;">
       <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
-      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" placeholder="Unesite koli\u010Dinu" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" inputmode="numeric" placeholder="Unesite koli\u010Dinu" autofocus style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
   `;
   
@@ -6453,6 +6459,11 @@ function openTransferQtyModal(productId) {
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
+  
+  setTimeout(() => {
+    const input = document.getElementById('transfer-qty');
+    if (input) input.focus();
+  }, 100);
 }
 
 // ── Master Confirm / Decline ────────────────────────────────────
