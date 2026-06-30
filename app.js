@@ -6495,36 +6495,52 @@ function openTransferQtyModal(productId) {
 function masterConfirm() {
   const pending = appState.pendingTransfers || [];
   if (!pending.length) { showToast('Nema transakcija za potvrditi'); return; }
-  
+
+  const today = new Date().toISOString().slice(0, 10);
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:12px;';
+  body.innerHTML = `
+    <div style="font-size:14px;">Potvr\u0111ujete ${pending.length} transakcija. Odaberite datum dokumenta:</div>
+    <label style="display:grid;gap:4px;">
+      <span style="font-weight:600;font-size:13px;">Datum dokumenta</span>
+      <input id="confirm-date" type="date" value="${today}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+    </label>
+  `;
+
   // Ask user what to do with document
   openModal({
     title: 'Potvrdi sve',
     headerIcon: { symbol: '\u2705', color: 'green' },
     size: 'small',
-    body: `Potvrđujete ${pending.length} transakcija. Želite li napraviti novi dokument ili ažurirati zadnji?`,
+    body,
     actions: [
       { label: 'Novi dokument', onClick: () => {
-        executeConfirm('new');
+        const dateStr = document.getElementById('confirm-date')?.value || today;
+        executeConfirm('new', dateStr);
       }},
-      { label: 'Ažuriraj zadnji', onClick: () => {
-        executeConfirm('update');
+      { label: 'A\u017Euriraj zadnji', onClick: () => {
+        const dateStr = document.getElementById('confirm-date')?.value || today;
+        executeConfirm('update', dateStr);
       }},
       { label: __('Cancel'), tone: 'secondary' }
     ]
   });
 }
 
-async function executeConfirm(docType) {
+async function executeConfirm(docType, customDateStr) {
   const pending = appState.pendingTransfers || [];
   if (!pending.length) return;
-  
+
+  const confirmDate = customDateStr ? new Date(customDateStr + 'T00:00:00') : new Date();
+  const confirmISO = confirmDate.toISOString();
+
   // Move pending to transferLog with master confirm date
   const logEntry = {
     id: uuid(),
-    date: new Date().toISOString(),
+    date: confirmISO,
     type: 'transfer',
     items: pending.map(p => ({ productId: p.productId, qty: p.qty, shopCategory: p.shopCategory })),
-    masterConfirmDate: new Date().toISOString(),
+    masterConfirmDate: confirmISO,
     documentId: uuid()
   };
   
@@ -6536,7 +6552,7 @@ async function executeConfirm(docType) {
   const docItems = buildDocumentItems(pending);
   const doc = {
     id: logEntry.documentId,
-    date: new Date().toISOString(),
+    date: confirmISO,
     type: docType,
     items: docItems,
     totalCount: docItems.reduce((s, i) => s + i.qty, 0)
