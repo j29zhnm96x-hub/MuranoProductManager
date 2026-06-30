@@ -5846,46 +5846,7 @@ function renderShopInventory() {
         <span class="shop-inv-item-qty" style="color:#c2410c;font-weight:700;width:80px;text-align:right;font-size:13px;">${totalQty} kom</span>
         <span class="shop-inv-item-value" style="color:#374151;width:80px;text-align:right;font-size:13px;">${formatCurrency(totalValue)}</span>
       `;
-      // Delete button
-      const delBtn = document.createElement('button');
-      delBtn.className = 'shop-inv-del';
-      delBtn.dataset.gid = gId;
-      delBtn.title = 'Izbri\u0161i kategoriju';
-      delBtn.type = 'button';
-      delBtn.textContent = '\u2715';
-      row.appendChild(delBtn);
       groupDiv.appendChild(row);
-      
-      // Delete handler
-      delBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openModal({
-          title: 'Izbri\u0161i kategoriju',
-          headerIcon: { symbol: '\u26A0', color: 'amber' },
-          size: 'small',
-          body: `Jeste li sigurni da \u017Eelite izbrisati kategoriju "${escapeHtml(group.name)}" iz prodaje? Svi proizvodi u ovoj kategoriji bit \u0107e uklonjeni.`,
-          actions: [
-            { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
-                const catItemIds = group.items.map(i => i.itemId);
-                appState.transferLog = (appState.transferLog || []).filter(t => {
-                  return !(t.items || []).some(ti => catItemIds.includes(ti.shopCategory));
-                });
-                appState.onSiteProduction = (appState.onSiteProduction || []).filter(o => {
-                  return !(o.items || []).some(oi => catItemIds.includes(oi.shopCategory));
-                });
-                appState.returnLog = (appState.returnLog || []).filter(r => {
-                  return !(r.items || []).some(ri => catItemIds.includes(ri.shopCategory));
-                });
-                saveStateDebounced();
-                renderShopInventory();
-                showToast(`Kategorija "${escapeHtml(group.name)}" izbrisana iz prodaje`);
-                closeModal();
-            }},
-            { label: 'Odustani', tone: 'secondary' }
-          ]
-        });
-      });
-      
       container.appendChild(groupDiv);
     }
     
