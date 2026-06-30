@@ -6197,10 +6197,22 @@ function openTransferQtyModalForCategory(catName, available) {
     ]
   });
   
-  // Force focus after modal renders
+  // Force focus + keyboard shortcuts after modal renders
   setTimeout(() => {
     const input = document.getElementById('transfer-qty');
-    if (input) input.focus();
+    if (input) {
+      input.focus();
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const addBtn = document.querySelector('#modal-actions button:first-of-type');
+          if (addBtn) addBtn.click();
+        } else if (e.key === 'Escape') {
+          const cancelBtn = document.querySelector('#modal-actions button:last-of-type');
+          if (cancelBtn) cancelBtn.click();
+        }
+      });
+    }
   }, 100);
 }
 
@@ -6462,7 +6474,19 @@ function openTransferQtyModal(productId) {
   
   setTimeout(() => {
     const input = document.getElementById('transfer-qty');
-    if (input) input.focus();
+    if (input) {
+      input.focus();
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const addBtn = document.querySelector('#modal-actions button:first-of-type');
+          if (addBtn) addBtn.click();
+        } else if (e.key === 'Escape') {
+          const cancelBtn = document.querySelector('#modal-actions button:last-of-type');
+          if (cancelBtn) cancelBtn.click();
+        }
+      });
+    }
   }, 100);
 }
 
