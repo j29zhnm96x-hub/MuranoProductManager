@@ -6152,7 +6152,7 @@ function openTransferQtyModalForCategory(catName, available) {
     ${price > 0 ? `<div style="color:#6b7280;font-size:13px;">Cijena: <strong>${price}\u20AC</strong></div>` : ''}
     <label style="display:grid;gap:4px;">
       <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
-      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" value="${Math.min(available, 1)}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" placeholder="Unesite koli\u010Dinu" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
   `;
   
@@ -6162,8 +6162,8 @@ function openTransferQtyModalForCategory(catName, available) {
     body,
     actions: [
       { label: 'Dodaj u prijenos', onClick: () => {
-        const qty = parseInt(body.querySelector('#transfer-qty')?.value || '0', 10);
-        if (qty <= 0 || qty > available) { showToast('Neispravna koli\u010Dina'); return; }
+        const qty = parseInt(body.querySelector('#transfer-qty')?.value, 10);
+        if (!qty || qty <= 0 || qty > available) { showToast('Unesite ispravnu koli\u010Dinu'); return; }
         
         // Add to pending transfers (no warehouse deduction)
         appState.pendingTransfers = appState.pendingTransfers || [];
@@ -6405,7 +6405,7 @@ function openTransferQtyModal(productId) {
     <div style="color:#0ea5e9;font-size:13px;background:#e0f2fe;padding:6px 10px;border-radius:6px;">Kategorija: ${escapeHtml(folderName)}</div>
     <label style="display:grid;gap:4px;">
       <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
-      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" value="${Math.min(available, 1)}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" placeholder="Unesite koli\u010Dinu" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
   `;
   
@@ -6415,9 +6415,9 @@ function openTransferQtyModal(productId) {
     body,
     actions: [
       { label: 'Dodaj u prijenos', onClick: () => {
-        const qty = parseInt(body.querySelector('#transfer-qty')?.value || '0', 10);
+        const qty = parseInt(body.querySelector('#transfer-qty')?.value, 10);
         const catId = _transferCatId;
-        if (qty <= 0 || qty > available) { showToast('Neispravna koli\u010Dina'); return; }
+        if (!qty || qty <= 0 || qty > available) { showToast('Unesite ispravnu koli\u010Dinu'); return; }
         if (!catId) { showToast('Proizvod nema mapu'); return; }
         
         // NO warehouse deduction — just record the transfer
