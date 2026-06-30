@@ -435,7 +435,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .shop-inv-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 28px; background: #ffffff; font-size: 13px; }
 .shop-inv-item-name { flex: 1; color: #374151; }
 .shop-inv-item-price { color: #6b7280; font-weight: 600; width: 60px; text-align: right; }
-.shop-inv-item-qty { color: #111827; font-weight: 700; width: 80px; text-align: right; }
+.shop-inv-item-qty { color: #c2410c; font-weight: 700; width: 80px; text-align: right; }
 .shop-inv-item-value { color: #374151; width: 80px; text-align: right; }
 .shop-inv-empty { padding: 24px 16px; text-align: center; color: #9ca3af; font-size: 14px; background: #ffffff; }
 .shop-actions { display: flex; flex-wrap: wrap; gap: 8px; }

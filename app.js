@@ -5840,7 +5840,7 @@ function renderShopInventory() {
       
       const header = document.createElement('div');
       header.className = 'shop-inv-group-header';
-      header.innerHTML = `<span class="shop-inv-group-toggle">\u25BC</span><span class="shop-inv-group-name">${escapeHtml(group.name)}</span><span class="shop-inv-group-total">${totalQty} kom / ${formatCurrency(totalValue)}</span> <button class="shop-inv-del" data-gid="${gId}" title="Izbri\u0161i kategoriju" type="button">\u2715</button>`;
+      header.innerHTML = `<span class="shop-inv-group-toggle">\u25BC</span><span class="shop-inv-group-name">${escapeHtml(group.name)}</span><span class="shop-inv-group-total"><span style="color:#c2410c;font-weight:700;">${totalQty} kom</span> / ${formatCurrency(totalValue)}</span> <button class="shop-inv-del" data-gid="${gId}" title="Izbri\u0161i kategoriju" type="button">\u2715</button>`;
       header.addEventListener('click', (e) => {
         if (e.target.closest('.shop-inv-del')) return; // let the delete button handle it
         const itemsDiv = groupDiv.querySelector('.shop-inv-items');
@@ -5940,7 +5940,7 @@ function renderShopInventory() {
         row.appendChild(chk);
         const nameSpan = document.createElement('span');
         nameSpan.style.cssText = 'flex:1;color:#374151;';
-        nameSpan.textContent = `${item.name}: ${item.qty} kom`;
+        nameSpan.innerHTML = `${escapeHtml(item.name)}: <span style="color:#c2410c;font-weight:700;">${item.qty} kom</span>`;
         row.appendChild(nameSpan);
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
