@@ -7653,7 +7653,57 @@ function openDocumentList() {
     
     // Delete button
     const delRow = document.createElement('div');
-    delRow.style.cssText = 'border-top:1px solid #f3f4f6;padding:4px 10px;text-align:right;';
+    delRow.style.cssText = 'border-top:1px solid #f3f4f6;padding:4px 10px;text-align:right;display:flex;gap:4px;justify-content:flex-end;';
+    
+    // Edit date button
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Uredi datum';
+    editBtn.style.cssText = 'padding:2px 10px;border-radius:4px;border:none;background:transparent;color:#6366f1;font-size:12px;cursor:pointer;';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const currentDate = doc.date ? new Date(doc.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+      const eb = document.createElement('div');
+      eb.style.cssText = 'display:grid;gap:8px;';
+      eb.innerHTML = `
+        <label style="display:grid;gap:4px;">
+          <span style="font-weight:600;font-size:13px;">Novi datum dokumenta</span>
+          <input id="edit-doc-date" type="date" value="${currentDate}" style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;" />
+        </label>
+      `;
+      const dateInputRef = eb.querySelector('#edit-doc-date');
+      openModal({
+        title: 'Uredi datum dokumenta',
+        headerIcon: { symbol: '\uD83D\uDCC5', color: 'indigo' },
+        size: 'small',
+        body: eb,
+        actions: [
+          { label: 'Spremi', onClick: () => {
+            const newDateStr = dateInputRef?.value;
+            if (!newDateStr) { showToast('Odaberite datum'); return; }
+            const [y, m, d] = newDateStr.split('-').map(Number);
+            const newDate = new Date(y, m - 1, d, 12, 0, 0);
+            const newISO = newDate.toISOString();
+            // Update document date
+            doc.date = newISO;
+            // Update linked transfer log entry dates
+            for (const t of (appState.transferLog || [])) {
+              if (t.documentId === doc.id) {
+                t.date = newISO;
+                t.masterConfirmDate = newISO;
+                break;
+              }
+            }
+            saveStateDebounced();
+            closeModal();
+            openDocumentList();
+            showToast('Datum dokumenta ažuriran');
+          }},
+          { label: 'Odustani', tone: 'secondary' }
+        ]
+      });
+    });
+    delRow.appendChild(editBtn);
+    
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Izbri\u0161i';
     delBtn.style.cssText = 'padding:2px 10px;border-radius:4px;border:none;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;';
