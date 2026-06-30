@@ -6031,6 +6031,10 @@ function transferFromWarehouse() {
         }
       }
     }
+    // Also subtract pending transfers (not yet confirmed) for this category
+    for (const pt of (appState.pendingTransfers || [])) {
+      if (pt.shopCategory === categoryName) alreadyTransferred += pt.qty;
+    }
     return Math.max(0, totalQty - alreadyTransferred);
   }
 
@@ -6384,6 +6388,10 @@ function openTransferQtyModal(productId) {
         if (item.shopCategory === folderName) alreadyTransferred += item.qty;
       }
     }
+  }
+  // Also subtract pending transfers for this category
+  for (const pt of (appState.pendingTransfers || [])) {
+    if (pt.shopCategory === folderName) alreadyTransferred += pt.qty;
   }
   const available = Math.max(0, totalInFolder - alreadyTransferred);
   
