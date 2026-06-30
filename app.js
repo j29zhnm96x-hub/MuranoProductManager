@@ -5838,67 +5838,54 @@ function renderShopInventory() {
       const groupDiv = document.createElement('div');
       groupDiv.className = 'shop-inv-group';
       
-      const header = document.createElement('div');
-      header.className = 'shop-inv-group-header';
-      header.innerHTML = `<span class="shop-inv-group-toggle">\u25BC</span><span class="shop-inv-group-name">${escapeHtml(group.name)}</span><span class="shop-inv-group-total"><span style="color:#c2410c;font-weight:700;">${totalQty} kom</span> / ${formatCurrency(totalValue)}</span> <button class="shop-inv-del" data-gid="${gId}" title="Izbri\u0161i kategoriju" type="button">\u2715</button>`;
-      header.addEventListener('click', (e) => {
-        if (e.target.closest('.shop-inv-del')) return; // let the delete button handle it
-        const itemsDiv = groupDiv.querySelector('.shop-inv-items');
-        if (itemsDiv) {
-          itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'grid' : 'none';
-          const toggle = header.querySelector('.shop-inv-group-toggle');
-          if (toggle) toggle.textContent = itemsDiv.style.display === 'none' ? '\u25B6' : '\u25BC';
-        }
-      });
-      // Delete category button
-      const delCatBtn = header.querySelector('.shop-inv-del');
-      if (delCatBtn) {
-        delCatBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const gId = delCatBtn.dataset.gid;
-          const group = inventory.byGroup[gId];
-          if (!group) return;
-          const catName = group.name;
-          openModal({
-            title: 'Izbri\u0161i kategoriju',
-            headerIcon: { symbol: '\u26A0', color: 'amber' },
-            size: 'small',
-            body: `Jeste li sigurni da želite izbrisati kategoriju "${escapeHtml(catName)}" iz prodaje? Svi proizvodi u ovoj kategoriji bit će uklonjeni.`,
-            actions: [
-              { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
-                  const catItemIds = group.items.map(i => i.itemId);
-                  appState.transferLog = (appState.transferLog || []).filter(t => {
-                    return !(t.items || []).some(ti => catItemIds.includes(ti.shopCategory));
-                  });
-                  appState.onSiteProduction = (appState.onSiteProduction || []).filter(o => {
-                    return !(o.items || []).some(oi => catItemIds.includes(oi.shopCategory));
-                  });
-                  appState.returnLog = (appState.returnLog || []).filter(r => {
-                    return !(r.items || []).some(ri => catItemIds.includes(ri.shopCategory));
-                  });
-                  saveStateDebounced();
-                  renderShopInventory();
-                  showToast(`Kategorija "${escapeHtml(catName)}" izbrisana iz prodaje`);
-                  closeModal();
-              }},
-              { label: 'Odustani', tone: 'secondary' }
-            ]
-          });
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;background:#ffffff;border-radius:8px;';
+      row.innerHTML = `
+        <span class="shop-inv-item-name" style="flex:1;font-size:13px;font-weight:700;">${escapeHtml(group.name)}</span>
+        <span class="shop-inv-item-price" style="color:#6b7280;font-weight:600;width:60px;text-align:right;font-size:13px;">${group.items[0]?.price || 0}\u20AC</span>
+        <span class="shop-inv-item-qty" style="color:#c2410c;font-weight:700;width:80px;text-align:right;font-size:13px;">${totalQty} kom</span>
+        <span class="shop-inv-item-value" style="color:#374151;width:80px;text-align:right;font-size:13px;">${formatCurrency(totalValue)}</span>
+      `;
+      // Delete button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'shop-inv-del';
+      delBtn.dataset.gid = gId;
+      delBtn.title = 'Izbri\u0161i kategoriju';
+      delBtn.type = 'button';
+      delBtn.textContent = '\u2715';
+      row.appendChild(delBtn);
+      groupDiv.appendChild(row);
+      
+      // Delete handler
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openModal({
+          title: 'Izbri\u0161i kategoriju',
+          headerIcon: { symbol: '\u26A0', color: 'amber' },
+          size: 'small',
+          body: `Jeste li sigurni da \u017Eelite izbrisati kategoriju "${escapeHtml(group.name)}" iz prodaje? Svi proizvodi u ovoj kategoriji bit \u0107e uklonjeni.`,
+          actions: [
+            { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
+                const catItemIds = group.items.map(i => i.itemId);
+                appState.transferLog = (appState.transferLog || []).filter(t => {
+                  return !(t.items || []).some(ti => catItemIds.includes(ti.shopCategory));
+                });
+                appState.onSiteProduction = (appState.onSiteProduction || []).filter(o => {
+                  return !(o.items || []).some(oi => catItemIds.includes(oi.shopCategory));
+                });
+                appState.returnLog = (appState.returnLog || []).filter(r => {
+                  return !(r.items || []).some(ri => catItemIds.includes(ri.shopCategory));
+                });
+                saveStateDebounced();
+                renderShopInventory();
+                showToast(`Kategorija "${escapeHtml(group.name)}" izbrisana iz prodaje`);
+                closeModal();
+            }},
+            { label: 'Odustani', tone: 'secondary' }
+          ]
         });
-      }
-      groupDiv.appendChild(header);
+      });
       
-      const itemsDiv = document.createElement('div');
-      itemsDiv.className = 'shop-inv-items';
-      
-      for (const item of group.items) {
-        const row = document.createElement('div');
-        row.className = 'shop-inv-item';
-        row.innerHTML = `<span class="shop-inv-item-name">${escapeHtml(item.name)}</span><span class="shop-inv-item-price">${item.price}\u20AC</span><span class="shop-inv-item-qty">${item.qty} kom</span><span class="shop-inv-item-value">${formatCurrency(item.value)}</span>`;
-        itemsDiv.appendChild(row);
-      }
-      
-      groupDiv.appendChild(itemsDiv);
       container.appendChild(groupDiv);
     }
     
