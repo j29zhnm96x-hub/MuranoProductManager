@@ -6000,9 +6000,9 @@ function collectTransferCategories(folderId) {
 function getProductTransferCategoryInfo(productId) {
   const product = appState.products[productId];
   if (!product) return null;
-  const parentId = product.folderId;
-  if (!parentId) return null;
-  const cats = collectTransferCategories(parentId);
+  const parent = getProductParentFolder(productId);
+  if (!parent) return null;
+  const cats = collectTransferCategories(parent.id);
   for (const [catName, catData] of Object.entries(cats)) {
     if (catData.productIds && catData.productIds.has(productId)) {
       return {
