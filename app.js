@@ -4657,11 +4657,18 @@ function renderFolderList(folderId = currentFolderId) {
       const meta = document.createElement('div'); meta.className = 'meta';
       
       // Raspoloživo = ukupno u mapi - već prebačeno u prodaju
+      // Calculate alreadyTransferred: match by folder name OR by product IDs in this folder
+      const folderProductIds = getAllProductIdsInFolder(fid);
       let alreadyTransferred = 0;
       for (const t of (appState.transferLog || [])) {
         if (t.masterConfirmDate) {
           for (const item of (t.items || [])) {
-            if (item.shopCategory === f.name) alreadyTransferred += item.qty;
+            // Match by shopCategory (folder name) or by productId belonging to this folder
+            if (item.shopCategory === f.name) {
+              alreadyTransferred += item.qty;
+            } else if (item.productId && folderProductIds.has(item.productId)) {
+              alreadyTransferred += item.qty;
+            }
           }
         }
       }
