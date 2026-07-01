@@ -6759,7 +6759,9 @@ function openTransferHistory() {
       const prod = appState.products[it.productId];
       const catName = it.shopCategory || 'Nepoznato';
       if (!catMap[catName]) catMap[catName] = { name: catName, items: [] };
-      catMap[catName].items.push({ pName: prod?.name || '?', qty: it.qty });
+      if (it.productId && prod) {
+        catMap[catName].items.push({ pName: prod.name, qty: it.qty });
+      }
     }
     
     const card = document.createElement('div');
