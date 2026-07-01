@@ -4721,6 +4721,30 @@ function renderFolderList(folderId = currentFolderId) {
         const price = Number(p.price || 0);
         const valueLine = document.createElement('div'); valueLine.className = 'meta-value'; valueLine.textContent = formatCurrency(qty * price);
         pmeta.appendChild(valueLine);
+        
+        // Show Uk. proizvedeno / Raspoloživo for product-based categories
+        const catInfo = getProductTransferCategoryInfo(p.id);
+        if (catInfo && catInfo.isSingleProduct) {
+          let alreadyTransferred = 0;
+          for (const t of (appState.transferLog || [])) {
+            if (t.masterConfirmDate) {
+              for (const item of (t.items || [])) {
+                if (item.shopCategory === catInfo.categoryName) alreadyTransferred += item.qty;
+              }
+            }
+          }
+          for (const rec of (appState.onSiteProduction || [])) {
+            for (const item of (rec.items || [])) {
+              if (item.shopCategory === catInfo.categoryName) alreadyTransferred += item.qty;
+            }
+          }
+          const raspolozivo = Math.max(0, qty - alreadyTransferred);
+          const ukProizvedeno = qty + alreadyTransferred;
+          const ukLine = document.createElement('div'); ukLine.className = 'meta-qty'; ukLine.textContent = `Uk. proizvedeno: ${ukProizvedeno} kom`;
+          const razLine = document.createElement('div'); razLine.className = 'meta-qty'; razLine.textContent = `Raspoloživo: ${raspolozivo} kom`;
+          pmeta.appendChild(ukLine);
+          pmeta.appendChild(razLine);
+        }
       } else if (p.isDynamic) {
         // Add link icon for dynamic components
         const linkIcon = document.createElement('div');
@@ -5971,6 +5995,24 @@ function collectTransferCategories(folderId) {
   }
 
   return result;
+}
+
+function getProductTransferCategoryInfo(productId) {
+  const product = appState.products[productId];
+  if (!product) return null;
+  const parentId = product.folderId;
+  if (!parentId) return null;
+  const cats = collectTransferCategories(parentId);
+  for (const [catName, catData] of Object.entries(cats)) {
+    if (catData.productIds && catData.productIds.has(productId)) {
+      return {
+        categoryName: catName,
+        productCount: catData.productIds.size,
+        isSingleProduct: catData.productIds.size === 1
+      };
+    }
+  }
+  return null;
 }
 
 function transferFromWarehouse() {
