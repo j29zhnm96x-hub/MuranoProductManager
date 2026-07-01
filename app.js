@@ -6751,6 +6751,7 @@ function openTransferHistory() {
     const date = new Date(t.date).toLocaleDateString('hr-HR');
     const time = new Date(t.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
     const totalQty = t.items.reduce((s, it) => s + it.qty, 0);
+    const totalValue = t.items.reduce((s, it) => s + it.qty * extractPriceFromName(it.shopCategory || ''), 0);
     
     // Group by category for display
     const catMap = {};
@@ -6766,14 +6767,17 @@ function openTransferHistory() {
     
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px;cursor:pointer;background:#f9fafb;';
-    header.innerHTML = `<span style="flex:1;font-weight:700;font-size:14px;">${date} ${time}</span><span style="color:#6b7280;font-size:13px;">${totalQty} kom</span>`;
+    header.innerHTML = `<span style="flex:1;font-weight:700;font-size:14px;">${date} ${time}</span><span style="color:#6b7280;font-size:13px;">${totalQty} kom</span><span style="color:#374151;font-weight:600;font-size:13px;margin-left:4px;">${formatCurrency(totalValue)}</span>`;
     
     const details = document.createElement('div');
     details.style.cssText = 'display:none;padding:6px 10px;';
     
     let detailsHTML = '';
     for (const cat of Object.values(catMap)) {
-      detailsHTML += `<div style="font-weight:600;font-size:13px;margin:4px 0 2px;">${cat.name}</div>`;
+      const catQty = cat.items.reduce((s, it) => s + it.qty, 0);
+      const catPrice = extractPriceFromName(cat.name);
+      const catValue = catQty * catPrice;
+      detailsHTML += `<div style="font-weight:600;font-size:13px;margin:4px 0 2px;">${cat.name} <span style="color:#6b7280;font-weight:400;">— ${catQty} kom, ${formatCurrency(catValue)}</span></div>`;
       for (const it of cat.items) {
         detailsHTML += `<div style="padding-left:12px;font-size:12px;color:#374151;">${it.pName}: ${it.qty} kom</div>`;
       }
