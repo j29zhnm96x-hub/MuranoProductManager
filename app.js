@@ -4657,18 +4657,26 @@ function renderFolderList(folderId = currentFolderId) {
       const meta = document.createElement('div'); meta.className = 'meta';
       
       // Raspoloživo = ukupno u mapi - već prebačeno u prodaju
-      // Calculate alreadyTransferred: match by folder name OR by product IDs in this folder
-      const folderProductIds = getAllProductIdsInFolder(fid);
+      // Collect all transfer category names that belong to this folder and its descendants
+      const transferCats = collectTransferCategories(fid);
+      const transferCatNames = new Set(Object.keys(transferCats));
+
       let alreadyTransferred = 0;
+      // Confirmed transfers out of warehouse
       for (const t of (appState.transferLog || [])) {
         if (t.masterConfirmDate) {
           for (const item of (t.items || [])) {
-            // Match by shopCategory (folder name) or by productId belonging to this folder
-            if (item.shopCategory === f.name) {
-              alreadyTransferred += item.qty;
-            } else if (item.productId && folderProductIds.has(item.productId)) {
+            if (transferCatNames.has(item.shopCategory) || item.shopCategory === f.name) {
               alreadyTransferred += item.qty;
             }
+          }
+        }
+      }
+      // On-site production also moves stock into the shop
+      for (const rec of (appState.onSiteProduction || [])) {
+        for (const item of (rec.items || [])) {
+          if (transferCatNames.has(item.shopCategory) || item.shopCategory === f.name) {
+            alreadyTransferred += item.qty;
           }
         }
       }
