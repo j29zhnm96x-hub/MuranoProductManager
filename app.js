@@ -6759,9 +6759,7 @@ function openTransferHistory() {
       const prod = appState.products[it.productId];
       const catName = it.shopCategory || 'Nepoznato';
       if (!catMap[catName]) catMap[catName] = { name: catName, items: [] };
-      if (it.productId && prod) {
-        catMap[catName].items.push({ pName: prod.name, qty: it.qty });
-      }
+      catMap[catName].items.push({ pName: prod?.name || null, qty: it.qty });
     }
     
     const card = document.createElement('div');
@@ -6781,7 +6779,9 @@ function openTransferHistory() {
       const catValue = catQty * catPrice;
       detailsHTML += `<div style="font-weight:600;font-size:13px;margin:4px 0 2px;">${cat.name} <span style="color:#6b7280;font-weight:400;">— ${catQty} kom, ${formatCurrency(catValue)}</span></div>`;
       for (const it of cat.items) {
-        detailsHTML += `<div style="padding-left:12px;font-size:12px;color:#374151;">${it.pName}: ${it.qty} kom</div>`;
+        if (it.pName) {
+          detailsHTML += `<div style="padding-left:12px;font-size:12px;color:#374151;">${it.pName}: ${it.qty} kom</div>`;
+        }
       }
     }
     details.innerHTML = detailsHTML;
