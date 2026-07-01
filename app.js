@@ -6569,7 +6569,12 @@ async function executeConfirm(docType, customDateStr) {
     date: confirmISO,
     type: docType,
     items: docItems,
-    totalCount: docItems.reduce((s, i) => s + i.qty, 0)
+    totalCount: docItems.reduce((s, i) => s + i.qty, 0),
+    history: [{
+      date: confirmISO,
+      items: docItems,
+      note: 'Transfer iz skladišta'
+    }]
   };
   appState.documents.push(doc);
   
@@ -6585,7 +6590,7 @@ async function executeConfirm(docType, customDateStr) {
   renderShopInventory();
   
   // Show document preview
-  if (docItems.length > 0) showDocumentPreview(docItems, docType, null, confirmISO);
+  if (docItems.length > 0) showDocumentPreview(docItems, docType, null, confirmISO, doc.history);
   else showToast('Dokument je prazan - provjerite kategorije proizvoda');
 }
 
@@ -7297,10 +7302,25 @@ function executeOnSiteConfirm() {
   const shopItems = buildDocumentItems();
   
   if (docs.length > 0) {
+    const prevDoc = docs[docs.length - 1];
+    // Build delta items for history (aggregate additions by category)
+    const deltaMap = {};
+    for (const li of logItems) {
+      if (!deltaMap[li.name]) deltaMap[li.name] = { name: li.name, price: li.price, qty: 0, value: 0 };
+      deltaMap[li.name].qty += li.qty;
+      deltaMap[li.name].value += li.qty * li.price;
+    }
+    const deltaList = Object.values(deltaMap).sort((a, b) => a.name.localeCompare(b.name));
+    const newHistory = [...(prevDoc.history || []), {
+      date: new Date().toISOString(),
+      items: deltaList,
+      note: 'Dodano proizvodnjom na licu mjesta'
+    }];
     docs[docs.length - 1] = {
-      ...docs[docs.length - 1],
+      ...prevDoc,
       items: shopItems,
-      totalCount: shopItems.reduce((s, i) => s + i.qty, 0)
+      totalCount: shopItems.reduce((s, i) => s + i.qty, 0),
+      history: newHistory
       // Keep old date - don't update
     };
   } else {
@@ -7309,7 +7329,12 @@ function executeOnSiteConfirm() {
       date: new Date().toISOString(),
       type: 'update',
       items: shopItems,
-      totalCount: shopItems.reduce((s, i) => s + i.qty, 0)
+      totalCount: shopItems.reduce((s, i) => s + i.qty, 0),
+      history: [{
+        date: new Date().toISOString(),
+        items: shopItems,
+        note: 'Proizvodnja na licu mjesta'
+      }]
     });
   }
   
@@ -7479,7 +7504,7 @@ function returnFromShop() {
 
 // ── Document Preview ────────────────────────────────────────────
 
-function showDocumentPreview(items, docType, customTitle, docDate) {
+function showDocumentPreview(items, docType, customTitle, docDate, history) {
   const preview = document.getElementById('doc-preview');
   const body = document.getElementById('doc-preview-body');
   if (!preview || !body) return;
@@ -7521,6 +7546,42 @@ function showDocumentPreview(items, docType, customTitle, docDate) {
   `;
   
   preview.classList.remove('hidden');
+  
+  // ── Document History Timeline ──────────────────────────────────
+  if (history && history.length > 1) {
+    const historyDiv = document.createElement('div');
+    historyDiv.style.cssText = 'background:#f9fafb;border-radius:10px;padding:12px;margin-top:12px;max-width:650px;margin-left:auto;margin-right:auto;';
+    historyDiv.innerHTML = '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#374151;">\uD83D\uDCCB Povijest dokumenta</div>';
+    for (const hEntry of history) {
+      const hDate = formatDateHR(new Date(hEntry.date));
+      const hTime = new Date(hEntry.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+      const hQty = (hEntry.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+      const hBlock = document.createElement('div');
+      hBlock.style.cssText = 'border-left:3px solid #6366f1;padding:4px 0 4px 10px;margin-bottom:6px;';
+      hBlock.innerHTML = `<div style="font-size:13px;color:#374151;"><strong>${hDate} ${hTime}</strong> — ${escapeHtml(hEntry.note || 'Nepoznato')} — <span style="color:#6366f1;font-weight:600;">${hQty} kom</span></div>`;
+      if ((hEntry.items || []).length > 0) {
+        const itemList = document.createElement('div');
+        itemList.style.cssText = 'display:none;margin-top:4px;font-size:12px;color:#6b7280;';
+        for (const hi of hEntry.items) {
+          const ir = document.createElement('div');
+          ir.textContent = `${hi.name}: ${hi.qty} kom (${(hi.price || 0)}\u20AC)`;
+          itemList.appendChild(ir);
+        }
+        hBlock.appendChild(itemList);
+        hBlock.style.cursor = 'pointer';
+        hBlock.addEventListener('click', (e) => {
+          e.stopPropagation();
+          itemList.style.display = itemList.style.display === 'none' ? 'block' : 'none';
+        });
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:11px;color:#9ca3af;';
+        hint.textContent = 'Klikni za detalje';
+        hBlock.appendChild(hint);
+      }
+      historyDiv.appendChild(hBlock);
+    }
+    body.appendChild(historyDiv);
+  }
   
   // Conditional page numbers: show only if content > 1 A4 page
   setTimeout(() => {
@@ -7612,7 +7673,7 @@ function openDocumentList() {
     mainRow.addEventListener('click', () => {
       const items = (doc.items || []).map(i => ({ name: i.name, price: i.price || 0, qty: i.qty || 0, value: (i.price || 0) * (i.qty || 0) }));
       closeModal();
-      showDocumentPreview(items, doc.type, docTitle, doc.date);
+      showDocumentPreview(items, doc.type, docTitle, doc.date, doc.history);
     });
     card.appendChild(mainRow);
     
