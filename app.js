@@ -6761,7 +6761,7 @@ function openTransferHistory() {
     
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px;cursor:pointer;background:#f9fafb;';
-    header.innerHTML = `<span style="flex:1;font-weight:700;font-size:14px;">${date} ${time}</span><span style="color:#6b7280;font-size:13px;">${totalQty} kom</span><span style="color:#ef4444;font-size:12px;cursor:pointer;">Poni\u0161ti</span>`;
+    header.innerHTML = `<span style="flex:1;font-weight:700;font-size:14px;">${date} ${time}</span><span style="color:#6b7280;font-size:13px;">${totalQty} kom</span>`;
     
     const details = document.createElement('div');
     details.style.cssText = 'display:none;padding:6px 10px;';
@@ -6775,49 +6775,9 @@ function openTransferHistory() {
     }
     details.innerHTML = detailsHTML;
     
-    // Toggle details
-    header.querySelector('span:first-child').addEventListener('click', () => {
+    // Toggle details on header click
+    header.addEventListener('click', () => {
       details.style.display = details.style.display === 'none' ? 'block' : 'none';
-    });
-    
-    // Reverse transfer
-    header.querySelector('span:last-child').addEventListener('click', () => {
-      const tId = t.id;
-      const docId = t.documentId;
-      openModal({
-        title: 'Poni\u0161ti transfer',
-        headerIcon: { symbol: '\u26A0', color: 'red' },
-        size: 'small',
-        body: `Poništiti transfer od ${date} (${totalQty} kom)?`,
-        actions: [
-          { label: 'Poni\u0161ti', tone: 'danger', onClick: () => {
-            // No warehouse quantities to restore (transfer doesn't deduct from warehouse)
-            // Remove history entries for this transfer
-            if (appState.productionLog) {
-              const transferTs = new Date(t.date).getTime();
-              for (const it of t.items) {
-                appState.productionLog = appState.productionLog.filter(h => {
-                  if (h.eventType !== 'transfer_to_shop') return true;
-                  if (h.productId !== it.productId) return true;
-                  if (Math.abs(h.ts - transferTs) > 60000) return true;
-                  return false;
-                });
-              }
-            }
-            // Remove transfer log
-            appState.transferLog = appState.transferLog.filter(x => x.id !== tId);
-            // Remove associated document
-            appState.documents = (appState.documents || []).filter(d => d.id !== docId);
-            closeModal();
-            saveStateDebounced();
-            renderAll();
-            renderShopInventory();
-            openTransferHistory();
-            showToast('Transfer poništen, proizvodi vraćeni u skladište');
-          }},
-          { label: __('Cancel'), tone: 'secondary' }
-        ]
-      });
     });
     
     card.appendChild(header);
