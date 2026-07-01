@@ -7478,8 +7478,10 @@ function showDocumentPreview(items, docType, customTitle, docDate) {
   document.title = docFilename;
   
   let tableRows = '';
+  let rowNum = 0;
   for (const item of items) {
-    tableRows += `<tr><td>${escapeHtml(item.name)}</td><td class="doc-price" style="text-align:right;">${item.price}\u20AC</td><td style="text-align:right;">${item.qty} kom</td></tr>`;
+    rowNum++;
+    tableRows += `<tr><td style="text-align:center;color:#6b7280;">${rowNum}.</td><td>${escapeHtml(item.name)}</td><td class="doc-price" style="text-align:right;">${item.price}\u20AC</td><td style="text-align:right;">${item.qty} kom</td></tr>`;
   }
   
   const totalQty = items.reduce((s, i) => s + i.qty, 0);
@@ -7495,9 +7497,9 @@ function showDocumentPreview(items, docType, customTitle, docDate) {
       <div class="doc-title">${escapeHtml(title)}</div>
       <div class="doc-date">Nadnevak: ${date}</div>
       <table class="doc-table">
-        <thead><tr><th>Proizvod</th><th class="price-header">Pojed. cijena</th><th style="text-align:right;">Količina</th></tr></thead>
+        <thead><tr><th style="width:40px;">R.Br.</th><th>Proizvod</th><th class="price-header">Pojed. cijena</th><th style="text-align:right;">Koli\u010Dina</th></tr></thead>
         <tbody>${tableRows}</tbody>
-        <tfoot><tr class="doc-total"><td>Ukupno</td><td></td><td style="text-align:right;">${totalQty} kom</td></tr></tfoot>
+        <tfoot><tr class="doc-total"><td></td><td>Ukupno</td><td></td><td style="text-align:right;">${totalQty} kom</td></tr></tfoot>
       </table>
     </div>
   `;
