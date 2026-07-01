@@ -4681,8 +4681,7 @@ function renderFolderList(folderId = currentFolderId) {
         }
       }
       const raspolozivo = Math.max(0, stats.totalQty - alreadyTransferred);
-      // Ukupno proizvedeno = real total ever in warehouse = current stock + confirmed transfers out
-      const ukProizvedeno = stats.totalQty + alreadyTransferred;
+      const ukProizvedeno = stats.totalQty;
       
       const ukLine = document.createElement('div'); ukLine.className = 'meta-qty'; ukLine.textContent = `Uk. proizvedeno: ${ukProizvedeno} kom`;
       const razLine = document.createElement('div'); razLine.className = 'meta-qty'; razLine.textContent = `Raspoloživo: ${raspolozivo} kom`;
@@ -4739,7 +4738,7 @@ function renderFolderList(folderId = currentFolderId) {
             }
           }
           const raspolozivo = Math.max(0, qty - alreadyTransferred);
-          const ukProizvedeno = qty + alreadyTransferred;
+          const ukProizvedeno = qty;
           const ukLine = document.createElement('div'); ukLine.className = 'meta-qty'; ukLine.textContent = `Uk. proizvedeno: ${ukProizvedeno} kom`;
           const razLine = document.createElement('div'); razLine.className = 'meta-qty'; razLine.textContent = `Raspoloživo: ${raspolozivo} kom`;
           pmeta.appendChild(ukLine);
