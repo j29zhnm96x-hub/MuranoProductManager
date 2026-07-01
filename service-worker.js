@@ -1,5 +1,5 @@
 /* Improved offline cache with network-first for app shell */
-const CACHE_NAME = 'app-cache-v27';
+const CACHE_NAME = 'app-cache-v28';
 const ASSETS = [
   '/',
   '/index.html',
