@@ -7123,7 +7123,6 @@ function openOnsiteProductPicker() {
       row.innerHTML = `
         <span style="color:#16a34a;font-size:14px;font-weight:700;">+</span>
         <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(category.name)}</span>
-        <span style="color:#6b7280;font-size:12px;">${Number(firstProduct.quantity || 0)} kom</span>
         <span style="color:#374151;font-weight:600;font-size:13px;">${category.price}€</span>
       `;
       row.addEventListener('mouseenter', () => { row.style.background = '#f0fdf4'; });
@@ -7152,7 +7151,7 @@ function openOnsiteProductPicker() {
       pRow.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 12px 6px 44px;cursor:pointer;transition:background 0.15s;border-top:1px solid #f3f4f6;';
       pRow.innerHTML = `
         <span style="font-size:13px;flex:1;">${escapeHtml(p.name)}</span>
-        <span style="color:#16a34a;font-size:12px;font-weight:600;">${Number(p.quantity || 0)} kom</span>
+        <span style="color:#6b7280;font-size:12px;">${category.price}€</span>
       `;
       pRow.addEventListener('mouseenter', () => { pRow.style.background = '#f9fafb'; });
       pRow.addEventListener('mouseleave', () => { pRow.style.background = ''; });
@@ -7365,12 +7364,14 @@ function addOnSiteItem() {
   
   appState.pendingOnSite = appState.pendingOnSite || [];
   
-  // If same product category already exists, increment qty
-  // New ad-hoc categories must not merge with existing categories of the same name.
-  const isNew = !!_onsitePick.isNew;
-  const existing = appState.pendingOnSite.find(i =>
-    i.shopCategory === _onsitePick.shopCategory && !!i.isNew === isNew
-  );
+  // If same product already exists (by productId), increment qty instead of adding new card
+  const existing = appState.pendingOnSite.find(i => {
+    if (_onsitePick.productId && i.productId && i.productId === _onsitePick.productId) return true;
+    // Fallback: match by category (for items without productId)
+    return !_onsitePick.productId || !i.productId
+      ? i.shopCategory === _onsitePick.shopCategory
+      : false;
+  });
   if (existing) {
     existing.qty += qty;
   } else {
