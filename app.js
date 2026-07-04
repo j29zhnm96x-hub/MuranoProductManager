@@ -7051,12 +7051,17 @@ function openOnsiteProductPicker() {
   }
 
   function selectNewCategory(groupFolderId, name, price) {
+    const catName = name.trim();
+    const catPrice = parseInt(price, 10);
+    // Create the product immediately so it appears in future picks
+    const realProductId = ensureWarehouseCategory(groupFolderId, catName, catPrice);
+    if (realProductId) saveStateDebounced();
     _onsitePick = {
-      shopCategory: name.trim(),
-      price: parseInt(price, 10),
-      productId: null,
-      productName: name.trim(),
-      isNew: true,
+      shopCategory: catName,
+      price: catPrice,
+      productId: realProductId,
+      productName: catName,
+      isNew: false,
       groupFolderId
     };
     closeModal();
