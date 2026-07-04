@@ -7095,7 +7095,25 @@ function openOnsiteProductPicker() {
   function renderCategoryRow(category, groupFolderId) {
     const productIds = Array.from(category.productIds || []);
     const productCount = productIds.length;
+    const firstProduct = productIds.map(pid => appState.products[pid]).find(p => p);
 
+    // Single product → directly clickable row (no expand)
+    if (productCount === 1 && firstProduct) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
+      row.innerHTML = `
+        <span style="color:#16a34a;font-size:14px;font-weight:700;">+</span>
+        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(category.name)}</span>
+        <span style="color:#6b7280;font-size:12px;">${Number(firstProduct.quantity || 0)} kom</span>
+        <span style="color:#374151;font-weight:600;font-size:13px;">${category.price}€</span>
+      `;
+      row.addEventListener('mouseenter', () => { row.style.background = '#f0fdf4'; });
+      row.addEventListener('mouseleave', () => { row.style.background = ''; });
+      row.addEventListener('click', () => selectProduct(category.name, category.price, firstProduct));
+      return row;
+    }
+
+    // Multiple products → expandable category with product list
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px 8px 28px;cursor:pointer;border-top:1px solid #f3f4f6;transition:background 0.15s;';
     row.innerHTML = `
