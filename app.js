@@ -7028,7 +7028,14 @@ function openOnsiteProductPicker() {
 
   function focusOnsiteQty() {
     const qty = document.getElementById('onsite-qty');
-    if (qty) setTimeout(() => qty.focus({ preventScroll: true }), 300);
+    if (!qty) return;
+    // Multi-layer approach for iOS Safari:
+    // 1. Synchronous (from user gesture) — needed by iOS for keyboard
+    qty.focus({ preventScroll: true });
+    // 2. After modal close completes (RAF is ~16ms)
+    requestAnimationFrame(() => { try { qty.focus({ preventScroll: true }); } catch(e) {} });
+    // 3. After full tap/click settles — safest for iOS keyboard trigger
+    setTimeout(() => { try { qty.focus({ preventScroll: true }); } catch(e) {} }, 100);
   }
 
   function selectProduct(categoryName, categoryPrice, product) {
