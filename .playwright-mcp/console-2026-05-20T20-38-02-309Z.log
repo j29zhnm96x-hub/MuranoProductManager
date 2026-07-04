@@ -1,0 +1,26 @@
+[    2641ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[    4190ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[  263472ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[  415187ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[ 6219527ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 6220098ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 6221097ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 6222098ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 6223115ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 6224108ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23429430ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23431943ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23431944ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23432095ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23433092ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23434092ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23436147ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23436148ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23437094ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23438106ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23439092ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23440094ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23441092ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23442094ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23443094ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23444095ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0

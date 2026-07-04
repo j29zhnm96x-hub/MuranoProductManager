@@ -1,0 +1,11 @@
+[    2176ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8081/:0
+[  101403ms] [LOG] BEFORE deleteProduct @ :16
+[  101403ms] [LOG] _undoSnapshot: null @ :17
+[  101426ms] [LOG] AFTER deleteProduct @ :19
+[  101426ms] [LOG] _undoSnapshot: {products: Object, folders: Object} @ :20
+[  101627ms] [LOG] toast element: null @ :24
+[  175421ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8081/?t=1780210972343:0
+[ 7945359ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 8305732ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 8395340ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 8485526ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0

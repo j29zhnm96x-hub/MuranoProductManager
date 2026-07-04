@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: Offline
+      - button "💾" [ref=e5] [cursor=pointer]
+      - button "Actions" [ref=e6] [cursor=pointer]
+      - button "+" [ref=e7] [cursor=pointer]
+    - textbox "Search products..." [ref=e10]
+    - generic [ref=e11]:
+      - button "Prodaja" [ref=e12] [cursor=pointer]
+      - button "Settings" [ref=e13] [cursor=pointer]:
+        - img "Settings" [ref=e14]
+  - button "Search" [ref=e16] [cursor=pointer]:
+    - img "Search" [ref=e17]

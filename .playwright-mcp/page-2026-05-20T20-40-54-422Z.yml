@@ -1,0 +1,203 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic "Synced" [ref=e4]: ✓
+      - button "💾" [ref=e5] [cursor=pointer]
+      - button "Akcije" [ref=e29] [cursor=pointer]
+      - button "+" [ref=e7] [cursor=pointer]
+    - textbox "Traži" [ref=e30]
+    - generic [ref=e11]:
+      - button "Prodaja" [ref=e12] [cursor=pointer]
+      - button "Settings" [ref=e13] [cursor=pointer]:
+        - img "Settings" [ref=e14]
+  - generic [ref=e15]:
+    - generic [ref=e31]: Početna > Ogrlice
+    - button "Search" [ref=e16] [cursor=pointer]:
+      - img "Search" [ref=e17]
+  - generic "Overall stats" [ref=e32]:
+    - generic [ref=e819]:
+      - generic [ref=e821]:
+        - generic [ref=e822]: Preostalo
+        - generic [ref=e823]: 58 €
+      - generic [ref=e824]:
+        - generic [ref=e825]: Preostalo
+        - generic [ref=e826]: 26 dana
+      - generic [ref=e827]:
+        - generic [ref=e828]: Uk. količina
+        - generic [ref=e829]: 3307 kom
+      - generic [ref=e830]:
+        - generic [ref=e831]: Uk. vrijednost
+        - generic [ref=e832]: 25,372 €
+  - generic [ref=e18]:
+    - generic "Folder and product tree" [ref=e19]:
+      - list [ref=e833]:
+        - listitem [ref=e834]:
+          - generic [ref=e835] [cursor=pointer]:
+            - img "folder" [ref=e837]
+            - generic [ref=e838]:
+              - generic [ref=e839]: Ogrlica 06
+              - generic [ref=e840]:
+                - generic [ref=e841]: "Kol.: 1653"
+                - generic [ref=e842]: 9,918 €
+          - generic [ref=e843]:
+            - button "Reorder Ogrlica 06" [ref=e844]: ↕
+            - button "⋯" [ref=e845] [cursor=pointer]
+        - listitem [ref=e846]:
+          - generic [ref=e847] [cursor=pointer]:
+            - img "folder" [ref=e849]
+            - generic [ref=e850]:
+              - generic [ref=e851]: Ogrlice 10
+              - generic [ref=e852]:
+                - generic [ref=e853]: "Kol.: 86"
+                - generic [ref=e854]: 860 €
+          - generic [ref=e855]:
+            - button "Reorder Ogrlice 10" [ref=e856]: ↕
+            - button "⋯" [ref=e857] [cursor=pointer]
+        - listitem [ref=e858]:
+          - generic [ref=e859] [cursor=pointer]:
+            - img "product" [ref=e861]
+            - generic [ref=e862]:
+              - generic [ref=e863]: Ogrlica 12
+              - generic [ref=e864]:
+                - generic [ref=e865]: 396 €
+                - generic [ref=e866]: "Kol.: 33"
+          - generic [ref=e867]:
+            - button "Reorder Ogrlica 12" [ref=e868]: ↕
+            - button "⋯" [ref=e869] [cursor=pointer]
+        - listitem [ref=e870]:
+          - generic [ref=e871] [cursor=pointer]:
+            - img "product" [ref=e873]
+            - generic [ref=e874]:
+              - generic [ref=e875]: Ogrlica 14
+              - generic [ref=e876]:
+                - generic [ref=e877]: 1,470 €
+                - generic [ref=e878]: "Kol.: 105"
+          - generic [ref=e879]:
+            - button "Reorder Ogrlica 14" [ref=e880]: ↕
+            - button "⋯" [ref=e881] [cursor=pointer]
+        - listitem [ref=e882]:
+          - generic [ref=e883] [cursor=pointer]:
+            - img "product" [ref=e885]
+            - generic [ref=e886]:
+              - generic [ref=e887]: Ogrlica 18
+              - generic [ref=e888]:
+                - generic [ref=e889]: 990 €
+                - generic [ref=e890]: "Kol.: 55"
+          - generic [ref=e891]:
+            - button "Reorder Ogrlica 18" [ref=e892]: ↕
+            - button "⋯" [ref=e893] [cursor=pointer]
+        - listitem [ref=e894]:
+          - generic [ref=e895] [cursor=pointer]:
+            - img "product" [ref=e897]
+            - generic [ref=e898]:
+              - generic [ref=e899]: Ogrlica 16
+              - generic [ref=e900]:
+                - generic [ref=e901]: 1,264 €
+                - generic [ref=e902]: "Kol.: 79"
+          - generic [ref=e903]:
+            - button "Reorder Ogrlica 16" [ref=e904]: ↕
+            - button "⋯" [ref=e905] [cursor=pointer]
+        - listitem [ref=e906]:
+          - generic [ref=e907] [cursor=pointer]:
+            - img "product" [ref=e909]
+            - generic [ref=e910]:
+              - generic [ref=e911]: Ogrlica 20
+              - generic [ref=e912]:
+                - generic [ref=e913]: 400 €
+                - generic [ref=e914]: "Kol.: 20"
+          - generic [ref=e915]:
+            - button "Reorder Ogrlica 20" [ref=e916]: ↕
+            - button "⋯" [ref=e917] [cursor=pointer]
+        - listitem [ref=e918]:
+          - generic [ref=e919] [cursor=pointer]:
+            - img "product" [ref=e921]
+            - generic [ref=e922]:
+              - generic [ref=e923]: Ogrlica 22
+              - generic [ref=e924]:
+                - generic [ref=e925]: 638 €
+                - generic [ref=e926]: "Kol.: 29"
+          - generic [ref=e927]:
+            - button "Reorder Ogrlica 22" [ref=e928]: ↕
+            - button "⋯" [ref=e929] [cursor=pointer]
+        - listitem [ref=e930]:
+          - generic [ref=e931] [cursor=pointer]:
+            - img "product" [ref=e933]
+            - generic [ref=e934]:
+              - generic [ref=e935]: Ogrlica 25
+              - generic [ref=e936]:
+                - generic [ref=e937]: 250 €
+                - generic [ref=e938]: "Kol.: 10"
+          - generic [ref=e939]:
+            - button "Reorder Ogrlica 25" [ref=e940]: ↕
+            - button "⋯" [ref=e941] [cursor=pointer]
+        - listitem [ref=e942]:
+          - generic [ref=e943] [cursor=pointer]:
+            - img "product" [ref=e945]
+            - generic [ref=e946]:
+              - generic [ref=e947]: Ogrlica 80
+              - generic [ref=e948]:
+                - generic [ref=e949]: 80 €
+                - generic [ref=e950]: "Kol.: 1"
+          - generic [ref=e951]:
+            - button "Reorder Ogrlica 80" [ref=e952]: ↕
+            - button "⋯" [ref=e953] [cursor=pointer]
+    - generic "Priority products progress" [ref=e20]:
+      - generic [ref=e955]: Prioritetno
+      - generic [ref=e956]:
+        - generic [ref=e957]:
+          - generic [ref=e958] [cursor=pointer]: Rak roza
+          - generic [ref=e960]: 0 / 50 pc (0%)
+        - generic [ref=e961]:
+          - generic [ref=e962] [cursor=pointer]: Snoopy
+          - generic [ref=e965]: 2 / 50 pc (4%)
+        - generic [ref=e966]:
+          - generic [ref=e967] [cursor=pointer]: Rak crveni
+          - generic [ref=e970]: 8 / 50 pc (16%)
+        - generic [ref=e971]:
+          - generic [ref=e972] [cursor=pointer]: Srce 10
+          - generic [ref=e975]: 55 / 200 pc (28%)
+        - generic [ref=e976]:
+          - generic [ref=e977] [cursor=pointer]: Mačka mix
+          - generic [ref=e980]: 50 / 100 pc (50%)
+        - generic [ref=e981]:
+          - generic [ref=e982] [cursor=pointer]: Morski pas
+          - generic [ref=e985]: 39 / 70 pc (56%)
+        - generic [ref=e986]:
+          - generic [ref=e987] [cursor=pointer]: Morski konjić mix
+          - generic [ref=e990]: 28 / 50 pc (56%)
+        - generic [ref=e991]:
+          - generic [ref=e992] [cursor=pointer]: Rak plavi
+          - generic [ref=e995]: 65 / 100 pc (65%)
+        - generic [ref=e996]:
+          - generic [ref=e997] [cursor=pointer]: Kornjača roza
+          - generic [ref=e1000]: 63 / 80 pc (79%)
+        - generic [ref=e1001]:
+          - generic [ref=e1002] [cursor=pointer]: Pingvin crni
+          - generic [ref=e1005]: 44 / 50 pc (88%)
+        - generic [ref=e1006]:
+          - generic [ref=e1007] [cursor=pointer]: Pingvin plavi
+          - generic [ref=e1010]: 46 / 50 pc (92%)
+        - generic [ref=e1011]:
+          - generic [ref=e1012] [cursor=pointer]: Delfin roza
+          - generic [ref=e1015]: 100 / 100 pc (100%)
+        - generic [ref=e1016]:
+          - generic [ref=e1017] [cursor=pointer]: Srce roza
+          - generic [ref=e1020]: 201 / 200 pc (100%)
+        - generic [ref=e1021]:
+          - generic [ref=e1022] [cursor=pointer]: Buba mara
+          - generic [ref=e1025]: 95 / 90 pc (106%)
+        - generic [ref=e1026]:
+          - generic [ref=e1027] [cursor=pointer]: Srce crveno
+          - generic [ref=e1030]: 106 / 100 pc (106%)
+        - generic [ref=e1031]:
+          - generic [ref=e1032] [cursor=pointer]: Delfin plavi
+          - generic [ref=e1035]: 267 / 250 pc (107%)
+        - generic [ref=e1036]:
+          - generic [ref=e1037] [cursor=pointer]: Morski konjić plavi
+          - generic [ref=e1040]: 58 / 50 pc (116%)
+        - generic [ref=e1041]:
+          - generic [ref=e1042] [cursor=pointer]: Kornjača zelena
+          - generic [ref=e1045]: 126 / 100 pc (126%)
+        - generic [ref=e1046]:
+          - generic [ref=e1047] [cursor=pointer]: Kornjača plava
+          - generic [ref=e1050]: 136 / 100 pc (136%)

@@ -1,0 +1,20 @@
+[    1728ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[   51049ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[ 3411112ms] [ERROR] Failed to load resource: the server responded with a status of 504 () @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[ 9453380ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[31888334ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[35236625ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[35266626ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[35296631ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[49636717ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[49756909ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[54830190ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[59146770ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[59986701ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[66856743ms] [ERROR] Failed to load resource: the server responded with a status of 504 () @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[69526950ms] [ERROR] Failed to load resource: the server responded with a status of 504 () @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[74877693ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[74877845ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[100327098ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[118762602ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[137104535ms] [ERROR] Failed to load resource: net::ERR_ADDRESS_UNREACHABLE @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0

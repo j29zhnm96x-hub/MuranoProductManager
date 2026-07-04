@@ -1,0 +1,5 @@
+[    2335ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8080/:0
+[10234941ms] [ERROR] Failed to load resource: the server responded with a status of 504 () @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[10864681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[23015064ms] [ERROR] Failed to load resource: the server responded with a status of 504 () @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0
+[27754833ms] [ERROR] Failed to load resource: the server responded with a status of 504 () @ https://drfyrustkimutpfmxzag.supabase.co/storage/v1/object/list/saves:0

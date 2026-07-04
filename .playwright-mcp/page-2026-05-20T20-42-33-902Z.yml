@@ -1,0 +1,209 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic "Synced" [ref=e293]: ✓
+      - button "💾" [ref=e5] [cursor=pointer]
+      - button "Akcije" [ref=e6] [cursor=pointer]
+      - button "+" [ref=e7] [cursor=pointer]
+    - textbox "Traži" [ref=e10]
+    - generic [ref=e11]:
+      - button "Prodaja" [ref=e12] [cursor=pointer]
+      - button "Settings" [ref=e13] [cursor=pointer]:
+        - img "Settings" [ref=e14]
+  - generic [ref=e15]:
+    - generic [ref=e16]: Početna
+    - button "Search" [ref=e17] [cursor=pointer]:
+      - img "Search" [ref=e18]
+  - generic "Overall stats" [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e22]:
+        - generic [ref=e23]: Preostalo
+        - generic [ref=e24]: 58 €
+      - generic [ref=e25]:
+        - generic [ref=e26]: Preostalo
+        - generic [ref=e27]: 26 dana
+      - generic [ref=e28]:
+        - generic [ref=e29]: Uk. količina
+        - generic [ref=e30]: 3307 kom
+      - generic [ref=e31]:
+        - generic [ref=e32]: Uk. vrijednost
+        - generic [ref=e33]: 25,372 €
+  - generic [ref=e34]:
+    - generic "Folder and product tree" [ref=e35]:
+      - list [ref=e36]:
+        - listitem [ref=e37]:
+          - generic [ref=e38] [cursor=pointer]:
+            - img "folder" [ref=e40]
+            - generic [ref=e41]:
+              - generic [ref=e42]: Ogrlice
+              - generic [ref=e43]:
+                - generic [ref=e44]: "Kol.: 2071"
+                - generic [ref=e45]: 16,266 €
+          - generic [ref=e46]:
+            - button "Reorder Ogrlice" [ref=e47]: ↕
+            - button "⋯" [ref=e48] [cursor=pointer]
+        - listitem [ref=e49]:
+          - generic [ref=e50] [cursor=pointer]:
+            - img "product" [ref=e52]
+            - generic [ref=e53]:
+              - generic [ref=e54]: Perla privjesak
+              - generic [ref=e55]:
+                - generic [ref=e56]: 1,250 €
+                - generic [ref=e57]: "Kol.: 125"
+          - generic [ref=e58]:
+            - generic [ref=e59]: ✏️
+            - button "Reorder Perla privjesak" [ref=e60]: ↕
+            - button "⋯" [ref=e61] [cursor=pointer]
+        - listitem [ref=e62]:
+          - generic [ref=e63] [cursor=pointer]:
+            - img "folder" [ref=e65]
+            - generic [ref=e66]:
+              - generic [ref=e67]: Naušnice
+              - generic [ref=e68]:
+                - generic [ref=e69]: "Kol.: 979"
+                - generic [ref=e70]: 6,256 €
+          - generic [ref=e71]:
+            - button "Reorder Naušnice" [ref=e72]: ↕
+            - button "⋯" [ref=e73] [cursor=pointer]
+        - listitem [ref=e74]:
+          - generic [ref=e75] [cursor=pointer]:
+            - img "product" [ref=e77]
+            - generic [ref=e78]:
+              - generic [ref=e79]: Prsten 10
+              - generic [ref=e80]:
+                - generic [ref=e81]: 760 €
+                - generic [ref=e82]: "Kol.: 76"
+          - generic [ref=e83]:
+            - button "Reorder Prsten 10" [ref=e84]: ↕
+            - button "⋯" [ref=e85] [cursor=pointer]
+        - listitem [ref=e86]:
+          - generic [ref=e87] [cursor=pointer]:
+            - img "folder" [ref=e89]
+            - generic [ref=e90]:
+              - generic [ref=e91]: Narukvice
+              - generic [ref=e92]:
+                - generic [ref=e93]: "Kol.: 56"
+                - generic [ref=e94]: 840 €
+          - generic [ref=e95]:
+            - button "Reorder Narukvice" [ref=e96]: ↕
+            - button "⋯" [ref=e97] [cursor=pointer]
+        - listitem [ref=e98]:
+          - generic [ref=e99] [cursor=pointer]:
+            - img "folder" [ref=e101]
+            - generic [ref=e103]: Repro materijal
+          - generic [ref=e104]:
+            - button "Reorder Repro materijal" [ref=e105]: ↕
+            - button "⋯" [ref=e106] [cursor=pointer]
+    - generic "Priority products progress" [ref=e107]:
+      - generic [ref=e109]: Prioritetno
+      - generic [ref=e110]:
+        - generic [ref=e111]:
+          - generic [ref=e112] [cursor=pointer]: Rak roza
+          - generic [ref=e114]: 0 / 50 pc (0%)
+        - generic [ref=e115]:
+          - generic [ref=e116] [cursor=pointer]: Snoopy
+          - generic [ref=e119]: 2 / 50 pc (4%)
+        - generic [ref=e120]:
+          - generic [ref=e121] [cursor=pointer]: Rak crveni
+          - generic [ref=e124]: 8 / 50 pc (16%)
+        - generic [ref=e125]:
+          - generic [ref=e126] [cursor=pointer]: Srce 10
+          - generic [ref=e129]: 55 / 200 pc (28%)
+        - generic [ref=e130]:
+          - generic [ref=e131] [cursor=pointer]: Narukvica 15 Pandora
+          - generic [ref=e134]: 50 / 150 pc (33%)
+        - generic [ref=e135]:
+          - generic [ref=e136] [cursor=pointer]: Perla privjesak
+          - generic [ref=e139]: 125 / 300 pc (42%)
+        - generic [ref=e140]:
+          - generic [ref=e141] [cursor=pointer]: Plave alabaster
+          - generic [ref=e144]: 9 / 20 pc (45%)
+        - generic [ref=e145]:
+          - generic [ref=e146] [cursor=pointer]: Alesandrit
+          - generic [ref=e149]: 14 / 30 pc (47%)
+        - generic [ref=e150]:
+          - generic [ref=e151] [cursor=pointer]: Mačka mix
+          - generic [ref=e154]: 50 / 100 pc (50%)
+        - generic [ref=e155]:
+          - generic [ref=e156] [cursor=pointer]: Verde marino
+          - generic [ref=e159]: 18 / 34 pc (53%)
+        - generic [ref=e160]:
+          - generic [ref=e161] [cursor=pointer]: Tirkizne
+          - generic [ref=e164]: 16 / 30 pc (53%)
+        - generic [ref=e165]:
+          - generic [ref=e166] [cursor=pointer]: Morski pas
+          - generic [ref=e169]: 39 / 70 pc (56%)
+        - generic [ref=e170]:
+          - generic [ref=e171] [cursor=pointer]: Morski konjić mix
+          - generic [ref=e174]: 28 / 50 pc (56%)
+        - generic [ref=e175]:
+          - generic [ref=e176] [cursor=pointer]: Rak plavi
+          - generic [ref=e179]: 65 / 100 pc (65%)
+        - generic [ref=e180]:
+          - generic [ref=e181] [cursor=pointer]: Mramorne plave
+          - generic [ref=e184]: 35 / 50 pc (70%)
+        - generic [ref=e185]:
+          - generic [ref=e186] [cursor=pointer]: Kornjača roza
+          - generic [ref=e189]: 63 / 80 pc (79%)
+        - generic [ref=e190]:
+          - generic [ref=e191] [cursor=pointer]: Svijetlo roza proz.
+          - generic [ref=e194]: 12 / 15 pc (80%)
+        - generic [ref=e195]:
+          - generic [ref=e196] [cursor=pointer]: Svijetlo zelena proz.
+          - generic [ref=e199]: 25 / 30 pc (83%)
+        - generic [ref=e200]:
+          - generic [ref=e201] [cursor=pointer]: Pingvin crni
+          - generic [ref=e204]: 44 / 50 pc (88%)
+        - generic [ref=e205]:
+          - generic [ref=e206] [cursor=pointer]: Pingvin plavi
+          - generic [ref=e209]: 46 / 50 pc (92%)
+        - generic [ref=e210]:
+          - generic [ref=e211] [cursor=pointer]: Zelene proz.
+          - generic [ref=e214]: 28 / 30 pc (93%)
+        - generic [ref=e215]:
+          - generic [ref=e216] [cursor=pointer]: Svijetlo plave proz.
+          - generic [ref=e219]: 60 / 60 pc (100%)
+        - generic [ref=e220]:
+          - generic [ref=e221] [cursor=pointer]: Delfin roza
+          - generic [ref=e224]: 100 / 100 pc (100%)
+        - generic [ref=e225]:
+          - generic [ref=e226] [cursor=pointer]: Srce roza
+          - generic [ref=e229]: 201 / 200 pc (100%)
+        - generic [ref=e230]:
+          - generic [ref=e231] [cursor=pointer]: Buba mara
+          - generic [ref=e234]: 95 / 90 pc (106%)
+        - generic [ref=e235]:
+          - generic [ref=e236] [cursor=pointer]: Srce crveno
+          - generic [ref=e239]: 106 / 100 pc (106%)
+        - generic [ref=e240]:
+          - generic [ref=e241] [cursor=pointer]: Delfin plavi
+          - generic [ref=e244]: 267 / 250 pc (107%)
+        - generic [ref=e245]:
+          - generic [ref=e246] [cursor=pointer]: Bijele
+          - generic [ref=e249]: 107 / 100 pc (107%)
+        - generic [ref=e250]:
+          - generic [ref=e251] [cursor=pointer]: Crne
+          - generic [ref=e254]: 108 / 100 pc (108%)
+        - generic [ref=e255]:
+          - generic [ref=e256] [cursor=pointer]: Morski konjić plavi
+          - generic [ref=e259]: 58 / 50 pc (116%)
+        - generic [ref=e260]:
+          - generic [ref=e261] [cursor=pointer]: Kornjača zelena
+          - generic [ref=e264]: 126 / 100 pc (126%)
+        - generic [ref=e265]:
+          - generic [ref=e266] [cursor=pointer]: Svijetlo plave alabaster
+          - generic [ref=e269]: 39 / 30 pc (130%)
+        - generic [ref=e270]:
+          - generic [ref=e271] [cursor=pointer]: Kornjača plava
+          - generic [ref=e274]: 136 / 100 pc (136%)
+        - generic [ref=e275]:
+          - generic [ref=e276] [cursor=pointer]: Ametist
+          - generic [ref=e279]: 29 / 20 pc (145%)
+        - generic [ref=e280]:
+          - generic [ref=e281] [cursor=pointer]: Plave proz.
+          - generic [ref=e284]: 107 / 70 pc (153%)
+  - generic [ref=e288]:
+    - generic [ref=e289]:
+      - textbox "••••••••" [ref=e290]
+      - button "Potvrdi" [ref=e291] [cursor=pointer]
+    - button "👁" [ref=e292] [cursor=pointer]
