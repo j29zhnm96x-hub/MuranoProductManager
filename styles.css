@@ -386,7 +386,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 }
 
 /* Product Page (overlay) */
-#product-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 40; overflow: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; height: 100dvh; height: 100vh; }
+#product-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 40; overflow: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
 .pp-header { position: fixed; top: 0; left: 0; right: 0; z-index: 41; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px; padding: 6px 8px; background: #faf7f2; border-bottom: 1px solid #d9d0c8; }
 .pp-left { display: inline-flex; align-items: center; gap: 8px; }
 .pp-back { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-size: 14px; }
@@ -412,14 +412,14 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .pp-image-preview { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; background: #f1f2f6; }
 
 /* ── Shop Page (overlay) ────────────────────────────────────── */
-#shop-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 41; overflow: auto; overscroll-behavior-y: contain; height: 100dvh; height: 100vh; }
+#shop-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 41; overflow: auto; overscroll-behavior-y: contain; }
 .shop-header { position: fixed; top: 0; left: 0; right: 0; z-index: 42; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; padding: 6px 8px; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
 .shop-left { display: inline-flex; align-items: center; gap: 8px; }
 .shop-back { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-size: 14px; cursor: pointer; }
 .shop-title { font-weight: 800; font-size: 19px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; justify-self: center; }
 .shop-akcije-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .shop-akcije-btn:hover { background: #f3f4f6; }
-.shop-content { padding: 10px; display: grid; gap: 10px; max-width: 960px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.shop-content { padding: 10px; display: grid; gap: 10px; max-width: 960px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .shop-inv-header { padding: 4px 0; }
 .shop-inv-title { font-weight: 700; font-size: 15px; color: #374151; }
 .shop-inventory { display: grid; gap: 1px; background: #e5e7eb; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
@@ -457,12 +457,12 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .shop-pending-actions { display: flex; gap: 8px; padding: 8px 10px; background: #fffbeb; }
 
 /* ── On-Site Production Page (overlay) ──────────────────────── */
-#onsite-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 41; overflow: auto; overscroll-behavior-y: contain; height: 100dvh; height: 100vh; }
+#onsite-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 41; overflow: auto; overscroll-behavior-y: contain; }
 .onsite-header { position: fixed; top: 0; left: 0; right: 0; z-index: 42; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; padding: 6px 8px; background: #faf7f2; border-bottom: 1px solid #d9d0c8; }
 .onsite-left { display: inline-flex; align-items: center; gap: 8px; }
 .onsite-back { padding: 6px 8px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-size: 14px; cursor: pointer; }
 .onsite-title { font-weight: 800; font-size: 18px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; justify-self: center; }
-.onsite-content { padding: 10px; display: grid; gap: 10px; max-width: 640px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.onsite-content { padding: 10px; display: grid; gap: 10px; max-width: 640px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .onsite-list { display: grid; gap: 6px; }
 .onsite-item { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
 .onsite-item-name { flex: 1; font-weight: 600; font-size: 14px; }
@@ -481,13 +481,13 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .onsite-actions { display: flex; gap: 8px; padding: 4px 0; }
 
 /* ── Document Preview (PDF overlay) ─────────────────────────── */
-#doc-preview { position: fixed; inset: 0; background: #ffffff; z-index: 44; overflow: auto; height: 100dvh; height: 100vh; }
+#doc-preview { position: fixed; inset: 0; background: #ffffff; z-index: 44; overflow: auto; }
 .doc-preview-header { position: fixed; top: 0; left: 0; right: 0; z-index: 45; display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
 .doc-preview-title { font-weight: 800; font-size: 16px; flex: 1; text-align: center; }
 .doc-preview-actions { display: flex; gap: 6px; }
 .doc-preview-actions button { padding: 6px 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; font-weight: 700; font-size: 12px; cursor: pointer; }
 .doc-preview-actions button:hover { background: #f3f4f6; }
-.doc-preview-body { padding: 20px; max-width: 800px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); }
+.doc-preview-body { padding: 20px; max-width: 800px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
 .doc-a4 { background: #ffffff; padding: 40px 30px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .doc-header { text-align: left; margin-bottom: 24px; }
 .doc-header .doc-company { font-weight: 800; font-size: 16px; }
@@ -517,7 +517,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 }
 
 /* ── History Page (overlay) ──────────────────────────────────── */
-#history-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 42; overflow: auto; overscroll-behavior-y: contain; height: 100dvh; height: 100vh; }
+#history-page { position: fixed; inset: 0; background: #f5f0eb; z-index: 42; overflow: auto; overscroll-behavior-y: contain; }
 
 /* Header */
 .history-header { position: fixed; top: 0; left: 0; right: 0; z-index: 43; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; padding: 6px 8px; background: #faf7f2; border-bottom: 1px solid #d9d0c8; }
@@ -528,7 +528,7 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .history-totop:hover { background: #f3f4f6; }
 
 /* Content area */
-.history-content { padding: 10px; display: grid; gap: 8px; max-width: 1100px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.history-content { padding: 10px; display: grid; gap: 8px; max-width: 1100px; margin: 0 auto; padding-top: calc(54px + env(safe-area-inset-top)); padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .history-toolbar { display: grid; gap: 8px; }
 
 /* ── Summary grid (Excel-like) ──────────────────────────────── */
@@ -661,3 +661,12 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 .stats-card { display: flex; align-items: center; justify-content: space-between; padding: 14px; border: 1px dashed #d9d0c8; border-radius: 12px; background: #f2ece5; }
 .stats-card .title { font-weight: 700; }
 .stats-card .values { display: flex; gap: 16px; color: #5c4f48; }
+
+/* Mobile: extra bottom space so last items are fully visible */
+@media (max-width: 768px) {
+  .shop-content { padding-bottom: calc(200px + env(safe-area-inset-bottom)); }
+  .onsite-content { padding-bottom: calc(200px + env(safe-area-inset-bottom)); }
+  .history-content { padding-bottom: calc(200px + env(safe-area-inset-bottom)); }
+  .doc-preview-body { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+  .pp-content { padding-bottom: calc(200px + env(safe-area-inset-bottom)); }
+}

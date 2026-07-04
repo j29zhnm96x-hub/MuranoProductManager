@@ -1,3 +1,14 @@
+// ── Force cache bust on every load ────────────────────────────
+(function(){
+  // Unregister all service workers and clear all caches
+  if ('caches' in self) {
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  }
+})();
+
 // ── Translation System ──────────────────────────────────────────
 const LANG = {
   hr: {
@@ -4308,12 +4319,14 @@ function openHistoryPage() {
   renderHistoryPage();
   page.classList.remove('hidden');
   page.scrollTop = 0;
+  enableViewportTracking(page);
 }
 
 function closeHistoryPage() {
   const page = document.getElementById('history-page');
   if (!page) return;
   page.classList.add('hidden');
+  disableViewportTracking(page);
 }
 
 // Build a comprehensive, shareable text report of all folders and products
@@ -5777,6 +5790,31 @@ async function initialCloudSync() {
   }
 }
 
+// ── iOS Viewport Height Fix ──────────────────────────────────
+function enableViewportTracking(el) {
+  const handler = () => {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    el.style.height = h + 'px';
+  };
+  handler();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handler, { passive: true });
+  } else {
+    window.addEventListener('resize', handler, { passive: true });
+  }
+  el._viewportHandler = handler;
+}
+function disableViewportTracking(el) {
+  if (el._viewportHandler) {
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', el._viewportHandler);
+    } else {
+      window.removeEventListener('resize', el._viewportHandler);
+    }
+    el._viewportHandler = null;
+  }
+}
+
 // ── Shop Page ──────────────────────────────────────────────────
 
 function openShopPage() {
@@ -5786,11 +5824,15 @@ function openShopPage() {
   page.classList.remove('hidden');
   renderShopInventory();
   page.scrollTop = 0;
+  enableViewportTracking(page);
 }
 
 function closeShopPage() {
   const page = document.getElementById('shop-page');
-  if (page) page.classList.add('hidden');
+  if (page) {
+    page.classList.add('hidden');
+    disableViewportTracking(page);
+  }
 }
 
 function calculateShopInventory() {
@@ -5895,6 +5937,17 @@ function renderShopInventory() {
     totalRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px;background:#f9fafb;font-size:14px;font-weight:700;border-top:2px solid #d1d5db;';
     totalRow.innerHTML = `<span style="flex:1;">Ukupno</span><span style="width:80px;text-align:right;color:#6b7280;">-</span><span style="width:80px;text-align:right;">${allQty} kom</span><span style="width:80px;text-align:right;">${formatCurrency(allVal)}</span>`;
     container.appendChild(totalRow);
+    
+    // Two empty spacer rows to push total above bottom toolbar
+    const spacerStyle = 'display:flex;align-items:center;gap:8px;padding:10px 10px;background:transparent;';
+    for (let s = 0; s < 2; s++) {
+      const sp = document.createElement('div');
+      sp.style.cssText = spacerStyle;
+      // Force each spacer to at least 42px tall
+      sp.style.minHeight = '42px';
+      sp.style.flexShrink = '0';
+      container.appendChild(sp);
+    }
   }
   
   // Pending transfers section
@@ -6741,19 +6794,19 @@ function openShopActionsMenu() {
 
 function openTransferHistory() {
   const tLog = appState.transferLog || [];
-  if (!tLog.length) { showToast('Nema transfera'); return; }
+  const oLog = appState.onSiteProduction || [];
+  const rLog = appState.returnLog || [];
   
-  const body = document.createElement('div');
-  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  if (!tLog.length && !oLog.length && !rLog.length) {
+    showToast('Nema transfera');
+    return;
+  }
   
-  for (let i = tLog.length - 1; i >= 0; i--) {
-    const t = tLog[i];
-    const date = new Date(t.date).toLocaleDateString('hr-HR');
-    const time = new Date(t.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
-    const totalQty = t.items.reduce((s, it) => s + it.qty, 0);
-    const totalValue = t.items.reduce((s, it) => s + it.qty * extractPriceFromName(it.shopCategory || ''), 0);
-    
-    // Group by category for display
+  // Normalize all entries into a common format
+  const allEntries = [];
+  
+  // Transfers from warehouse to shop
+  for (const t of tLog) {
     const catMap = {};
     for (const it of t.items) {
       const prod = appState.products[it.productId];
@@ -6761,19 +6814,83 @@ function openTransferHistory() {
       if (!catMap[catName]) catMap[catName] = { name: catName, items: [] };
       catMap[catName].items.push({ pName: prod?.name || null, qty: it.qty });
     }
+    allEntries.push({
+      date: t.date,
+      type: 'transfer',
+      typeLabel: 'Transfer iz skladišta',
+      catMap,
+      totalQty: t.items.reduce((s, it) => s + it.qty, 0),
+      totalValue: t.items.reduce((s, it) => s + it.qty * extractPriceFromName(it.shopCategory || ''), 0)
+    });
+  }
+  
+  // On-site production
+  for (const o of oLog) {
+    if (!o.addedToShop) continue;
+    const catMap = {};
+    for (const it of o.items) {
+      const catName = it.shopCategory || it.name || 'Nepoznato';
+      if (!catMap[catName]) catMap[catName] = { name: catName, items: [] };
+      catMap[catName].items.push({ pName: it.name || null, qty: it.qty });
+    }
+    allEntries.push({
+      date: o.date,
+      type: 'onsite',
+      typeLabel: 'Proizvodnja na licu mjesta',
+      catMap,
+      totalQty: o.items.reduce((s, it) => s + it.qty, 0),
+      totalValue: o.items.reduce((s, it) => s + it.qty * (it.price || extractPriceFromName(it.shopCategory || '')), 0)
+    });
+  }
+  
+  // Returns from shop to warehouse
+  for (const r of rLog) {
+    const catMap = {};
+    for (const it of r.items) {
+      const catName = it.shopCategory || it.name || 'Nepoznato';
+      if (!catMap[catName]) catMap[catName] = { name: catName, items: [] };
+      catMap[catName].items.push({ pName: it.name || null, qty: it.qty });
+    }
+    allEntries.push({
+      date: r.date,
+      type: 'return',
+      typeLabel: 'Povrat iz prodaje',
+      catMap,
+      totalQty: r.items.reduce((s, it) => s + it.qty, 0),
+      totalValue: r.items.reduce((s, it) => s + it.qty * extractPriceFromName(it.shopCategory || ''), 0)
+    });
+  }
+  
+  // Sort by date descending (newest first)
+  allEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  const body = document.createElement('div');
+  body.style.cssText = 'display:grid;gap:8px;max-height:70vh;overflow:auto;';
+  
+  for (const entry of allEntries) {
+    const date = new Date(entry.date).toLocaleDateString('hr-HR');
+    const time = new Date(entry.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+    
+    // Type badge colors
+    const badgeColors = {
+      transfer: { bg: '#dbeafe', text: '#1e40af' },
+      onsite: { bg: '#dcfce7', text: '#166534' },
+      return: { bg: '#fef3c7', text: '#92400e' }
+    };
+    const bc = badgeColors[entry.type] || badgeColors.transfer;
     
     const card = document.createElement('div');
     card.style.cssText = 'border:1px solid #e5e7eb;border-radius:10px;background:#ffffff;overflow:hidden;';
     
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px;cursor:pointer;background:#f9fafb;';
-    header.innerHTML = `<span style="flex:1;font-weight:700;font-size:14px;">${date} ${time}</span><span style="color:#6b7280;font-size:13px;">${totalQty} kom</span><span style="color:#374151;font-weight:600;font-size:13px;margin-left:4px;">${formatCurrency(totalValue)}</span>`;
+    header.innerHTML = `<span style="background:${bc.bg};color:${bc.text};font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap;">${entry.typeLabel}</span><span style="font-weight:700;font-size:14px;">${date} ${time}</span><span style="color:#6b7280;font-size:13px;">${entry.totalQty} kom</span><span style="color:#374151;font-weight:600;font-size:13px;margin-left:4px;">${formatCurrency(entry.totalValue)}</span>`;
     
     const details = document.createElement('div');
     details.style.cssText = 'display:none;padding:6px 10px;';
     
     let detailsHTML = '';
-    for (const cat of Object.values(catMap)) {
+    for (const cat of Object.values(entry.catMap)) {
       const catQty = cat.items.reduce((s, it) => s + it.qty, 0);
       const catPrice = extractPriceFromName(cat.name);
       const catValue = catQty * catPrice;
@@ -6814,11 +6931,16 @@ function openInSeasonProduction() {
   page.classList.remove('hidden');
   renderOnSiteItems();
   page.scrollTop = 0;
+  enableViewportTracking(page);
 }
 
 function closeOnSitePage() {
   const page = document.getElementById('onsite-page');
-  if (page) { page.classList.add('hidden'); openShopPage(); }
+  if (page) {
+    disableViewportTracking(page);
+    page.classList.add('hidden');
+    openShopPage();
+  }
 }
 
 function updateOnsitePickDisplay() {
@@ -7613,7 +7735,7 @@ function showDocumentPreview(items, docType, customTitle, docDate, history) {
     }
   };
   
-  // Single Akcije button → opens small modal
+  // Single Akcije button → opens small modal with print/share only
   document.getElementById('doc-actions-btn').onclick = () => {
     openModal({
       title: 'Akcije',
@@ -7621,25 +7743,6 @@ function showDocumentPreview(items, docType, customTitle, docDate, history) {
       actionsLayout: 'stack',
       actions: [
         { label: '\uD83D\uDDB1\uFE0F  Ispi\u0161i / Podijeli', onClick: () => { closeModal(); window.print(); } },
-        { label: '\uD83D\uDCCB  Novi dokument', onClick: () => {
-          closeModal();
-          const newDoc = { id: uuid(), date: now.toISOString(), type: 'new', items, totalCount: totalQty };
-          appState.documents = appState.documents || [];
-          appState.documents.push(newDoc);
-          saveStateDebounced();
-          showToast('Novi dokument spremljen');
-        }},
-        { label: '\uD83D\uDD04  A\u017euriraj zadnji', onClick: () => {
-          closeModal();
-          const docs = appState.documents || [];
-          if (docs.length > 0) {
-            docs[docs.length - 1] = { ...docs[docs.length - 1], date: now.toISOString(), items, totalCount: totalQty };
-          } else {
-            docs.push({ id: uuid(), date: now.toISOString(), type: 'update', items, totalCount: totalQty });
-          }
-          saveStateDebounced();
-          showToast('Dokument ažuriran');
-        }},
         { label: 'Zatvori', tone: 'secondary' }
       ]
     });
