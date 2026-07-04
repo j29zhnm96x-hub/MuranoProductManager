@@ -7370,7 +7370,7 @@ function addOnSiteItem() {
   
   _onsitePick = null;
   updateOnsitePickDisplay();
-  qtyInput.value = '1';
+  qtyInput.value = '';
   saveStateDebounced();
   renderOnSiteItems();
   showToast(`Dodano: ${qty} x ${catName}`);
