@@ -7026,6 +7026,11 @@ function openOnsiteProductPicker() {
   const rootFolder = appState.folders['root'];
   if (!rootFolder) { showToast('Nema mapa'); return; }
 
+  function focusOnsiteQty() {
+    const qty = document.getElementById('onsite-qty');
+    if (qty) setTimeout(() => qty.focus({ preventScroll: true }), 300);
+  }
+
   function selectProduct(categoryName, categoryPrice, product) {
     _onsitePick = {
       shopCategory: categoryName,
@@ -7035,6 +7040,7 @@ function openOnsiteProductPicker() {
     };
     closeModal();
     updateOnsitePickDisplay();
+    focusOnsiteQty();
   }
 
   function selectNewCategory(groupFolderId, name, price) {
@@ -7048,6 +7054,7 @@ function openOnsiteProductPicker() {
     };
     closeModal();
     updateOnsitePickDisplay();
+    focusOnsiteQty();
   }
 
   function createInlineNewCategoryForm(groupFolderId) {
