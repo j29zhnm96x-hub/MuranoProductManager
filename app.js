@@ -7353,6 +7353,7 @@ function renderOnSiteItems() {
 }
 
 function addOnSiteItem() {
+  try {
   const qtyInput = document.getElementById('onsite-qty');
   if (!qtyInput) return;
   
@@ -7383,7 +7384,6 @@ function addOnSiteItem() {
       name: catName,
       qty,
       price: extractPriceFromName(catName),
-      isNew,
       groupFolderId: _onsitePick.groupFolderId || null
     });
   }
@@ -7394,6 +7394,7 @@ function addOnSiteItem() {
   saveStateDebounced();
   renderOnSiteItems();
   showToast(`Dodano: ${qty} x ${catName}`);
+  } catch (e) { showToast('Greška: ' + e.message); }
 }
 
 function confirmOnSiteItems() {
