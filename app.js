@@ -6602,13 +6602,17 @@ async function executeConfirm(docType, customDateStr) {
   const confirmISO = confirmDate.toISOString();
 
   // Move pending to transferLog with master confirm date
+  // For 'update', link to the actual last document; for 'new', generate a fresh ID
+  const linkedDocId = (docType === 'update' && appState.documents?.length > 0)
+    ? appState.documents[appState.documents.length - 1].id
+    : uuid();
   const logEntry = {
     id: uuid(),
     date: confirmISO,
     type: 'transfer',
     items: pending.map(p => ({ productId: p.productId, qty: p.qty, shopCategory: p.shopCategory })),
     masterConfirmDate: confirmISO,
-    documentId: uuid()
+    documentId: linkedDocId
   };
   
   appState.transferLog = appState.transferLog || [];
