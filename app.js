@@ -7979,6 +7979,59 @@ function openDocumentList() {
     delRow.appendChild(delBtn);
     card.appendChild(delRow);
     
+    // Document history timeline (collapsible, only if multiple entries)
+    const historyEntries = doc.history || [];
+    if (historyEntries.length > 1) {
+      const histRow = document.createElement('div');
+      histRow.style.cssText = 'border-top:1px solid #f3f4f6;';
+      const histToggle = document.createElement('button');
+      histToggle.textContent = '\uD83D\uDCCB Povijest dokumenta (' + historyEntries.length + ')';
+      histToggle.style.cssText = 'width:100%;padding:6px 10px;border:none;background:transparent;color:#6366f1;font-size:12px;font-weight:600;cursor:pointer;text-align:left;';
+      histToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const div = histRow.querySelector('.doc-history-body');
+        if (div) {
+          const hidden = div.style.display === 'none';
+          div.style.display = hidden ? 'block' : 'none';
+          histToggle.textContent = hidden
+            ? '\u25BC Povijest dokumenta (' + historyEntries.length + ')'
+            : '\uD83D\uDCCB Povijest dokumenta (' + historyEntries.length + ')';
+        }
+      });
+      histRow.appendChild(histToggle);
+      
+      const histBody = document.createElement('div');
+      histBody.className = 'doc-history-body';
+      histBody.style.cssText = 'display:none;padding:4px 10px 8px;';
+      for (const hEntry of historyEntries) {
+        const hDate = formatDateHR(new Date(hEntry.date));
+        const hTime = new Date(hEntry.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+        const hQty = (hEntry.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+        const hBlock = document.createElement('div');
+        hBlock.style.cssText = 'border-left:2px solid #6366f1;padding:3px 0 3px 8px;margin-bottom:4px;font-size:12px;color:#374151;';
+        hBlock.innerHTML = `<strong>${hDate} ${hTime}</strong> — ${escapeHtml(hEntry.note || '')} — <span style="color:#6366f1;font-weight:600;">${hQty} kom</span>`;
+        if ((hEntry.items || []).length > 0) {
+          const itemList = document.createElement('div');
+          itemList.style.cssText = 'display:none;margin-top:2px;font-size:11px;color:#6b7280;';
+          for (const hi of hEntry.items) {
+            const ir = document.createElement('div');
+            ir.style.cssText = 'padding-left:8px;';
+            ir.textContent = `${hi.name}: ${hi.qty} kom${hi.price ? ' (' + hi.price + '\u20AC)' : ''}`;
+            itemList.appendChild(ir);
+          }
+          hBlock.style.cursor = 'pointer';
+          hBlock.addEventListener('click', (e) => {
+            e.stopPropagation();
+            itemList.style.display = itemList.style.display === 'none' ? 'block' : 'none';
+          });
+          hBlock.appendChild(itemList);
+        }
+        histBody.appendChild(hBlock);
+      }
+      histRow.appendChild(histBody);
+      card.appendChild(histRow);
+    }
+    
     body.appendChild(card);
   }
   
