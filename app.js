@@ -6225,9 +6225,10 @@ function openTransferQtyModalForCategory(catName, available) {
     headerIcon: { symbol: '\uD83D\uDCE6', color: 'blue' },
     body,
     actions: [
-      { label: 'Dodaj u prijenos', onClick: () => {
+      { label: 'Dodaj u prijenos', keepOpen: true, onClick: () => {
         const qty = parseInt(body.querySelector('#transfer-qty')?.value, 10);
-        if (!qty || qty <= 0 || qty > available) { showToast('Unesite ispravnu koli\u010Dinu'); return; }
+        if (!qty || qty <= 0) { showToast('Unesite ispravnu koli\u010Dinu'); return; }
+        if (qty > available) { showToast(`Nedovoljna koli\u010Dina u skladi\u0161tu. Dostupno: ${available} kom.`); return; }
         
         // Add to pending transfers (no warehouse deduction)
         appState.pendingTransfers = appState.pendingTransfers || [];
@@ -6254,8 +6255,8 @@ function openTransferQtyModalForCategory(catName, available) {
         saveStateDebounced();
         renderAll();
         renderShopInventory();
-        showToast(`Preneseno ${qty} kom: ${catName}`);
         closeModal();
+        showToast(`Preneseno ${qty} kom: ${catName}`);
       }},
       { label: __('Cancel'), tone: 'secondary' }
     ]
