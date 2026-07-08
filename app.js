@@ -8007,16 +8007,18 @@ function openDocumentList() {
         const hDate = formatDateHR(new Date(hEntry.date));
         const hTime = new Date(hEntry.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
         const hQty = (hEntry.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+        const hVal = (hEntry.items || []).reduce((s, i) => s + ((i.price || 0) * (i.qty || 0)), 0);
         const hBlock = document.createElement('div');
         hBlock.style.cssText = 'border-left:2px solid #6366f1;padding:3px 0 3px 8px;margin-bottom:4px;font-size:12px;color:#374151;';
-        hBlock.innerHTML = `<strong>${hDate} ${hTime}</strong> — ${escapeHtml(hEntry.note || '')} — <span style="color:#6366f1;font-weight:600;">${hQty} kom</span>`;
+        hBlock.innerHTML = `<strong>${hDate} ${hTime}</strong> — ${escapeHtml(hEntry.note || '')} — <span style="color:#6366f1;font-weight:600;">${hQty} kom</span> <span style="color:#374151;font-weight:600;">(${formatCurrency(hVal)})</span>`;
         if ((hEntry.items || []).length > 0) {
           const itemList = document.createElement('div');
           itemList.style.cssText = 'display:none;margin-top:2px;font-size:11px;color:#6b7280;';
           for (const hi of hEntry.items) {
             const ir = document.createElement('div');
             ir.style.cssText = 'padding-left:8px;';
-            ir.textContent = `${hi.name}: ${hi.qty} kom${hi.price ? ' (' + hi.price + '\u20AC)' : ''}`;
+            const itemVal = (hi.price || 0) * (hi.qty || 0);
+            ir.textContent = `${hi.name}: ${hi.qty} kom \u00D7 ${hi.price || 0}\u20AC = ${formatCurrency(itemVal)}`;
             itemList.appendChild(ir);
           }
           hBlock.style.cursor = 'pointer';
