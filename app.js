@@ -7819,58 +7819,6 @@ function showDocumentPreview(items, docType, customTitle, docDate, history) {
   `;
   
   preview.classList.remove('hidden');
-  
-  // ── Document History Timeline ──────────────────────────────────
-  if (history && history.length > 1) {
-    const historyDiv = document.createElement('div');
-    historyDiv.style.cssText = 'background:#f9fafb;border-radius:10px;padding:12px;margin-top:12px;max-width:650px;margin-left:auto;margin-right:auto;';
-    historyDiv.innerHTML = '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#374151;">\uD83D\uDCCB Povijest dokumenta</div>';
-    for (const hEntry of history) {
-      const hDate = formatDateHR(new Date(hEntry.date));
-      const hTime = new Date(hEntry.date).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
-      const hQty = (hEntry.items || []).reduce((s, i) => s + (i.qty || 0), 0);
-      const hBlock = document.createElement('div');
-      hBlock.style.cssText = 'border-left:3px solid #6366f1;padding:4px 0 4px 10px;margin-bottom:6px;';
-      hBlock.innerHTML = `<div style="font-size:13px;color:#374151;"><strong>${hDate} ${hTime}</strong> — ${escapeHtml(hEntry.note || 'Nepoznato')} — <span style="color:#6366f1;font-weight:600;">${hQty} kom</span></div>`;
-      if ((hEntry.items || []).length > 0) {
-        const itemList = document.createElement('div');
-        itemList.style.cssText = 'display:none;margin-top:4px;font-size:12px;color:#6b7280;';
-        for (const hi of hEntry.items) {
-          const ir = document.createElement('div');
-          ir.textContent = `${hi.name}: ${hi.qty} kom (${(hi.price || 0)}\u20AC)`;
-          itemList.appendChild(ir);
-        }
-        hBlock.appendChild(itemList);
-        hBlock.style.cursor = 'pointer';
-        hBlock.addEventListener('click', (e) => {
-          e.stopPropagation();
-          itemList.style.display = itemList.style.display === 'none' ? 'block' : 'none';
-        });
-        const hint = document.createElement('div');
-        hint.style.cssText = 'font-size:11px;color:#9ca3af;';
-        hint.textContent = 'Klikni za detalje';
-        hBlock.appendChild(hint);
-      }
-      historyDiv.appendChild(hBlock);
-    }
-    body.appendChild(historyDiv);
-  }
-  
-  // Conditional page numbers: show only if content > 1 A4 page
-  setTimeout(() => {
-    const content = body.querySelector('.doc-a4');
-    if (content) {
-      const style = document.getElementById('page-number-style') || document.createElement('style');
-      style.id = 'page-number-style';
-      const h = content.scrollHeight;
-      const a4Height = 1123; // approx A4 at 96dpi
-      style.textContent = h > a4Height
-        ? '@page { @bottom-center { content: counter(page); font-family: sans-serif; font-size: 10px; color: #9ca3af; } }'
-        : '@page { @bottom-center { content: none; } }';
-      document.head.appendChild(style);
-    }
-  }, 50);
-  
   // Back button (restore original title)
   document.getElementById('doc-preview-back').onclick = () => {
     preview.classList.add('hidden');
