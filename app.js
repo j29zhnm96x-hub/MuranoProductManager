@@ -6971,6 +6971,27 @@ function openTransferHistory() {
                 const p = appState.products[it.productId];
                 if (p) p.quantity = Number(p.quantity || 0) + it.qty;
               }
+              // Also revert the associated document (reduce items, add reversal history)
+              const docId = entry._source.documentId;
+              if (docId) {
+                const doc = (appState.documents || []).find(d => d.id === docId);
+                if (doc && doc.items) {
+                  for (const it of (entry._source.items || [])) {
+                    const docItem = doc.items.find(di => di.name === it.shopCategory);
+                    if (docItem) {
+                      docItem.qty = Math.max(0, (docItem.qty || 0) - it.qty);
+                      docItem.value = docItem.qty * (docItem.price || 0);
+                    }
+                  }
+                  doc.items = doc.items.filter(di => di.qty > 0);
+                  doc.totalCount = doc.items.reduce((s, i) => s + i.qty, 0);
+                  doc.history = [...(doc.history || []), {
+                    date: new Date().toISOString(),
+                    items: (entry._source.items || []).map(it => ({ name: it.shopCategory, qty: it.qty })),
+                    note: 'Poništenje transfera'
+                  }];
+                }
+              }
             }
             // Remove from source array
             const arr = appState[entry._sourceArr];
