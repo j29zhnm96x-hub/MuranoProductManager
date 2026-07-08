@@ -6080,19 +6080,26 @@ function transferFromWarehouse() {
       const p = appState.products[pid];
       if (p) totalQty += Number(p.quantity || 0);
     }
-    let alreadyTransferred = 0;
+    // Subtract items already in the shop (transferLog confirmed + onSiteProduction + pending)
+    let alreadyInShop = 0;
     for (const t of (appState.transferLog || [])) {
       if (t.masterConfirmDate) {
         for (const item of (t.items || [])) {
-          if (item.shopCategory === categoryName) alreadyTransferred += item.qty;
+          if (item.shopCategory === categoryName) alreadyInShop += item.qty;
         }
       }
     }
-    // Also subtract pending transfers (not yet confirmed) for this category
-    for (const pt of (appState.pendingTransfers || [])) {
-      if (pt.shopCategory === categoryName) alreadyTransferred += pt.qty;
+    for (const o of (appState.onSiteProduction || [])) {
+      if (o.addedToShop) {
+        for (const item of (o.items || [])) {
+          if (item.shopCategory === categoryName) alreadyInShop += item.qty;
+        }
+      }
     }
-    return Math.max(0, totalQty - alreadyTransferred);
+    for (const pt of (appState.pendingTransfers || [])) {
+      if (pt.shopCategory === categoryName) alreadyInShop += pt.qty;
+    }
+    return Math.max(0, totalQty - alreadyInShop);
   }
 
   function renderStandaloneRow(sub) {
