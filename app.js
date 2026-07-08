@@ -6637,7 +6637,6 @@ async function executeConfirm(docType, customDateStr) {
     }
     lastDoc.items = mergedItems;
     lastDoc.totalCount = mergedItems.reduce((s, i) => s + i.qty, 0);
-    lastDoc.date = confirmISO;
     lastDoc.history = [...(lastDoc.history || []), {
       date: confirmISO,
       items: docItems,
@@ -6652,7 +6651,7 @@ async function executeConfirm(docType, customDateStr) {
     renderShopInventory();
     
     if (mergedItems.length > 0) {
-      showDocumentPreview(mergedItems, docType, null, confirmISO, lastDoc.history);
+      showDocumentPreview(mergedItems, docType, null, lastDoc.date, lastDoc.history);
     } else {
       showToast('Dokument je prazan');
     }
