@@ -6851,6 +6851,7 @@ function openTransferHistory() {
       catMap[catName].items.push({ pName: prod?.name || null, qty: it.qty });
     }
     allEntries.push({
+      _source: t, _sourceArr: 'transferLog',
       date: t.date,
       type: 'transfer',
       typeLabel: 'Transfer iz skladišta',
@@ -6870,6 +6871,7 @@ function openTransferHistory() {
       catMap[catName].items.push({ pName: it.name || null, qty: it.qty });
     }
     allEntries.push({
+      _source: o, _sourceArr: 'onSiteProduction',
       date: o.date,
       type: 'onsite',
       typeLabel: 'Proizvodnja na licu mjesta',
@@ -6888,6 +6890,7 @@ function openTransferHistory() {
       catMap[catName].items.push({ pName: it.name || null, qty: it.qty });
     }
     allEntries.push({
+      _source: r, _sourceArr: 'returnLog',
       date: r.date,
       type: 'return',
       typeLabel: 'Povrat iz prodaje',
@@ -6943,6 +6946,47 @@ function openTransferHistory() {
     header.addEventListener('click', () => {
       details.style.display = details.style.display === 'none' ? 'block' : 'none';
     });
+    
+    // Delete button (only for transfer and return entries)
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '\u2715';
+    delBtn.style.cssText = 'padding:2px 8px;border:none;background:transparent;color:#ef4444;font-size:13px;cursor:pointer;opacity:0.5;';
+    delBtn.title = 'Izbri\u0161i zapis';
+    delBtn.addEventListener('mouseenter', () => { delBtn.style.opacity = '1'; });
+    delBtn.addEventListener('mouseleave', () => { delBtn.style.opacity = '0.5'; });
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!entry._source || !entry._sourceArr) return;
+      const label = entry.typeLabel || 'zapis';
+      openModal({
+        title: 'Izbri\u0161i zapis',
+        headerIcon: { symbol: '\u26A0', color: 'red' },
+        size: 'small',
+        body: `Jeste li sigurni da \u017eelite izbrisati ${label} od ${date} ${time} s ${entry.totalQty} kom?`,
+        actions: [
+          { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
+            // Restore warehouse for transfer entries (undo the stock reduction)
+            if (entry._sourceArr === 'transferLog') {
+              for (const it of (entry._source.items || [])) {
+                const p = appState.products[it.productId];
+                if (p) p.quantity = Number(p.quantity || 0) + it.qty;
+              }
+            }
+            // Remove from source array
+            const arr = appState[entry._sourceArr];
+            if (Array.isArray(arr)) {
+              appState[entry._sourceArr] = arr.filter(e => e !== entry._source);
+            }
+            closeModal();
+            saveStateDebounced();
+            openTransferHistory();
+            showToast('Zapis izbrisan');
+          }},
+          { label: 'Odustani', tone: 'secondary' }
+        ]
+      });
+    });
+    header.appendChild(delBtn);
     
     card.appendChild(header);
     card.appendChild(details);
