@@ -6979,6 +6979,8 @@ function openTransferHistory() {
             }
             closeModal();
             saveStateDebounced();
+            renderAll();
+            renderShopInventory();
             openTransferHistory();
             showToast('Zapis izbrisan');
           }},
