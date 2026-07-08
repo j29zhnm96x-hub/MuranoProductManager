@@ -6617,34 +6617,70 @@ async function executeConfirm(docType, customDateStr) {
   // Save document
   appState.documents = appState.documents || [];
   const docItems = buildDocumentItems(pending);
-  const doc = {
-    id: logEntry.documentId,
-    date: confirmISO,
-    type: docType,
-    items: docItems,
-    totalCount: docItems.reduce((s, i) => s + i.qty, 0),
-    history: [{
+  
+  if (docType === 'update' && appState.documents.length > 0) {
+    // Merge into the last document (items, history, totals)
+    const lastDoc = appState.documents[appState.documents.length - 1];
+    const mergedItems = [...(lastDoc.items || [])];
+    for (const di of docItems) {
+      const existing = mergedItems.find(i => i.name === di.name);
+      if (existing) {
+        existing.qty += di.qty;
+        existing.value = existing.qty * existing.price;
+      } else {
+        mergedItems.push({ name: di.name, price: di.price, qty: di.qty, value: di.value });
+      }
+    }
+    lastDoc.items = mergedItems;
+    lastDoc.totalCount = mergedItems.reduce((s, i) => s + i.qty, 0);
+    lastDoc.date = confirmISO;
+    lastDoc.history = [...(lastDoc.history || []), {
       date: confirmISO,
       items: docItems,
-      note: 'Transfer iz skladišta'
-    }]
-  };
-  appState.documents.push(doc);
-  
-  // Clear pending
-  appState.pendingTransfers = [];
-  
-  try {
-    await writeState(appState);
-    setSyncStatus('synced');
-  } catch {}
-  
-  renderAll();
-  renderShopInventory();
-  
-  // Show document preview
-  if (docItems.length > 0) showDocumentPreview(docItems, docType, null, confirmISO, doc.history);
-  else showToast('Dokument je prazan - provjerite kategorije proizvoda');
+      note: 'Transfer iz skladišta (ažurirano)'
+    }];
+    
+    // Clear pending
+    appState.pendingTransfers = [];
+    
+    try { await writeState(appState); setSyncStatus('synced'); } catch {}
+    renderAll();
+    renderShopInventory();
+    
+    if (mergedItems.length > 0) {
+      showDocumentPreview(mergedItems, docType, null, confirmISO, lastDoc.history);
+    } else {
+      showToast('Dokument je prazan');
+    }
+  } else {
+    // Create new document (original behavior)
+    const doc = {
+      id: logEntry.documentId,
+      date: confirmISO,
+      type: docType,
+      items: docItems,
+      totalCount: docItems.reduce((s, i) => s + i.qty, 0),
+      history: [{
+        date: confirmISO,
+        items: docItems,
+        note: 'Transfer iz skladišta'
+      }]
+    };
+    appState.documents.push(doc);
+    
+    // Clear pending
+    appState.pendingTransfers = [];
+    
+    try { await writeState(appState); setSyncStatus('synced'); } catch {}
+    renderAll();
+    renderShopInventory();
+    
+    if (docItems.length > 0) {
+      showDocumentPreview(docItems, docType, null, confirmISO, doc.history);
+    } else {
+      showToast('Dokument je prazan - provjerite kategorije proizvoda');
+    }
+  }
 }
 
 function buildDocumentItems(directItems) {
@@ -7901,11 +7937,22 @@ function openDocumentList() {
         body: `Jeste li sigurni da \u017eelite izbrisati dokument "${docTitle}" od ${d}?`,
         actions: [
           { label: 'Izbri\u0161i', tone: 'danger', onClick: () => {
+            // Revert matching transferLog entries: restore warehouse + remove entries
+            const tLog = appState.transferLog || [];
+            const toDelete = tLog.filter(t => t.documentId === doc.id);
+            for (const tEntry of toDelete) {
+              for (const item of (tEntry.items || [])) {
+                const p = appState.products[item.productId];
+                if (p) p.quantity = Number(p.quantity || 0) + item.qty;
+              }
+            }
+            appState.transferLog = tLog.filter(t => t.documentId !== doc.id);
+            // Delete document
             appState.documents = (appState.documents || []).filter(d => d.id !== doc.id);
             saveStateDebounced();
             closeModal();
             openDocumentList();
-            showToast('Dokument izbrisan');
+            showToast('Dokument izbrisan, transfer poništen');
           }},
           { label: 'Odustani', tone: 'secondary' }
         ]
