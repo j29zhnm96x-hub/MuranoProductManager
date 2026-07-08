@@ -6656,17 +6656,18 @@ async function executeConfirm(docType, customDateStr) {
       showToast('Dokument je prazan');
     }
   } else {
-    // Create new document (original behavior)
+    // Create new document — includes ALL current shop inventory
+    const allItems = buildDocumentItems(); // no args = calculateShopInventory() (includes transfers + onsite + returns)
     const doc = {
       id: logEntry.documentId,
       date: confirmISO,
       type: docType,
-      items: docItems,
-      totalCount: docItems.reduce((s, i) => s + i.qty, 0),
+      items: allItems,
+      totalCount: allItems.reduce((s, i) => s + i.qty, 0),
       history: [{
         date: confirmISO,
-        items: docItems,
-        note: 'Transfer iz skladišta'
+        items: allItems,
+        note: 'Stanje prodaje'
       }]
     };
     appState.documents.push(doc);
@@ -6678,10 +6679,10 @@ async function executeConfirm(docType, customDateStr) {
     renderAll();
     renderShopInventory();
     
-    if (docItems.length > 0) {
-      showDocumentPreview(docItems, docType, null, confirmISO, doc.history);
+    if (allItems.length > 0) {
+      showDocumentPreview(allItems, docType, null, confirmISO, doc.history);
     } else {
-      showToast('Dokument je prazan - provjerite kategorije proizvoda');
+      showToast('Dokument je prazan');
     }
   }
 }
