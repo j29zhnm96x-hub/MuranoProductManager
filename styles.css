@@ -352,7 +352,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 }
 
 /* Toasts */
-#toast-container { position: fixed; bottom: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
+#toast-container { position: fixed; bottom: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }
 .toast { background: #111827; color: #ffffff; padding: 10px 12px; border-radius: 10px; opacity: 0.95; animation: fadeout 0.3s ease-in both; }
 
 /* Back buttons (product page, editor) */
