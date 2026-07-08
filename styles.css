@@ -509,11 +509,14 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
 
   html, body { height: auto; overflow: visible; }
   body > *:not(#doc-preview) { display: none !important; }
-  #doc-preview { display: block !important; position: static; width: 100%; }
+  #doc-preview { display: block !important; position: static; width: 100%; height: auto; }
   #doc-preview > *:not(.doc-preview-body) { display: none !important; }
   .doc-preview-body { padding: 0; margin: 0; }
-  .doc-a4 { box-shadow: none; padding: 8mm 10mm 5mm 10mm; page-break-after: avoid; }
-  .doc-table, .doc-table tr, .doc-table td, .doc-table th { page-break-inside: avoid; }
+  .doc-a4 { box-shadow: none; padding: 5mm 8mm; page-break-after: avoid; page-break-inside: avoid; }
+  .doc-table { page-break-inside: avoid; }
+  .doc-header { margin-bottom: 10px; }
+  .doc-title { margin: 8px 0 10px; }
+  .doc-date { margin-bottom: 10px; }
 }
 
 /* ── History Page (overlay) ──────────────────────────────────── */
