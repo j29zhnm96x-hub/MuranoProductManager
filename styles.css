@@ -512,17 +512,13 @@ body.reorder-drag-active { -webkit-user-select: none; user-select: none; cursor:
   #doc-preview { display: block !important; position: static; width: 100%; height: auto; }
   #doc-preview > *:not(.doc-preview-body) { display: none !important; }
   .doc-preview-body { padding: 0; margin: 0; }
-  .doc-a4 { box-shadow: none; padding: 3mm 5mm; page-break-after: avoid; page-break-inside: avoid; }
-  .doc-header { margin-bottom: 6px; }
-  .doc-header .doc-company { font-size: 14px; }
-  .doc-header .doc-info { font-size: 11px; line-height: 1.3; }
-  .doc-title { font-size: 15px; margin: 4px 0 6px; }
-  .doc-date { font-size: 11px; margin-bottom: 6px; }
+  .doc-a4 { box-shadow: none; padding: 5mm 8mm; page-break-after: avoid; page-break-inside: avoid; }
+  .doc-header { margin-bottom: 8px; }
+  .doc-title { font-size: 16px; margin: 6px 0 8px; }
+  .doc-date { margin-bottom: 8px; }
   .doc-table { page-break-inside: avoid; font-size: 11px; }
-  .doc-table th { padding: 4px 6px; font-size: 11px; }
-  .doc-table td { padding: 3px 6px; font-size: 11px; }
-  .doc-table .doc-total td { font-size: 12px; }
-  .doc-footer { margin-top: 10px; font-size: 10px; }
+  .doc-table th { padding: 4px 8px; }
+  .doc-table td { padding: 3px 8px; }
 }
 
 /* ── History Page (overlay) ──────────────────────────────────── */
