@@ -3082,7 +3082,7 @@ function dayLabel(n) {
   return num === 1 ? `${num} day` : `${num} days`;
 }
 
-function showToast(message, timeout = 3000) {
+function showToast(message, timeout = 10000) {
   const c = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = 'toast';
