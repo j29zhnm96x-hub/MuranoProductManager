@@ -6227,8 +6227,8 @@ function openTransferQtyModalForCategory(catName, available) {
     actions: [
       { label: 'Dodaj u prijenos', keepOpen: true, onClick: () => {
         const qty = parseInt(body.querySelector('#transfer-qty')?.value, 10);
-        if (!qty || qty <= 0) { showToast('Unesite ispravnu koli\u010Dinu', 4000); return; }
-        if (qty > available) { showToast(`Nedovoljna koli\u010Dina u skladi\u0161tu. Dostupno: ${available} kom.`, 4000); return; }
+        if (!qty || qty <= 0) { showToast('Unesite ispravnu koli\u010Dinu', 6000); return; }
+        if (qty > available) { showToast(`Nedovoljna koli\u010Dina u skladi\u0161tu. Dostupno: ${available} kom.`, 6000); return; }
         
         // Add to pending transfers (no warehouse deduction)
         appState.pendingTransfers = appState.pendingTransfers || [];
