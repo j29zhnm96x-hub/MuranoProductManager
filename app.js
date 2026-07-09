@@ -6216,7 +6216,7 @@ function openTransferQtyModalForCategory(catName, available) {
     ${price > 0 ? `<div style="color:#6b7280;font-size:13px;">Cijena: <strong>${price}\u20AC</strong></div>` : ''}
     <label style="display:grid;gap:4px;">
       <span style="font-weight:600;font-size:13px;">Koli\u010Dina za prijenos</span>
-      <input id="transfer-qty" type="number" min="1" max="${available}" step="1" inputmode="numeric" placeholder="Unesite koli\u010Dinu" autofocus style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
+      <input id="transfer-qty" type="number" min="1" step="1" inputmode="numeric" placeholder="Unesite koli\u010Dinu" autofocus style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
   `;
   
