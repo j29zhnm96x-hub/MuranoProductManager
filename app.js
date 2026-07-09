@@ -6210,6 +6210,10 @@ function openTransferQtyModalForCategory(catName, available) {
   body.style.cssText = 'display:grid;gap:12px;max-width:400px;';
   
   const price = extractPriceFromName(catName);
+  const errorDiv = document.createElement('div');
+  errorDiv.id = 'transfer-error';
+  errorDiv.style.cssText = 'display:none;color:#dc2626;font-size:13px;font-weight:600;padding:6px 10px;background:#fef2f2;border-radius:6px;text-align:center;';
+  
   body.innerHTML = `
     <div style="font-weight:700;font-size:16px;">${escapeHtml(catName)}</div>
     <div style="color:#16a34a;font-size:14px;background:#f0fdf4;padding:6px 10px;border-radius:6px;">Raspolo\u017Eivo: <strong>${available} kom</strong></div>
@@ -6219,6 +6223,12 @@ function openTransferQtyModalForCategory(catName, available) {
       <input id="transfer-qty" type="number" min="1" step="1" inputmode="numeric" placeholder="Unesite koli\u010Dinu" autofocus style="padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;" />
     </label>
   `;
+  body.insertBefore(errorDiv, body.firstChild);
+  
+  function showError(msg) {
+    errorDiv.textContent = msg;
+    errorDiv.style.display = 'block';
+  }
   
   openModal({
     title: 'Prijenos u prodaju',
@@ -6226,9 +6236,10 @@ function openTransferQtyModalForCategory(catName, available) {
     body,
     actions: [
       { label: 'Dodaj u prijenos', keepOpen: true, onClick: () => {
+        errorDiv.style.display = 'none';
         const qty = parseInt(body.querySelector('#transfer-qty')?.value, 10);
-        if (!qty || qty <= 0) { showToast('Unesite ispravnu koli\u010Dinu', 6000); return; }
-        if (qty > available) { showToast(`Nedovoljna koli\u010Dina u skladi\u0161tu. Dostupno: ${available} kom.`, 6000); return; }
+        if (!qty || qty <= 0) { showError('Unesite ispravnu koli\u010Dinu'); return; }
+        if (qty > available) { showError(`Nedovoljna koli\u010Dina u skladi\u0161tu. Dostupno: ${available} kom.`); return; }
         
         // Add to pending transfers (no warehouse deduction)
         appState.pendingTransfers = appState.pendingTransfers || [];
